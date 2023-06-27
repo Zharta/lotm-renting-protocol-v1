@@ -1,0 +1,12 @@
+-r requirements.txt
+git+https://github.com/vyperlang/titanoboa#egg=titanoboa[forking-recommended]
+black
+boto3
+click
+hypothesis
+ipython
+mypy
+pytest
+pytest-xdist
+python-lsp-server[flake8]
+rope

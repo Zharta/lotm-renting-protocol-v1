@@ -1,0 +1,7 @@
+name: lotm-renting-protocol
+
+plugins:
+  - name: alchemy
+  - name: foundry
+  - name: ganache
+  - name: vyper
