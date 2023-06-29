@@ -27,7 +27,8 @@ test: ${VENV}
 	${VENV}/bin/pytest -n auto tests --durations=0
 
 gas:
-	${VENV}/bin/pytest tests --durations=0 --profile
+	rm -rf .cache/
+	${VENV}/bin/pytest tests --durations=0 --gas-profile
 	
 
 interfaces:
