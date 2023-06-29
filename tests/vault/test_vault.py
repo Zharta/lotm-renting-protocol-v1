@@ -209,24 +209,24 @@ def test_start_rental_no_listing(
         vault_contract.start_rental(renter, 1, sender=lotm_renting_contract)
 
 
-# def test_start_rental_insufficient_allowance(
-#     contracts_config,
-#     vault_contract,
-#     lotm_renting_contract,
-#     nft_contract,
-#     nft_owner,
-#     renter,
-# ):
-#     token_id = 1
-#     price = 1
-#     expiration = int(boa.eval("block.timestamp")) + 86400
+def test_start_rental_insufficient_allowance(
+    contracts_config,
+    vault_contract,
+    lotm_renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+):
+    token_id = 1
+    price = 1
+    expiration = int(boa.eval("block.timestamp")) + 86400
 
-#     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-#     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-#     vault_contract.create_listing(price, sender=lotm_renting_contract)
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, sender=lotm_renting_contract)
+    vault_contract.create_listing(price, sender=lotm_renting_contract)
 
-#     with boa.reverts("insufficient allowance"):
-#         vault_contract.start_rental(renter, expiration, sender=lotm_renting_contract)
+    with boa.reverts("insufficient allowance"):
+        vault_contract.start_rental(renter, expiration, sender=lotm_renting_contract)
 
 
 def test_start_rental(
