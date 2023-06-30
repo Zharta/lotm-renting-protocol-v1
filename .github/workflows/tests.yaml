@@ -12,7 +12,8 @@ permissions:
 
 env:
   ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
+  BOA_FORK_RPC_URL: ${{ secrets.BOA_FORK_RPC_URL }}
 
 jobs:
   build:
