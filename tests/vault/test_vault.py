@@ -83,14 +83,14 @@ def test_deposit(
 
 def test_create_listing_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.create_listing(1, sender=nft_owner)
+        vault_contract.create_listing(nft_owner, 1, sender=nft_owner)
 
 
 def test_create_listing_zero_price(
-    contracts_config, vault_contract, lotm_renting_contract
+    contracts_config, vault_contract, lotm_renting_contract, nft_owner
 ):
     with boa.reverts("price must be greater than 0"):
-        vault_contract.create_listing(0, sender=lotm_renting_contract)
+        vault_contract.create_listing(nft_owner, 0, sender=lotm_renting_contract)
 
 
 def test_create_listing(
@@ -102,7 +102,7 @@ def test_create_listing(
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
 
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
     event = get_last_event(vault_contract, name="ListingCreated")
 
     assert vault_contract.listing() == (1, price, True)
@@ -121,28 +121,28 @@ def test_create_listing_twice(
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
 
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
     with boa.reverts("listing already exists"):
-        vault_contract.create_listing(price, sender=lotm_renting_contract)
+        vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
 
 def test_change_listing_price_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.change_listing_price(1, sender=nft_owner)
+        vault_contract.change_listing_price(nft_owner, 1, sender=nft_owner)
 
 
 def test_change_listing_price_zero_price(
-    contracts_config, vault_contract, lotm_renting_contract
+    contracts_config, vault_contract, lotm_renting_contract, nft_owner
 ):
     with boa.reverts("price must be greater than 0"):
-        vault_contract.change_listing_price(0, sender=lotm_renting_contract)
+        vault_contract.change_listing_price(nft_owner, 0, sender=lotm_renting_contract)
 
 
 def test_change_listing_price_no_listing(
-    contracts_config, vault_contract, lotm_renting_contract
+    contracts_config, vault_contract, lotm_renting_contract, nft_owner
 ):
     with boa.reverts("listing does not exist"):
-        vault_contract.change_listing_price(1, sender=lotm_renting_contract)
+        vault_contract.change_listing_price(nft_owner, 1, sender=lotm_renting_contract)
 
 
 def test_change_listing_price(
@@ -154,9 +154,9 @@ def test_change_listing_price(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
-    vault_contract.change_listing_price(new_price, sender=lotm_renting_contract)
+    vault_contract.change_listing_price(nft_owner, new_price, sender=lotm_renting_contract)
     event = get_last_event(vault_contract, name="ListingPriceChanged")
 
     assert vault_contract.listing() == (1, new_price, True)
@@ -168,14 +168,14 @@ def test_change_listing_price(
 
 def test_cancel_listing_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.cancel_listing(sender=nft_owner)
+        vault_contract.cancel_listing(nft_owner, sender=nft_owner)
 
 
 def test_cancel_listing_no_listing(
-    contracts_config, vault_contract, lotm_renting_contract
+    contracts_config, vault_contract, lotm_renting_contract, nft_owner
 ):
     with boa.reverts("listing does not exist"):
-        vault_contract.cancel_listing(sender=lotm_renting_contract)
+        vault_contract.cancel_listing(nft_owner, sender=lotm_renting_contract)
 
 
 def test_cancel_listing(
@@ -186,9 +186,9 @@ def test_cancel_listing(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
-    vault_contract.cancel_listing(sender=lotm_renting_contract)
+    vault_contract.cancel_listing(nft_owner, sender=lotm_renting_contract)
     event = get_last_event(vault_contract, name="ListingCancelled")
 
     assert vault_contract.listing() == (0, 0, False)
@@ -223,7 +223,7 @@ def test_start_rental_insufficient_allowance(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     with boa.reverts("insufficient allowance"):
         vault_contract.start_rental(renter, expiration, sender=lotm_renting_contract)
@@ -245,7 +245,7 @@ def test_start_rental(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(
@@ -287,7 +287,7 @@ def test_start_rental_ongoing(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(
@@ -301,17 +301,17 @@ def test_start_rental_ongoing(
         vault_contract.start_rental(renter, expiration, sender=lotm_renting_contract)
 
 
-def test_close_rental_not_caller(contracts_config, vault_contract, nft_owner):
+def test_close_rental_not_caller(contracts_config, vault_contract, nft_owner, renter):
     with boa.reverts("not caller"):
-        vault_contract.close_rental(sender=nft_owner)
+        vault_contract.close_rental(renter, sender=nft_owner)
 
 
 def test_close_rental_no_active_rental(
-    contracts_config, vault_contract, lotm_renting_contract
+    contracts_config, vault_contract, lotm_renting_contract, renter
 ):
     boa.env.time_travel(seconds=1)
     with boa.reverts("active rental does not exist"):
-        vault_contract.close_rental(sender=lotm_renting_contract)
+        vault_contract.close_rental(renter, sender=lotm_renting_contract)
 
 
 def test_close_rental(
@@ -329,7 +329,7 @@ def test_close_rental(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -342,7 +342,7 @@ def test_close_rental(
     time_passed = 43200
     boa.env.time_travel(seconds=time_passed)
 
-    vault_contract.close_rental(sender=lotm_renting_contract)
+    vault_contract.close_rental(renter, sender=lotm_renting_contract)
     event = get_last_event(vault_contract, name="RentalClosedPrematurely")
 
     assert vault_contract.active_rental()[1] == renter
@@ -362,12 +362,12 @@ def test_close_rental(
 
 def test_claim_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.claim(sender=nft_owner)
+        vault_contract.claim(nft_owner, sender=nft_owner)
 
 
-def test_claim_no_rewards(contracts_config, vault_contract, lotm_renting_contract):
+def test_claim_no_rewards(contracts_config, vault_contract, lotm_renting_contract, nft_owner):
     with boa.reverts("no rewards to claim"):
-        vault_contract.claim(sender=lotm_renting_contract)
+        vault_contract.claim(nft_owner, sender=lotm_renting_contract)
 
 
 def test_claim(
@@ -385,7 +385,7 @@ def test_claim(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -399,7 +399,7 @@ def test_claim(
 
     assert vault_contract.claimable_rewards() == rental_amount
 
-    vault_contract.claim(sender=lotm_renting_contract)
+    vault_contract.claim(nft_owner, sender=lotm_renting_contract)
     event = get_last_event(vault_contract, name="RewardsClaimed")
 
     assert vault_contract.unclaimed_rewards() == 0
@@ -425,7 +425,7 @@ def test_claim2(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -447,7 +447,7 @@ def test_claim2(
 
     assert vault_contract.claimable_rewards() == rental_amount * 2
 
-    vault_contract.claim(sender=lotm_renting_contract)
+    vault_contract.claim(nft_owner, sender=lotm_renting_contract)
     event = get_last_event(vault_contract, name="RewardsClaimed")
 
     assert vault_contract.unclaimed_rewards() == 0
@@ -460,7 +460,7 @@ def test_claim2(
 
 def test_withdraw_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.withdraw(sender=nft_owner)
+        vault_contract.withdraw(nft_owner, sender=nft_owner)
 
 
 def test_withdraw_rental_ongoing(
@@ -478,7 +478,7 @@ def test_withdraw_rental_ongoing(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -488,7 +488,7 @@ def test_withdraw_rental_ongoing(
     vault_contract.start_rental(renter, expiration, sender=lotm_renting_contract)
 
     with boa.reverts("active rental ongoing"):
-        vault_contract.withdraw(sender=lotm_renting_contract)
+        vault_contract.withdraw(nft_owner, sender=lotm_renting_contract)
 
 
 def test_withdraw(
@@ -506,7 +506,7 @@ def test_withdraw(
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, sender=lotm_renting_contract)
-    vault_contract.create_listing(price, sender=lotm_renting_contract)
+    vault_contract.create_listing(nft_owner, price, sender=lotm_renting_contract)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -519,7 +519,7 @@ def test_withdraw(
 
     assert vault_contract.claimable_rewards() == rental_amount
 
-    vault_contract.withdraw(sender=lotm_renting_contract)
+    vault_contract.withdraw(nft_owner, sender=lotm_renting_contract)
     event = get_last_event(vault_contract, name="NFTWithdrawn")
 
     assert vault_contract.unclaimed_rewards() == 0

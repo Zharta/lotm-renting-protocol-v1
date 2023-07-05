@@ -147,9 +147,10 @@ def deposit(token_id: uint256):
 
 
 @external
-def create_listing(price: uint256):
+def create_listing(sender: address, price: uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
+    assert sender == self.owner, "not owner of vault"
     assert price > 0, "price must be greater than 0"
     assert not self.listing.is_active, "listing already exists"
 
@@ -164,9 +165,10 @@ def create_listing(price: uint256):
 
 
 @external
-def change_listing_price(price: uint256):
+def change_listing_price(sender: address, price: uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
+    assert sender == self.owner, "not owner of vault"
     assert price > 0, "price must be greater than 0"
     assert self.listing.is_active, "listing does not exist"
 
@@ -180,9 +182,10 @@ def change_listing_price(price: uint256):
 
 
 @external
-def cancel_listing():
+def cancel_listing(sender: address):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
+    assert sender == self.owner, "not owner of vault"
     assert self.listing.is_active, "listing does not exist"
 
     log ListingCancelled(
@@ -191,12 +194,6 @@ def cancel_listing():
     )
 
     self.listing = empty(Listing)
-
-
-# @view
-# @external
-# def compute_rental_amount(expiration: uint256) -> uint256:
-#     return self._compute_rental_amount(block.timestamp, expiration, self.listing.price)
 
 
 @external
@@ -244,10 +241,11 @@ def start_rental(renter: address, expiration: uint256):
 
 
 @external
-def close_rental():
+def close_rental(sender: address):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert self.active_rental.expiration >= block.timestamp, "active rental does not exist"
+    assert sender == self.active_rental.renter, "not renter of active rental"
     
     # compute amount to send back to renter
     pro_rata_rental_amount: uint256 = self._compute_rental_amount(self.active_rental.start, block.timestamp, self.listing.price)
@@ -278,9 +276,10 @@ def close_rental():
 
 
 @external
-def claim():
+def claim(sender: address):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
+    assert sender == self.owner, "not owner of vault"
     assert self._claimable_rewards() > 0, "no rewards to claim"
 
     rewards_to_claim: uint256 = self._claimable_rewards()
@@ -303,9 +302,10 @@ def claim():
 
 
 @external
-def withdraw():
+def withdraw(sender: address):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
+    assert sender == self.owner, "not owner of vault"
     assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
     # assert IERC721(self.nft_contract_addr).ownerOf(self.listing.token_id) == self, "not owner of token"
     
@@ -318,7 +318,7 @@ def withdraw():
     self.listing = empty(Listing)
     self.active_rental = empty(Rental)
     self.is_initialised = False
-    self.owner = ZERO_ADDRESS
+    self.owner = empty(address)
 
     # transfer token to owner
     IERC721(self.nft_contract_addr).safeTransferFrom(self, owner, token_id, b"")
