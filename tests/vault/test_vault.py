@@ -5,10 +5,6 @@ from decimal import Decimal
 from ..conftest_base import ZERO_ADDRESS, get_last_event
 
 
-# def test_load_contract_configs(contracts_config):
-#     pass
-
-
 def test_initial_state(
     contracts_config, vault_contract, nft_owner, lotm_renting_contract, nft_contract
 ):
