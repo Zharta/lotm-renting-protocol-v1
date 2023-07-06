@@ -37,13 +37,6 @@ def renter():
     return acc.address
 
 
-# Temp account
-@pytest.fixture(scope="session", autouse=True)
-def lotm_renting_contract():
-    acc = Account.create()
-    return acc.address
-
-
 @pytest.fixture(scope="session")
 def nft_contract(owner):
     return boa.load("tests/auxiliary/ERC721.vy")
@@ -65,12 +58,17 @@ def vault_contract():
     return boa.load("contracts/Vault.vy")
 
 
+@pytest.fixture(scope="session")
+def renting_contract(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract):
+    return boa.load("contracts/Renting.vy", vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract)
+
+
 @pytest.fixture(scope="module")
 def contracts_config(
     nft_owner,
     owner,
     renter,
-    lotm_renting_contract,
+    renting_contract,
     vault_contract,
     nft_contract,
     ape_contract,
@@ -79,11 +77,11 @@ def contracts_config(
     with boa.env.anchor():
         vault_contract.initialise(
             nft_owner,
-            lotm_renting_contract,
+            renting_contract.address,
             ape_contract,
             nft_contract,
             delegation_registry_warm_contract,
-            sender=lotm_renting_contract,
+            sender=renting_contract.address,
         )
         nft_contract.mint(nft_owner, 1, sender=owner)
         ape_contract.mint(renter, int(1000 * 1e18), sender=owner)

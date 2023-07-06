@@ -76,3 +76,8 @@ def checksummed(obj, vyper_type=None):
             return f"0x{obj.hex()}"
 
     return obj
+
+
+def get_vault_from_proxy(proxy_addr):
+    deployer = boa.load_partial("contracts/Vault.vy")
+    return deployer.at(proxy_addr)
