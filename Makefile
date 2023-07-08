@@ -26,6 +26,10 @@ test: ${VENV}
 	rm -rf .cache/
 	${VENV}/bin/pytest -n auto tests --durations=0
 
+coverage:
+	${VENV}/bin/coverage run -m pytest --durations=0
+	${VENV}/bin/coverage report
+
 gas:
 	rm -rf .cache/
 	${VENV}/bin/pytest tests --durations=0 --gas-profile
