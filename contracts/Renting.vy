@@ -8,16 +8,94 @@ interface IVault:
     def create_listing(sender: address, price: uint256): nonpayable
     def change_listing_price(sender: address, price: uint256): nonpayable
     def cancel_listing(sender: address): nonpayable
-    def start_rental(renter: address, expiration: uint256): nonpayable
-    def close_rental(sender: address): nonpayable
-    def claim(sender: address): nonpayable
-    def withdraw(sender: address): nonpayable
+    def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
+    def close_rental(sender: address) -> Rental: nonpayable
+    def claim(sender: address) -> uint256: nonpayable
+    def withdraw(sender: address) -> uint256: nonpayable
+    def owner() -> address: view
 
 
 # Structs
 
+struct Rental:
+    id: bytes32 # keccak256 of the renter, token_id, start and expiration
+    owner: address
+    renter: address
+    token_id: uint256
+    start: uint256
+    expiration: uint256
+    amount: uint256
+
 
 # Events
+
+event VaultCreated:
+    vault: address
+    owner: address
+    nft_contract: address
+    token_id: uint256
+
+event NFTDeposited:
+    vault: address
+    owner: address
+    nft_contract: address
+    token_id: uint256
+
+event NFTWithdrawn:
+    vault: address
+    owner: address
+    nft_contract: address
+    token_id: uint256
+    claimed_rewards: uint256
+
+event ListingCreated:
+    vault: address
+    owner: address
+    nft_contract: address
+    token_id: uint256
+    price: uint256
+
+event ListingPriceChanged:
+    vault: address
+    owner: address
+    nft_contract: address
+    token_id: uint256
+    price: uint256
+
+event ListingCancelled:
+    vault: address
+    owner: address
+    nft_contract: address
+    token_id: uint256
+
+event RentalStarted:
+    id: bytes32
+    vault: address
+    owner: address
+    renter: address
+    nft_contract: address
+    token_id: uint256
+    start: uint256
+    expiration: uint256
+    amount: uint256
+
+event RentalClosedPrematurely:
+    id: bytes32
+    vault: address
+    owner: address
+    renter: address
+    nft_contract: address
+    token_id: uint256
+    start: uint256
+    expiration: uint256
+    amount: uint256
+
+event RewardsClaimed:
+    vault: address
+    owner: address
+    nft_contract: address
+    token_id: uint256
+    amount: uint256
 
 
 # Global Variables
@@ -25,9 +103,9 @@ interface IVault:
 _COLLISION_OFFSET: constant(bytes1) = 0xFF
 
 vault_impl_addr: public(address)
-payment_token_addr: public(address)
-nft_contract_addr: public(address)
-delegation_registry_addr: public(address)
+payment_token_addr: immutable(address)
+nft_contract_addr: immutable(address)
+delegation_registry_addr: immutable(address)
 
 active_vaults: public(HashMap[uint256, address]) # token_id -> vault
 available_vaults: public(DynArray[address, 2**15]) # one vault per Koda
@@ -38,32 +116,47 @@ available_vaults: public(DynArray[address, 2**15]) # one vault per Koda
 @external
 def __init__(
     vault_impl_addr: address,
-    payment_token_addr: address,
-    nft_contract_addr: address,
-    delegation_registry_addr: address
+    _payment_token_addr: address,
+    _nft_contract_addr: address,
+    _delegation_registry_addr: address
 ):
     self.vault_impl_addr = vault_impl_addr
-    self.payment_token_addr = payment_token_addr
-    self.nft_contract_addr = nft_contract_addr
-    self.delegation_registry_addr = delegation_registry_addr
+    payment_token_addr = _payment_token_addr
+    nft_contract_addr = _nft_contract_addr
+    delegation_registry_addr = _delegation_registry_addr
 
 
 @external
 def create_vault_and_deposit(token_id: uint256):
     assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
+    assert len(self.available_vaults) == 0, "no available vaults"
 
     vault: address = create_minimal_proxy_to(self.vault_impl_addr, salt=convert(token_id, bytes32))
     
+    log VaultCreated(
+        vault,
+        msg.sender,
+        nft_contract_addr,
+        token_id
+    )
+
     self.active_vaults[token_id] = vault
 
     IVault(vault).initialise(
         msg.sender,
         self,
-        self.payment_token_addr,
-        self.nft_contract_addr,
-        self.delegation_registry_addr
+        payment_token_addr,
+        nft_contract_addr,
+        delegation_registry_addr
     )
     IVault(vault).deposit(token_id)
+
+    log NFTDeposited(
+        vault,
+        msg.sender,
+        nft_contract_addr,
+        token_id
+    )
 
 
 @external
@@ -80,12 +173,19 @@ def deposit(token_id: uint256):
             IVault(vault).initialise(
                 msg.sender,
                 self,
-                self.payment_token_addr,
-                self.nft_contract_addr,
-                self.delegation_registry_addr
+                payment_token_addr,
+                nft_contract_addr,
+                delegation_registry_addr
             )
 
     IVault(vault).deposit(token_id)
+
+    log NFTDeposited(
+        vault,
+        msg.sender,
+        nft_contract_addr,
+        token_id
+    )
 
 
 @external
@@ -94,12 +194,28 @@ def create_listing(token_id: uint256, price: uint256):
 
     IVault(self.active_vaults[token_id]).create_listing(msg.sender, price)
 
+    log ListingCreated(
+        self.active_vaults[token_id],
+        msg.sender,
+        nft_contract_addr,
+        token_id,
+        price
+    )
+
 
 @external
 def change_listing_price(token_id:uint256, price: uint256):
     assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
 
     IVault(self.active_vaults[token_id]).change_listing_price(msg.sender, price)
+
+    log ListingPriceChanged(
+        self.active_vaults[token_id],
+        msg.sender,
+        nft_contract_addr,
+        token_id,
+        price
+    )
 
 
 @external
@@ -108,26 +224,65 @@ def cancel_listing(token_id: uint256):
 
     IVault(self.active_vaults[token_id]).cancel_listing(msg.sender)
 
+    log ListingCancelled(
+        self.active_vaults[token_id],
+        msg.sender,
+        nft_contract_addr,
+        token_id
+    )
+
 
 @external
 def start_rental(token_id: uint256, expiration: uint256):
     assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
 
-    IVault(self.active_vaults[token_id]).start_rental(msg.sender, expiration)
+    rental: Rental = IVault(self.active_vaults[token_id]).start_rental(msg.sender, expiration)
+
+    log RentalStarted(
+        rental.id,
+        self.active_vaults[token_id],
+        rental.owner,
+        msg.sender,
+        nft_contract_addr,
+        token_id,
+        rental.start,
+        expiration,
+        rental.amount
+    )
 
 
 @external
 def close_rental(token_id: uint256):
     assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
 
-    IVault(self.active_vaults[token_id]).close_rental(msg.sender)
+    rental: Rental = IVault(self.active_vaults[token_id]).close_rental(msg.sender)
+
+    log RentalClosedPrematurely(
+        rental.id,
+        self.active_vaults[token_id],
+        rental.owner,
+        msg.sender,
+        nft_contract_addr,
+        token_id,
+        rental.start,
+        block.timestamp,
+        rental.amount
+    )
 
 
 @external
 def claim(token_id: uint256):
     assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
 
-    IVault(self.active_vaults[token_id]).claim(msg.sender)
+    rewards: uint256 = IVault(self.active_vaults[token_id]).claim(msg.sender)
+
+    log RewardsClaimed(
+        self.active_vaults[token_id],
+        msg.sender,
+        nft_contract_addr,
+        token_id,
+        rewards
+    )
 
 
 @external
@@ -139,7 +294,15 @@ def withdraw(token_id: uint256):
     self.available_vaults.append(vault)
     self.active_vaults[token_id] = empty(address)
 
-    IVault(vault).withdraw(msg.sender)
+    rewards: uint256 = IVault(vault).withdraw(msg.sender)
+
+    log NFTWithdrawn(
+        vault,
+        msg.sender,
+        nft_contract_addr,
+        token_id,
+        rewards
+    )
 
 
 ##### INTERNAL METHODS #####
@@ -203,3 +366,21 @@ def get_vault_to_approve(token_id: uint256) -> address:
 @external
 def get_available_vaults() -> DynArray[address, 2**15]:
     return self.available_vaults
+
+
+@view
+@external
+def get_nft_contract() -> address:
+    return nft_contract_addr
+
+
+@view
+@external
+def get_payment_token() -> address:
+    return payment_token_addr
+
+
+@view
+@external
+def get_delegation_registry() -> address:
+    return delegation_registry_addr
