@@ -1,8 +1,10 @@
 import boa
 import vyper
 import os
-from web3 import Web3
+
+from dataclasses import dataclass
 from functools import cached_property
+from web3 import Web3
 
 
 boa.env.enable_gas_profiling()
@@ -81,3 +83,13 @@ def checksummed(obj, vyper_type=None):
 def get_vault_from_proxy(proxy_addr):
     deployer = boa.load_partial("contracts/Vault.vy")
     return deployer.at(proxy_addr)
+
+
+@dataclass
+class Rental:
+    owner: str
+    renter: str
+    token_id: int
+    start: int
+    expiration: int
+    amount: int

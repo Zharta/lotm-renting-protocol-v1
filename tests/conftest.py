@@ -1,7 +1,8 @@
 import boa
-from eth_account import Account
-
 import pytest
+
+from boa.environment import Env
+from eth_account import Account
 
 
 DELEGATION_REGISTRY_ADDRESS = "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c"
@@ -38,19 +39,19 @@ def renter():
 
 
 @pytest.fixture(scope="session")
-def nft_contract(owner):
+def nft_contract():
     return boa.load("tests/auxiliary/ERC721.vy")
 
 
 @pytest.fixture(scope="session")
-def ape_contract(owner):
+def ape_contract():
     return boa.load("tests/auxiliary/ERC20.vy", "APE", "APE", 18, 0)
 
 
 @pytest.fixture(scope="session")
 def delegation_registry_warm_contract():
-    abi = boa.load_abi("tests/auxiliary/delegation_registry_warm_abi.json")
-    return abi.at("0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c")
+    partial_contract = boa.load_partial("tests/stubs/DelegationRegistry.vy")
+    return partial_contract.at("0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c")
 
 
 @pytest.fixture(scope="session")
