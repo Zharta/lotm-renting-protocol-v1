@@ -14,57 +14,12 @@ interface IDelegationRegistry:
 
 # Events
 
-event NFTDeposited:
-    owner: address
-    token_id: uint256
-
-event NFTWithdrawn:
-    owner: address
-    token_id: uint256
-    claimed_rewards: uint256
-
-event ListingCreated:
-    owner: address
-    token_id: uint256
-    price: uint256
-
-event ListingPriceChanged:
-    owner: address
-    token_id: uint256
-    price: uint256
-
-event ListingCancelled:
-    owner: address
-    token_id: uint256
-
-event RentalStarted:
-    id: bytes32
-    owner: address
-    renter: address
-    token_id: uint256
-    start: uint256
-    expiration: uint256
-    amount: uint256
-
-event RentalClosedPrematurely:
-    id: bytes32
-    owner: address
-    renter: address
-    token_id: uint256
-    start: uint256
-    expiration: uint256
-    amount: uint256
-
-event RewardsClaimed:
-    owner: address
-    token_id: uint256
-    amount: uint256
-
 
 # Structs
 
 struct Rental:
     id: bytes32 # keccak256 of the renter, token_id, start and expiration
+    owner: address
     renter: address
     token_id: uint256
     start: uint256
@@ -140,11 +95,6 @@ def deposit(token_id: uint256):
     # transfer token to this contract
     IERC721(self.nft_contract_addr).safeTransferFrom(self.owner, self, token_id, b"")
 
-    log NFTDeposited(
-        self.owner,
-        token_id
-    )
-
 
 @external
 def create_listing(sender: address, price: uint256):
@@ -157,12 +107,6 @@ def create_listing(sender: address, price: uint256):
     self.listing.price = price
     self.listing.is_active = True
 
-    log ListingCreated(
-        self.owner,
-        self.listing.token_id,
-        price
-    )
-
 
 @external
 def change_listing_price(sender: address, price: uint256):
@@ -174,12 +118,6 @@ def change_listing_price(sender: address, price: uint256):
 
     self.listing.price = price
 
-    log ListingPriceChanged(
-        self.owner,
-        self.listing.token_id,
-        price
-    )
-
 
 @external
 def cancel_listing(sender: address):
@@ -188,16 +126,11 @@ def cancel_listing(sender: address):
     assert sender == self.owner, "not owner of vault"
     assert self.listing.is_active, "listing does not exist"
 
-    log ListingCancelled(
-        self.owner,
-        self.listing.token_id
-    )
-
     self.listing = empty(Listing)
 
 
 @external
-def start_rental(renter: address, expiration: uint256):
+def start_rental(renter: address, expiration: uint256) -> Rental:
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert self.listing.is_active, "listing does not exist"
@@ -213,6 +146,7 @@ def start_rental(renter: address, expiration: uint256):
     rental_id: bytes32 = self._compute_rental_id(renter, self.listing.token_id, block.timestamp, expiration)
     self.active_rental = Rental({
         id: rental_id,
+        owner: self.owner,
         renter: renter,
         token_id: self.listing.token_id,
         start: block.timestamp,
@@ -229,19 +163,11 @@ def start_rental(renter: address, expiration: uint256):
     # transfer rental amount from renter to this contract
     IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount)
 
-    log RentalStarted(
-        rental_id,
-        self.owner,
-        renter,
-        self.listing.token_id,
-        block.timestamp,
-        expiration,
-        rental_amount
-    )
+    return self.active_rental
 
 
 @external
-def close_rental(sender: address):
+def close_rental(sender: address) -> Rental:
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert self.active_rental.expiration >= block.timestamp, "active rental does not exist"
@@ -264,19 +190,11 @@ def close_rental(sender: address):
     # transfer unused payment to renter
     IERC20(self.payment_token_addr).transfer(self.active_rental.renter, payback_amount)
 
-    log RentalClosedPrematurely(
-        self.active_rental.id,
-        self.owner,
-        self.active_rental.renter,
-        self.listing.token_id,
-        self.active_rental.start,
-        block.timestamp,
-        pro_rata_rental_amount
-    )
+    return self.active_rental
 
 
 @external
-def claim(sender: address):
+def claim(sender: address) -> uint256:
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
@@ -294,15 +212,11 @@ def claim(sender: address):
     # transfer reward to nft owner
     IERC20(self.payment_token_addr).transfer(self.active_rental.renter, rewards_to_claim)
 
-    log RewardsClaimed(
-        self.owner,
-        self.listing.token_id,
-        rewards_to_claim
-    )
+    return rewards_to_claim
 
 
 @external
-def withdraw(sender: address):
+def withdraw(sender: address) -> uint256:
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
@@ -326,12 +240,8 @@ def withdraw(sender: address):
     # transfer unclaimed rewards to owner
     if rewards_to_claim > 0:
         IERC20(self.payment_token_addr).transfer(owner, rewards_to_claim)
-    
-    log NFTWithdrawn(
-        owner,
-        token_id,
-        rewards_to_claim
-    )
+
+    return rewards_to_claim
 
 
 ##### INTERNAL METHODS #####
