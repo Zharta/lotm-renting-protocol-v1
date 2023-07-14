@@ -206,9 +206,10 @@ def create_listing(token_id: uint256, price: uint256):
 
 @external
 def change_listing_price(token_id:uint256, price: uint256):
-    assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
+    vault_address: address = self.active_vaults[token_id]
+    assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(self.active_vaults[token_id]).change_listing_price(msg.sender, price)
+    IVault(vault_address).change_listing_price(msg.sender, price)
 
     log ListingPriceChanged(
         self.active_vaults[token_id],
