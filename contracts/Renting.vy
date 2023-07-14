@@ -222,9 +222,10 @@ def change_listing_price(token_id:uint256, price: uint256):
 
 @external
 def cancel_listing(token_id: uint256):
-    assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
+    vault_address: address = self.active_vaults[token_id]
+    assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(self.active_vaults[token_id]).cancel_listing(msg.sender)
+    IVault(vault_address).cancel_listing(msg.sender)
 
     log ListingCancelled(
         self.active_vaults[token_id],
