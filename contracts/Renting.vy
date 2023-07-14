@@ -190,9 +190,10 @@ def deposit(token_id: uint256):
 
 @external
 def create_listing(token_id: uint256, price: uint256):
-    assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
+    vault_address: address = self.active_vaults[token_id]
+    assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(self.active_vaults[token_id]).create_listing(msg.sender, price)
+    IVault(vault_address).create_listing(msg.sender, price)
 
     log ListingCreated(
         self.active_vaults[token_id],
