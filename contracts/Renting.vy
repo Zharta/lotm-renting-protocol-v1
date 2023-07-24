@@ -2,12 +2,18 @@
 
 # Interfaces
 
+interface ISelf:
+    def tokenid_to_vault(token_id: uint256) -> address: view
+    def is_vault_available(token_id: uint256) -> bool: view
+
+
 interface IVault:
+    def is_initialised() -> bool: view
     def initialise(owner: address, caller: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
-    def deposit(token_id: uint256): nonpayable
-    def create_listing(sender: address, price: uint256): nonpayable
-    def change_listing_price(sender: address, price: uint256): nonpayable
-    def cancel_listing(sender: address): nonpayable
+    def deposit(token_id: uint256, price: uint256): nonpayable
+    # def create_listing(sender: address, price: uint256): nonpayable
+    def set_listing_price(sender: address, price: uint256): nonpayable
+    # def cancel_listing(sender: address): nonpayable
     def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
     def close_rental(sender: address) -> Rental: nonpayable
     def claim(sender: address) -> uint256: nonpayable
@@ -48,12 +54,12 @@ event NFTWithdrawn:
     token_id: uint256
     claimed_rewards: uint256
 
-event ListingCreated:
-    vault: address
-    owner: address
-    nft_contract: address
-    token_id: uint256
-    price: uint256
+# event ListingCreated:
+#     vault: address
+#     owner: address
+#     nft_contract: address
+#     token_id: uint256
+#     price: uint256
 
 event ListingPriceChanged:
     vault: address
@@ -101,6 +107,9 @@ event RewardsClaimed:
 # Global Variables
 
 _COLLISION_OFFSET: constant(bytes1) = 0xFF
+_DEPLOYMENT_CODE: constant(bytes9) = 0x602D3D8160093D39F3
+_PRE: constant(bytes10) = 0x363d3d373d3d3d363d73
+_POST: constant(bytes15) = 0x5af43d82803e903d91602b57fd5bf3
 
 vault_impl_addr: public(address)
 payment_token_addr: immutable(address)
@@ -108,7 +117,6 @@ nft_contract_addr: immutable(address)
 delegation_registry_addr: immutable(address)
 
 active_vaults: public(HashMap[uint256, address]) # token_id -> vault
-available_vaults: public(DynArray[address, 2**15]) # one vault per Koda
 
 
 ##### EXTERNAL METHODS - WRITE #####
@@ -127,9 +135,8 @@ def __init__(
 
 
 @external
-def create_vault_and_deposit(token_id: uint256):
+def create_vault_and_deposit(token_id: uint256, price: uint256):
     assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
-    assert len(self.available_vaults) == 0, "no available vaults"
 
     vault: address = create_minimal_proxy_to(self.vault_impl_addr, salt=convert(token_id, bytes32))
     
@@ -149,7 +156,7 @@ def create_vault_and_deposit(token_id: uint256):
         nft_contract_addr,
         delegation_registry_addr
     )
-    IVault(vault).deposit(token_id)
+    IVault(vault).deposit(token_id, price)
 
     log NFTDeposited(
         vault,
@@ -160,25 +167,21 @@ def create_vault_and_deposit(token_id: uint256):
 
 
 @external
-def deposit(token_id: uint256):    
-    vault: address = self.active_vaults[token_id]
+def deposit(token_id: uint256, price: uint256):
+    assert ISelf(self).is_vault_available(token_id), "vault is not available"
+
+    vault: address = ISelf(self).tokenid_to_vault(token_id)
+    self.active_vaults[token_id] = vault
     
-    if vault == empty(address):
-        if len(self.available_vaults) == 0:
-            raise "no available vaults"
-        else:
-            vault = self.available_vaults.pop()
-            self.active_vaults[token_id] = vault
-            
-            IVault(vault).initialise(
-                msg.sender,
-                self,
-                payment_token_addr,
-                nft_contract_addr,
-                delegation_registry_addr
-            )
+    IVault(vault).initialise(
+        msg.sender,
+        self,
+        payment_token_addr,
+        nft_contract_addr,
+        delegation_registry_addr
+    )
 
-    IVault(vault).deposit(token_id)
+    IVault(vault).deposit(token_id, price)
 
     log NFTDeposited(
         vault,
@@ -189,27 +192,11 @@ def deposit(token_id: uint256):
 
 
 @external
-def create_listing(token_id: uint256, price: uint256):
+def set_listing_price(token_id:uint256, price: uint256):
     vault_address: address = self.active_vaults[token_id]
     assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(vault_address).create_listing(msg.sender, price)
-
-    log ListingCreated(
-        self.active_vaults[token_id],
-        msg.sender,
-        nft_contract_addr,
-        token_id,
-        price
-    )
-
-
-@external
-def change_listing_price(token_id:uint256, price: uint256):
-    vault_address: address = self.active_vaults[token_id]
-    assert vault_address != empty(address), "no vault exists for token_id"
-
-    IVault(vault_address).change_listing_price(msg.sender, price)
+    IVault(vault_address).set_listing_price(msg.sender, price)
 
     log ListingPriceChanged(
         self.active_vaults[token_id],
@@ -225,7 +212,7 @@ def cancel_listing(token_id: uint256):
     vault_address: address = self.active_vaults[token_id]
     assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(vault_address).cancel_listing(msg.sender)
+    IVault(vault_address).set_listing_price(msg.sender, 0)
 
     log ListingCancelled(
         self.active_vaults[token_id],
@@ -294,7 +281,7 @@ def withdraw(token_id: uint256):
 
     vault: address = self.active_vaults[token_id]
     
-    self.available_vaults.append(vault)
+    # self.available_vaults.append(vault)
     self.active_vaults[token_id] = empty(address)
 
     rewards: uint256 = IVault(vault).withdraw(msg.sender)
@@ -310,8 +297,8 @@ def withdraw(token_id: uint256):
 
 ##### INTERNAL METHODS #####
 
-@internal
 @pure
+@internal
 def _compute_address(salt: bytes32, bytecode_hash: bytes32, deployer: address) -> address:
     """
     @dev An `internal` helper function that returns the address
@@ -329,8 +316,8 @@ def _compute_address(salt: bytes32, bytecode_hash: bytes32, deployer: address) -
     return self._convert_keccak256_2_address(data)
 
 
-@internal
 @pure
+@internal
 def _convert_keccak256_2_address(digest: bytes32) -> address:
     """
     @dev Converts a 32-byte keccak256 digest to an address.
@@ -344,31 +331,24 @@ def _convert_keccak256_2_address(digest: bytes32) -> address:
 
 @view
 @external
-def get_vault_to_approve(token_id: uint256) -> address:
-    if self.active_vaults[token_id] != empty(address):
-        return self.active_vaults[token_id]
-    elif len(self.available_vaults) > 0:
-        return self.available_vaults[len(self.available_vaults) - 1]
-    else:
-        deployment_code: bytes9 = 0x602D3D8160093D39F3
-        pre: bytes10 = 0x363d3d373d3d3d363d73
-        post: bytes15 = 0x5af43d82803e903d91602b57fd5bf3
-        return self._compute_address(
-            convert(token_id, bytes32),
-            keccak256(concat(
-                deployment_code,
-                pre,
-                convert(self.vault_impl_addr, bytes20),
-                post
-            )),
-            self
-        )
+def is_vault_available(token_id: uint256) -> bool:
+    vault: address = ISelf(self).tokenid_to_vault(token_id)
+    return self.active_vaults[token_id] == empty(address) and vault.is_contract and not IVault(vault).is_initialised()
 
 
 @view
 @external
-def get_available_vaults() -> DynArray[address, 2**15]:
-    return self.available_vaults
+def tokenid_to_vault(token_id: uint256) -> address:
+    return self._compute_address(
+        convert(token_id, bytes32),
+        keccak256(concat(
+            _DEPLOYMENT_CODE,
+            _PRE,
+            convert(self.vault_impl_addr, bytes20),
+            _POST
+        )),
+        self
+    )
 
 
 @view
