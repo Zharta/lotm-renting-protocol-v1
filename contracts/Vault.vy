@@ -29,8 +29,7 @@ struct Rental:
 
 struct Listing:
     token_id: uint256
-    price: uint256 # price per hour
-    is_active: bool
+    price: uint256 # price per hour, 0 means not listed
 
 
 # Global Variables
@@ -45,12 +44,6 @@ unclaimed_rewards: public(uint256)
 payment_token_addr: public(address)
 nft_contract_addr: public(address)
 delegation_registry_addr: public(address)
-
-
-@view
-@external
-def aux(tmp: DynArray[uint256, 2**5]) -> (uint256, bool):
-    return 1, False
 
 
 ##### EXTERNAL METHODS - WRITE #####
@@ -80,7 +73,7 @@ def initialise(
 
 
 @external
-def deposit(token_id: uint256):
+def deposit(token_id: uint256, price: uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert IERC721(self.nft_contract_addr).ownerOf(token_id) == self.owner, "not owner of token"
@@ -88,8 +81,7 @@ def deposit(token_id: uint256):
 
     self.listing = Listing({
         token_id: token_id,
-        price: 0,
-        is_active: False
+        price: price
     })
 
     # transfer token to this contract
@@ -97,43 +89,19 @@ def deposit(token_id: uint256):
 
 
 @external
-def create_listing(sender: address, price: uint256):
+def set_listing_price(sender: address, price: uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
-    assert price > 0, "price must be greater than 0"
-    assert not self.listing.is_active, "listing already exists"
 
     self.listing.price = price
-    self.listing.is_active = True
-
-
-@external
-def change_listing_price(sender: address, price: uint256):
-    assert self.is_initialised, "not initialised"
-    assert msg.sender == self.caller, "not caller"
-    assert sender == self.owner, "not owner of vault"
-    assert price > 0, "price must be greater than 0"
-    assert self.listing.is_active, "listing does not exist"
-
-    self.listing.price = price
-
-
-@external
-def cancel_listing(sender: address):
-    assert self.is_initialised, "not initialised"
-    assert msg.sender == self.caller, "not caller"
-    assert sender == self.owner, "not owner of vault"
-    assert self.listing.is_active, "listing does not exist"
-
-    self.listing = empty(Listing)
 
 
 @external
 def start_rental(renter: address, expiration: uint256) -> Rental:
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
-    assert self.listing.is_active, "listing does not exist"
+    assert self._is_active(), "listing does not exist"
     assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
 
     rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, self.listing.price)
@@ -245,6 +213,11 @@ def withdraw(sender: address) -> uint256:
 
 
 ##### INTERNAL METHODS #####
+
+@internal
+def _is_active() -> bool:
+    return self.listing.price > 0
+
 
 @pure
 @internal
