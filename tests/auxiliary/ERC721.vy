@@ -74,7 +74,7 @@ ownerToOperators: HashMap[address, HashMap[address, bool]]
 wallet: public(HashMap[address, DynArray[uint256, 2**16]])
 
 # @dev Address of minter, who can mint a token
-minter: address
+minter: public(address)
 
 baseURL: String[53]
 

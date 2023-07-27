@@ -108,7 +108,7 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
     assert IERC20(self.payment_token_addr).allowance(renter, self) >= rental_amount, "insufficient allowance"
 
     # store unclaimed rewards
-    self.unclaimed_rewards = self.active_rental.amount
+    self._consolidate_claims()
 
     # create rental
     rental_id: bytes32 = self._compute_rental_id(renter, self.listing.token_id, block.timestamp, expiration)
@@ -127,6 +127,7 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
         IDelegationRegistry(self.delegation_registry_addr).setExpirationTimestamp(expiration)
     else:
         IDelegationRegistry(self.delegation_registry_addr).setHotWallet(renter, expiration, False)
+        # TODO can this be used in both cases?
     
     # transfer rental amount from renter to this contract
     IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount)
@@ -135,7 +136,7 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
 
 
 @external
-def close_rental(sender: address) -> Rental:
+def close_rental(sender: address) -> (Rental, uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert self.active_rental.expiration >= block.timestamp, "active rental does not exist"
@@ -147,10 +148,10 @@ def close_rental(sender: address) -> Rental:
 
     # clear active rental
     self.active_rental.expiration = block.timestamp
-    self.active_rental.amount = pro_rata_rental_amount
+    self.active_rental.amount = 0
 
     # set unclaimed rewards
-    self.unclaimed_rewards = pro_rata_rental_amount
+    self.unclaimed_rewards += pro_rata_rental_amount
 
     # revoke delegation
     IDelegationRegistry(self.delegation_registry_addr).renounceHotWallet()
@@ -158,7 +159,7 @@ def close_rental(sender: address) -> Rental:
     # transfer unused payment to renter
     IERC20(self.payment_token_addr).transfer(self.active_rental.renter, payback_amount)
 
-    return self.active_rental
+    return self.active_rental, pro_rata_rental_amount
 
 
 @external
@@ -168,17 +169,16 @@ def claim(sender: address) -> uint256:
     assert sender == self.owner, "not owner of vault"
     assert self._claimable_rewards() > 0, "no rewards to claim"
 
-    rewards_to_claim: uint256 = self._claimable_rewards()
+    # consolidate last renting rewards if existing
+    self._consolidate_claims()
+
+    rewards_to_claim: uint256 = self.unclaimed_rewards
 
     # clear uncclaimed rewards
     self.unclaimed_rewards = 0
 
-    # clear active rental if time passed
-    if self.active_rental.expiration < block.timestamp:
-        self.active_rental.amount = 0
-
     # transfer reward to nft owner
-    IERC20(self.payment_token_addr).transfer(self.active_rental.renter, rewards_to_claim)
+    IERC20(self.payment_token_addr).transfer(self.active_rental.owner, rewards_to_claim)
 
     return rewards_to_claim
 
@@ -189,9 +189,11 @@ def withdraw(sender: address) -> uint256:
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
     assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
-    # assert IERC721(self.nft_contract_addr).ownerOf(self.listing.token_id) == self, "not owner of token"
     
-    rewards_to_claim: uint256 = self._claimable_rewards()
+    # consolidate last renting rewards if existing
+    self._consolidate_claims()
+
+    rewards_to_claim: uint256 = self.unclaimed_rewards
     token_id: uint256 = self.listing.token_id
     owner: address = self.owner
 
@@ -218,6 +220,11 @@ def withdraw(sender: address) -> uint256:
 def _is_active() -> bool:
     return self.listing.price > 0
 
+@internal
+def _consolidate_claims():
+    if self.active_rental.expiration < block.timestamp:
+        self.unclaimed_rewards += self.active_rental.amount
+        self.active_rental.amount = 0
 
 @pure
 @internal
@@ -228,6 +235,7 @@ def _compute_rental_id(renter: address, token_id: uint256, start: uint256, expir
 @pure
 @internal
 def _compute_rental_amount(start: uint256, expiration: uint256, price: uint256) -> uint256:
+    ## TODO calc uses listing price which can change
     return (expiration - start) * price / 3600
 
 

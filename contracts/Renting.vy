@@ -11,11 +11,9 @@ interface IVault:
     def is_initialised() -> bool: view
     def initialise(owner: address, caller: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
     def deposit(token_id: uint256, price: uint256): nonpayable
-    # def create_listing(sender: address, price: uint256): nonpayable
     def set_listing_price(sender: address, price: uint256): nonpayable
-    # def cancel_listing(sender: address): nonpayable
     def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
-    def close_rental(sender: address) -> Rental: nonpayable
+    def close_rental(sender: address) -> (Rental, uint256): nonpayable
     def claim(sender: address) -> uint256: nonpayable
     def withdraw(sender: address) -> uint256: nonpayable
     def owner() -> address: view
@@ -53,13 +51,6 @@ event NFTWithdrawn:
     nft_contract: address
     token_id: uint256
     claimed_rewards: uint256
-
-# event ListingCreated:
-#     vault: address
-#     owner: address
-#     nft_contract: address
-#     token_id: uint256
-#     price: uint256
 
 event ListingPriceChanged:
     vault: address
@@ -245,7 +236,9 @@ def start_rental(token_id: uint256, expiration: uint256):
 def close_rental(token_id: uint256):
     assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
 
-    rental: Rental = IVault(self.active_vaults[token_id]).close_rental(msg.sender)
+    amount: uint256 = 0
+    rental: Rental = empty(Rental)
+    rental, amount = IVault(self.active_vaults[token_id]).close_rental(msg.sender)
 
     log RentalClosedPrematurely(
         rental.id,
@@ -256,7 +249,7 @@ def close_rental(token_id: uint256):
         token_id,
         rental.start,
         block.timestamp,
-        rental.amount
+        amount
     )
 
 
@@ -280,8 +273,7 @@ def withdraw(token_id: uint256):
     assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
 
     vault: address = self.active_vaults[token_id]
-    
-    # self.available_vaults.append(vault)
+
     self.active_vaults[token_id] = empty(address)
 
     rewards: uint256 = IVault(vault).withdraw(msg.sender)

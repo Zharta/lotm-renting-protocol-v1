@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from datetime import datetime as dt
 from decimal import Decimal
-from ..conftest_base import ZERO_ADDRESS, get_last_event, get_vault_from_proxy, Rental
+from ...conftest_base import ZERO_ADDRESS, get_last_event, get_vault_from_proxy, Rental
 
 
 def test_initial_state(
@@ -44,7 +44,7 @@ def test_create_vault_and_deposit(
     event_nft_deposited = get_last_event(renting_contract, "NFTDeposited")
 
     assert renting_contract.active_vaults(token_id) == vault_addr
-    
+
     assert event_vault_created.vault == vault_addr
     assert event_vault_created.owner == nft_owner
     assert event_vault_created.nft_contract == nft_contract.address
@@ -162,8 +162,8 @@ def test_start_rental(
 
     renting_contract.start_rental(token_id, expiration, sender=renter)
     event = get_last_event(renting_contract, "RentalStarted")
-    
-    active_rental = Rental(*vault_contract.active_rental()[1:])
+
+    active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.owner == nft_owner
     assert active_rental.renter == renter
     assert active_rental.token_id == token_id
@@ -204,8 +204,8 @@ def test_close_rental(
     # assert vault_contract.listing() == (token_id, price, True)
 
     renting_contract.start_rental(token_id, expiration, sender=renter)
-   
-    active_rental = Rental(*vault_contract.active_rental()[1:])
+
+    active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.owner == nft_owner
     assert active_rental.renter == renter
     assert active_rental.token_id == token_id
@@ -221,13 +221,13 @@ def test_close_rental(
     renting_contract.close_rental(token_id, sender=renter)
     event = get_last_event(renting_contract, "RentalClosedPrematurely")
 
-    active_rental = Rental(*vault_contract.active_rental()[1:])
+    active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.owner == nft_owner
     assert active_rental.renter == renter
     assert active_rental.token_id == token_id
     assert active_rental.start == start_time
     assert active_rental.expiration == real_expiration
-    assert active_rental.amount == real_rental_amount
+    assert active_rental.amount == 0
 
     assert vault_contract.unclaimed_rewards() == real_rental_amount
     assert vault_contract.claimable_rewards() == real_rental_amount
@@ -272,7 +272,7 @@ def test_claim(
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
 
-    active_rental = Rental(*vault_contract.active_rental()[1:])
+    active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.owner == nft_owner
     assert active_rental.renter == renter
     assert active_rental.token_id == token_id
@@ -286,7 +286,7 @@ def test_claim(
     renting_contract.claim(token_id, sender=nft_owner)
     event = get_last_event(renting_contract, "RewardsClaimed")
 
-    active_rental = Rental(*vault_contract.active_rental()[1:])
+    active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.amount == 0
     assert vault_contract.claimable_rewards() == 0
     assert vault_contract.unclaimed_rewards() == 0
