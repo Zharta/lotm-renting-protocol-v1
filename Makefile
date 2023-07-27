@@ -22,17 +22,21 @@ install: ${VENV}
 install-dev: ${VENV}
 	${PIP} install -r requirements-dev.txt
 
-test: ${VENV}
-	rm -rf .cache/
-	${VENV}/bin/pytest -n auto tests --durations=0
+unit-tests: ${VENV}
+	${VENV}/bin/pytest tests/unit --durations=0 -n auto
+
+integration-tests: ${VENV}
+	${VENV}/bin/pytest -n auto tests/integration --durations=0
+
+fuzz-tests:
+	${VENV}/bin/pytest tests/fuzz--durations=0 -n auto
 
 coverage:
-	${VENV}/bin/coverage run -m pytest --durations=0
+	${VENV}/bin/coverage run -m pytest tests/unit --durations=0
 	${VENV}/bin/coverage report
 
 gas:
-	rm -rf .cache/
-	${VENV}/bin/pytest tests --durations=0 --gas-profile
+	${VENV}/bin/pytest tests/integration --durations=0 --gas-profile
 	
 
 interfaces:

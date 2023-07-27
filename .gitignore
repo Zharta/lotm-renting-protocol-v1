@@ -6,6 +6,7 @@
 
 # Python
 .env
+.env*
 .venv
 .pytest_cache
 __pycache__

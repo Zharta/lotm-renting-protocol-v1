@@ -1,17 +1,12 @@
 import boa
 import vyper
-import os
 
 from dataclasses import dataclass
 from functools import cached_property
 from web3 import Web3
 
 
-boa.env.enable_gas_profiling()
-boa.env.fork(url=os.environ["BOA_FORK_RPC_URL"])
-
-
-ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+ZERO_ADDRESS = boa.eval("empty(address)")
 
 
 def get_last_event(contract: boa.vyper.contract.VyperContract, name: str = None):
@@ -87,9 +82,16 @@ def get_vault_from_proxy(proxy_addr):
 
 @dataclass
 class Rental:
+    id: bytes
     owner: str
     renter: str
     token_id: int
     start: int
     expiration: int
     amount: int
+
+
+@dataclass
+class Listing:
+    token_id: int
+    price: int

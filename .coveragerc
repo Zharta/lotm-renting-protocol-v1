@@ -1,0 +1,6 @@
+[run]
+plugins = boa.coverage
+omit =
+    tests/auxiliary/*
+    tests/stubs/*
+
