@@ -29,7 +29,7 @@ integration-tests: ${VENV}
 	${VENV}/bin/pytest -n auto tests/integration --durations=0
 
 fuzz-tests:
-	${VENV}/bin/pytest tests/fuzz--durations=0 -n auto
+	${VENV}/bin/pytest tests/fuzz --durations=0 -n auto
 
 coverage:
 	${VENV}/bin/coverage run -m pytest tests/unit --durations=0
