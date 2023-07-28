@@ -33,7 +33,7 @@ fuzz-tests:
 
 coverage:
 	${VENV}/bin/coverage run -m pytest tests/unit --durations=0
-	${VENV}/bin/coverage report
+	${VENV}/bin/coverage report | tee coverage.txt
 
 gas:
 	${VENV}/bin/pytest tests/integration --durations=0 --gas-profile

@@ -2,6 +2,7 @@
 .build/
 .cache/
 .coverage
+coverage.txt
 .hypothesis/
 
 # Python
