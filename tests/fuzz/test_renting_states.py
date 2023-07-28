@@ -272,6 +272,6 @@ def test_renting_states(renting_contract, ape_contract, nft_contract, delegation
         # stateful_step_count=10,
         # verbosity=Verbosity.verbose,
         phases=tuple(Phase)[:Phase.shrink],
-        deadline=10 * 1000,
+        deadline=300 * 1000,
     )
     run_state_machine_as_test(StateMachine)

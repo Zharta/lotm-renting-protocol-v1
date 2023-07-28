@@ -1,4 +1,4 @@
-name: Tests
+name: Integration tests
 
 on:
   push:
@@ -11,8 +11,8 @@ permissions:
   id-token: write
 
 env:
-  ALCHEMY_KEY: ${{ secrets.ALCHEMY_KEY }}
   BOA_FORK_RPC_URL: ${{ secrets.BOA_FORK_RPC_URL }}
+  BOA_FORK_NO_CACHE: "TRUE"
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
@@ -21,14 +21,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
       with:
         python-version: "3.11"
-    
+
     - name: Install dependencies
-      run: make install-dev install
-    
-    - name: Run project unit tests 
-      run: make test
+      run: make install-dev
+
+    - name: Run project integration tests 
+      run: make gas
