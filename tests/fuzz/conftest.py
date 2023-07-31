@@ -76,16 +76,11 @@ def delegation_registry_mock():
     @external
     def setHotWallet(hot_wallet_address: address, expiration_timestamp: uint256, lock_hot_wallet_address: bool):
         self.hot[msg.sender] = hot_wallet_address
-        self.exp[msg.sender] = expiration_timestamp
+        self.exp[msg.sender] = expiration_timestamp if hot_wallet_address != empty(address) else 0
 
     @external
     def setExpirationTimestamp(expiration_timestamp: uint256):
         self.exp[msg.sender] = expiration_timestamp
-
-    @external
-    def renounceHotWallet():
-        self.exp[msg.sender] = 0
-
 
     @view
     @external
@@ -102,5 +97,3 @@ def vault_contract(vault_contract_def):
 @pytest.fixture(scope="module")
 def renting_contract(renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_mock):
     return renting_contract_def.deploy(vault_contract, ape_contract, nft_contract, delegation_registry_mock)
-
-

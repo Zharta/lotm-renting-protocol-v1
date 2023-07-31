@@ -9,7 +9,6 @@ interface IDelegationRegistry:
     def getHotWallet(cold_wallet: address) -> address: view
     def setHotWallet(hot_wallet_address: address, expiration_timestamp: uint256, lock_hot_wallet_address: bool): nonpayable
     def setExpirationTimestamp(expiration_timestamp: uint256): nonpayable
-    def renounceHotWallet(): nonpayable
 
 
 # Events
@@ -133,7 +132,6 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
         IDelegationRegistry(self.delegation_registry_addr).setExpirationTimestamp(expiration)
     else:
         IDelegationRegistry(self.delegation_registry_addr).setHotWallet(renter, expiration, False)
-        # TODO can this be used in both cases?
     
     # transfer rental amount from renter to this contract
     IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount)
@@ -164,7 +162,7 @@ def close_rental(sender: address) -> (Rental, uint256):
     self.unclaimed_rewards += pro_rata_rental_amount
 
     # revoke delegation
-    IDelegationRegistry(self.delegation_registry_addr).renounceHotWallet()
+    IDelegationRegistry(self.delegation_registry_addr).setHotWallet(empty(address), 0, False)
 
     # transfer unused payment to renter
     IERC20(self.payment_token_addr).transfer(rental.renter, payback_amount)
