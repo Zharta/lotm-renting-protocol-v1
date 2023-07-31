@@ -71,7 +71,7 @@ def test_deposit(
     vault_contract.deposit(token_id, price, sender=renting_contract.address)
 
     assert nft_contract.ownerOf(token_id) == vault_contract.address
-    assert vault_contract.listing() == (token_id, 1)
+    assert vault_contract.listing() == (token_id, 1, 0)
 
 
 def test_set_listing_price_not_caller(contracts_config, vault_contract, nft_owner):
@@ -93,7 +93,7 @@ def test_change_listing_price(
         nft_owner, new_price, sender=renting_contract.address
     )
 
-    assert vault_contract.listing() == (1, new_price)
+    assert vault_contract.listing() == (1, new_price, 0)
 
 
 
@@ -113,7 +113,7 @@ def test_cancel_listing(
 
     vault_contract.set_listing_price(nft_owner, 0, sender=renting_contract.address)
 
-    assert vault_contract.listing() == (token_id, 0)
+    assert vault_contract.listing() == (token_id, 0, 0)
 
 
 def test_start_rental_not_caller(contracts_config, vault_contract, nft_owner, renter):
@@ -422,7 +422,7 @@ def test_withdraw(
 
     assert vault_contract.unclaimed_rewards() == 0
     assert vault_contract.claimable_rewards() == 0
-    assert vault_contract.listing() == (0, 0)
+    assert vault_contract.listing() == (0, 0, 0)
 
     active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.owner == ZERO_ADDRESS

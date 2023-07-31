@@ -30,6 +30,7 @@ struct Rental:
 struct Listing:
     token_id: uint256
     price: uint256 # price per hour, 0 means not listed
+    max_duration: uint256 # max duration in hours, 0 means unlimited
 
 
 # Global Variables
@@ -73,7 +74,7 @@ def initialise(
 
 
 @external
-def deposit(token_id: uint256, price: uint256):
+def deposit(token_id: uint256, price: uint256, max_duration: uint256 = 0):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert IERC721(self.nft_contract_addr).ownerOf(token_id) == self.owner, "not owner of token"
@@ -81,7 +82,8 @@ def deposit(token_id: uint256, price: uint256):
 
     self.listing = Listing({
         token_id: token_id,
-        price: price
+        price: price,
+        max_duration: max_duration
     })
 
     # transfer token to this contract
@@ -89,12 +91,13 @@ def deposit(token_id: uint256, price: uint256):
 
 
 @external
-def set_listing_price(sender: address, price: uint256):
+def set_listing_price(sender: address, price: uint256, max_duration: uint256 = 0):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
 
     self.listing.price = price
+    self.listing.max_duration = max_duration
 
 
 @external
@@ -103,20 +106,23 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
     assert msg.sender == self.caller, "not caller"
     assert self._is_active(), "listing does not exist"
     assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
+    assert self._is_within_max_duration(block.timestamp, expiration), "max duration exceeded"
 
-    rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, self.listing.price)
+    listing: Listing = self.listing
+
+    rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, listing.price)
     assert IERC20(self.payment_token_addr).allowance(renter, self) >= rental_amount, "insufficient allowance"
 
     # store unclaimed rewards
     self._consolidate_claims()
 
     # create rental
-    rental_id: bytes32 = self._compute_rental_id(renter, self.listing.token_id, block.timestamp, expiration)
+    rental_id: bytes32 = self._compute_rental_id(renter, listing.token_id, block.timestamp, expiration)
     self.active_rental = Rental({
         id: rental_id,
         owner: self.owner,
         renter: renter,
-        token_id: self.listing.token_id,
+        token_id: listing.token_id,
         start: block.timestamp,
         expiration: expiration,
         amount: rental_amount
@@ -139,16 +145,20 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
 def close_rental(sender: address) -> (Rental, uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
-    assert self.active_rental.expiration >= block.timestamp, "active rental does not exist"
-    assert sender == self.active_rental.renter, "not renter of active rental"
+    
+    rental: Rental = self.active_rental
+
+    assert rental.expiration >= block.timestamp, "active rental does not exist"
+    assert sender == rental.renter, "not renter of active rental"
     
     # compute amount to send back to renter
-    pro_rata_rental_amount: uint256 = self._compute_rental_amount(self.active_rental.start, block.timestamp, self.listing.price)
-    payback_amount: uint256 = self.active_rental.amount - pro_rata_rental_amount
+    pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(rental.expiration - rental.start, block.timestamp - rental.start, rental.amount)
+    payback_amount: uint256 = rental.amount - pro_rata_rental_amount
 
     # clear active rental
-    self.active_rental.expiration = block.timestamp
-    self.active_rental.amount = 0
+    rental.expiration = block.timestamp
+    rental.amount = 0
+    self.active_rental = rental
 
     # set unclaimed rewards
     self.unclaimed_rewards += pro_rata_rental_amount
@@ -157,9 +167,9 @@ def close_rental(sender: address) -> (Rental, uint256):
     IDelegationRegistry(self.delegation_registry_addr).renounceHotWallet()
 
     # transfer unused payment to renter
-    IERC20(self.payment_token_addr).transfer(self.active_rental.renter, payback_amount)
+    IERC20(self.payment_token_addr).transfer(rental.renter, payback_amount)
 
-    return self.active_rental, pro_rata_rental_amount
+    return rental, pro_rata_rental_amount
 
 
 @external
@@ -226,6 +236,11 @@ def _consolidate_claims():
         self.unclaimed_rewards += self.active_rental.amount
         self.active_rental.amount = 0
 
+@internal
+def _is_within_max_duration(start: uint256, expiration: uint256) -> bool:
+    return self.listing.max_duration == 0 or expiration - start <= self.listing.max_duration * 3600
+
+
 @pure
 @internal
 def _compute_rental_id(renter: address, token_id: uint256, start: uint256, expiration: uint256) -> bytes32:
@@ -237,6 +252,12 @@ def _compute_rental_id(renter: address, token_id: uint256, start: uint256, expir
 def _compute_rental_amount(start: uint256, expiration: uint256, price: uint256) -> uint256:
     ## TODO calc uses listing price which can change
     return (expiration - start) * price / 3600
+
+
+@pure
+@internal
+def _compute_real_rental_amount(duration: uint256, real_duration: uint256, rental_amount: uint256) -> uint256:
+    return rental_amount * real_duration / duration
 
 
 @view
