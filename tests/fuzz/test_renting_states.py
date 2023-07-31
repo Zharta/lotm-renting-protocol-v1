@@ -84,7 +84,7 @@ class StateMachine(RuleBasedStateMachine):
     @rule(token=tokens_in_vaults)
     def cancel_listing(self, token):
         owner = self.owner_of[token]
-        self.renting.cancel_listing(token, 0, sender=owner)
+        self.renting.cancel_listing(token, sender=owner)
         self.listing_price[token] = 0
 
     @rule(
