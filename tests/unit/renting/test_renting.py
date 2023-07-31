@@ -34,7 +34,7 @@ def test_create_vault_and_deposit_not_approved(renting_contract, nft_owner):
     token_id = 1
     price = 1
     with boa.reverts("not approved for token"):
-        renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+        renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
 
 
 def test_create_vault_and_deposit(renting_contract, nft_contract, nft_owner, vault_contract):
@@ -75,7 +75,7 @@ def test_change_listing_price(renting_contract, nft_contract, nft_owner, vault_c
 
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
     assert vault_contract.listing() == (token_id, price, 0)
@@ -101,7 +101,7 @@ def test_cancel_listing(renting_contract, nft_contract, nft_owner, vault_contrac
 
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
     assert vault_contract.listing() == (token_id, price, 0)
@@ -131,7 +131,7 @@ def test_start_rental(renting_contract, nft_contract, ape_contract, nft_owner, r
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
     renting_contract.start_rental(token_id, expiration, sender=renter)
@@ -169,7 +169,7 @@ def test_close_rental(renting_contract, nft_contract, ape_contract, nft_owner, r
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
     renting_contract.start_rental(token_id, expiration, sender=renter)
@@ -225,7 +225,7 @@ def test_claim(renting_contract, nft_contract, ape_contract, nft_owner, renter, 
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
     renting_contract.start_rental(token_id, expiration, sender=renter)
@@ -276,7 +276,7 @@ def test_withdraw(renting_contract, nft_contract, ape_contract, nft_owner, rente
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
     renting_contract.start_rental(token_id, expiration, sender=renter)
 
     time_passed = 61
@@ -299,7 +299,7 @@ def test_deposit_no_vaults(renting_contract, nft_contract, nft_owner, renter):
     price = 1
 
     with boa.reverts("vault is not available"):
-        renting_contract.deposit(token_id, price, sender=nft_owner)
+        renting_contract.deposit(token_id, price, 0, sender=nft_owner)
 
 
 def test_deposit_already_deposited(renting_contract, nft_contract, nft_owner, renter):
@@ -310,10 +310,10 @@ def test_deposit_already_deposited(renting_contract, nft_contract, nft_owner, re
 
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
 
     with boa.reverts("vault is not available"):
-        renting_contract.deposit(token_id, price, sender=nft_owner)
+        renting_contract.deposit(token_id, price, 0, sender=nft_owner)
 
 
 def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter):
@@ -330,7 +330,7 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract.create_vault_and_deposit(token_id, price, sender=nft_owner)
+    renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
 
     assert nft_contract.ownerOf(token_id) == vault_addr
 
@@ -347,7 +347,7 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     assert nft_contract.ownerOf(token_id) == nft_owner
 
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
-    renting_contract.deposit(token_id, price, sender=nft_owner)
+    renting_contract.deposit(token_id, price, 0, sender=nft_owner)
 
     assert renting_contract.active_vaults(token_id) == vault_addr
     assert not renting_contract.is_vault_available(token_id)

@@ -54,18 +54,18 @@ def test_initialise_twice(vault_contract, renting_contract, nft_owner, nft_contr
 
 def test_deposit_not_caller(vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.deposit(1, 1, sender=nft_owner)
+        vault_contract.deposit(1, 1, 1, sender=nft_owner)
 
 
 def test_deposit_not_owner(vault_contract, renting_contract, nft_contract, owner, nft_owner):
     nft_contract.mint(renting_contract.address, 2, sender=owner)
     with boa.reverts("not owner of token"):
-        vault_contract.deposit(2, 1, sender=renting_contract.address)
+        vault_contract.deposit(2, 1, 1, sender=renting_contract.address)
 
 
 def test_deposit_not_approved(vault_contract, renting_contract):
     with boa.reverts("not approved for token"):
-        vault_contract.deposit(1, 1, sender=renting_contract.address)
+        vault_contract.deposit(1, 1, 1, sender=renting_contract.address)
 
 
 def test_deposit(vault_contract, nft_owner, renting_contract, nft_contract):
@@ -82,7 +82,7 @@ def test_deposit(vault_contract, nft_owner, renting_contract, nft_contract):
 
 def test_set_listing_price_not_caller(vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.set_listing_price(nft_owner, 1, sender=nft_owner)
+        vault_contract.set_listing_price(nft_owner, 1, 1, sender=nft_owner)
 
 
 def test_change_listing_price(vault_contract, renting_contract, nft_contract, nft_owner):
@@ -92,7 +92,7 @@ def test_change_listing_price(vault_contract, renting_contract, nft_contract, nf
     max_duration = 1
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     vault_contract.set_listing_price(
         nft_owner, new_price, max_duration, sender=renting_contract.address
@@ -104,7 +104,7 @@ def test_change_listing_price(vault_contract, renting_contract, nft_contract, nf
 
 def test_cancel_listing_not_caller(vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.set_listing_price(nft_owner, 0, sender=nft_owner)
+        vault_contract.set_listing_price(nft_owner, 0, 0, sender=nft_owner)
 
 
 def test_cancel_listing(vault_contract, renting_contract, nft_contract, nft_owner):
@@ -112,9 +112,9 @@ def test_cancel_listing(vault_contract, renting_contract, nft_contract, nft_owne
     price = 1
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
-    vault_contract.set_listing_price(nft_owner, 0, sender=renting_contract.address)
+    vault_contract.set_listing_price(nft_owner, 0, 0, sender=renting_contract.address)
 
     assert vault_contract.listing() == (token_id, 0, 0)
 
@@ -135,7 +135,7 @@ def test_start_rental_insufficient_allowance(vault_contract, renting_contract, n
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     with boa.reverts("insufficient allowance"):
         vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
@@ -168,7 +168,7 @@ def test_start_rental(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(
@@ -201,7 +201,7 @@ def test_start_rental_ongoing(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(
@@ -239,7 +239,7 @@ def test_close_rental(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -290,7 +290,7 @@ def test_claim(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -323,7 +323,7 @@ def test_claim2(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -366,7 +366,7 @@ def test_withdraw_rental_ongoing(vault_contract, renting_contract, nft_contract,
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(
@@ -385,7 +385,7 @@ def test_withdraw(vault_contract, renting_contract, nft_contract, nft_owner, ren
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, sender=renting_contract.address)
 
     start_time = int(boa.eval("block.timestamp"))
     rental_amount = int(

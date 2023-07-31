@@ -128,7 +128,7 @@ def __init__(
 
 
 @external
-def create_vault_and_deposit(token_id: uint256, price: uint256, max_duration: uint256 = 0):
+def create_vault_and_deposit(token_id: uint256, price: uint256, max_duration: uint256):
     assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
 
     vault: address = create_minimal_proxy_to(self.vault_impl_addr, salt=convert(token_id, bytes32))
@@ -161,7 +161,7 @@ def create_vault_and_deposit(token_id: uint256, price: uint256, max_duration: ui
 
 
 @external
-def deposit(token_id: uint256, price: uint256, max_duration: uint256 = 0):
+def deposit(token_id: uint256, price: uint256, max_duration: uint256):
     assert ISelf(self).is_vault_available(token_id), "vault is not available"
 
     vault: address = ISelf(self).tokenid_to_vault(token_id)
@@ -187,7 +187,7 @@ def deposit(token_id: uint256, price: uint256, max_duration: uint256 = 0):
 
 
 @external
-def set_listing_price(token_id:uint256, price: uint256, max_duration: uint256 = 0):
+def set_listing_price(token_id:uint256, price: uint256, max_duration: uint256):
     vault_address: address = self.active_vaults[token_id]
     assert vault_address != empty(address), "no vault exists for token_id"
 
@@ -204,11 +204,11 @@ def set_listing_price(token_id:uint256, price: uint256, max_duration: uint256 = 
 
 
 @external
-def cancel_listing(token_id: uint256, max_duration: uint256 = 0):
+def cancel_listing(token_id: uint256):
     vault_address: address = self.active_vaults[token_id]
     assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(vault_address).set_listing_price(msg.sender, 0, max_duration)
+    IVault(vault_address).set_listing_price(msg.sender, 0, 0)
 
     log ListingCancelled(
         self.active_vaults[token_id],
