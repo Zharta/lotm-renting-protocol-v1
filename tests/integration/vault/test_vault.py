@@ -51,9 +51,9 @@ def test_deposit_not_owner(
     owner,
     nft_owner,
 ):
-    nft_contract.mint(renting_contract.address, 2, sender=owner)
+    nft_contract.mint(renting_contract.address, 100, sender=owner)
     with boa.reverts("not owner of token"):
-        vault_contract.deposit(2, 1, 0, sender=renting_contract.address)
+        vault_contract.deposit(100, 1, 0, sender=renting_contract.address)
 
 
 def test_deposit_not_approved(contracts_config, vault_contract, renting_contract):
