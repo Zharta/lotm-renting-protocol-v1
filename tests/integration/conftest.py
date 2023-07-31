@@ -106,6 +106,7 @@ def contracts_config(
             delegation_registry_warm_contract,
             sender=renting_contract.address,
         )
-        nft_contract.mint(nft_owner, 1, sender=owner)
+        for i in range(32):
+            nft_contract.mint(nft_owner, i, sender=owner)
         ape_contract.mint(renter, int(1000 * 1e18), sender=owner)
         yield

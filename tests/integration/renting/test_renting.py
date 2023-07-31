@@ -183,7 +183,7 @@ def test_close_rental(
     real_expiration = int(boa.eval("block.timestamp"))
     real_rental_amount = int(Decimal(rental_amount) / Decimal(2))
 
-    renting_contract.close_rental(token_id, sender=renter)
+    renting_contract.close_rentals([token_id], sender=renter)
     event = get_last_event(renting_contract, "RentalClosed")
 
     active_rental = Rental(*vault_contract.active_rental())
@@ -245,7 +245,7 @@ def test_claim(
     assert vault_contract.claimable_rewards() == rental_amount
     assert vault_contract.unclaimed_rewards() == 0
 
-    renting_contract.claim(token_id, sender=nft_owner)
+    renting_contract.claim([token_id], sender=nft_owner)
     event = get_last_event(renting_contract, "RewardsClaimed")
 
     active_rental = Rental(*vault_contract.active_rental())

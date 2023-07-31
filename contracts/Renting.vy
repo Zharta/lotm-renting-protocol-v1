@@ -188,13 +188,13 @@ def deposit(token_id: uint256, price: uint256, max_duration: uint256):
 
 @external
 def set_listing_price(token_id:uint256, price: uint256, max_duration: uint256):
-    vault_address: address = self.active_vaults[token_id]
-    assert vault_address != empty(address), "no vault exists for token_id"
+    vault: address = self.active_vaults[token_id]
+    assert vault != empty(address), "no vault exists for token_id"
 
-    IVault(vault_address).set_listing_price(msg.sender, price, max_duration)
+    IVault(vault).set_listing_price(msg.sender, price, max_duration)
 
     log ListingPriceChanged(
-        self.active_vaults[token_id],
+        vault,
         msg.sender,
         nft_contract_addr,
         token_id,
@@ -205,13 +205,13 @@ def set_listing_price(token_id:uint256, price: uint256, max_duration: uint256):
 
 @external
 def cancel_listing(token_id: uint256):
-    vault_address: address = self.active_vaults[token_id]
-    assert vault_address != empty(address), "no vault exists for token_id"
+    vault: address = self.active_vaults[token_id]
+    assert vault != empty(address), "no vault exists for token_id"
 
-    IVault(vault_address).set_listing_price(msg.sender, 0, 0)
+    IVault(vault).set_listing_price(msg.sender, 0, 0)
 
     log ListingCancelled(
-        self.active_vaults[token_id],
+        vault,
         msg.sender,
         nft_contract_addr,
         token_id
@@ -220,13 +220,14 @@ def cancel_listing(token_id: uint256):
 
 @external
 def start_rental(token_id: uint256, expiration: uint256):
-    assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
+    vault: address = self.active_vaults[token_id]
+    assert vault != empty(address), "no vault exists for token_id"
 
-    rental: Rental = IVault(self.active_vaults[token_id]).start_rental(msg.sender, expiration)
+    rental: Rental = IVault(vault).start_rental(msg.sender, expiration)
 
     log RentalStarted(
         rental.id,
-        self.active_vaults[token_id],
+        vault,
         rental.owner,
         msg.sender,
         nft_contract_addr,
@@ -238,46 +239,52 @@ def start_rental(token_id: uint256, expiration: uint256):
 
 
 @external
-def close_rental(token_id: uint256):
-    assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
+def close_rentals(token_ids: DynArray[uint256, 32]):
 
     amount: uint256 = 0
     rental: Rental = empty(Rental)
-    rental, amount = IVault(self.active_vaults[token_id]).close_rental(msg.sender)
 
-    log RentalClosed(
-        rental.id,
-        self.active_vaults[token_id],
-        rental.owner,
-        msg.sender,
-        nft_contract_addr,
-        token_id,
-        rental.start,
-        block.timestamp,
-        amount
-    )
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
+
+        rental, amount = IVault(vault).close_rental(msg.sender)
+
+        log RentalClosed(
+            rental.id,
+            vault,
+            rental.owner,
+            msg.sender,
+            nft_contract_addr,
+            token_id,
+            rental.start,
+            block.timestamp,
+            amount
+        )
 
 
 @external
-def claim(token_id: uint256):
-    assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
+def claim(token_ids: DynArray[uint256, 32]):
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
 
-    rewards: uint256 = IVault(self.active_vaults[token_id]).claim(msg.sender)
+        rewards: uint256 = IVault(vault).claim(msg.sender)
 
-    log RewardsClaimed(
-        self.active_vaults[token_id],
-        msg.sender,
-        nft_contract_addr,
-        token_id,
-        rewards
-    )
+        log RewardsClaimed(
+            vault,
+            msg.sender,
+            nft_contract_addr,
+            token_id,
+            rewards
+        )
 
 
 @external
 def withdraw(token_id: uint256):
-    assert self.active_vaults[token_id] != empty(address), "no vault exists for token_id"
-
     vault: address = self.active_vaults[token_id]
+
+    assert vault != empty(address), "no vault exists for token_id"
 
     self.active_vaults[token_id] = empty(address)
 

@@ -192,7 +192,7 @@ class StateMachine(RuleBasedStateMachine):
         amount_to_return = rental.amount - rental_amount
 
         balance_before = self.ape.balanceOf(rental.renter)
-        self.renting.close_rental(token, sender=rental.renter)
+        self.renting.close_rentals([token], sender=rental.renter)
         balance_after = self.ape.balanceOf(rental.renter)
 
         new_rental = Rental(*self.vaults[token].active_rental())
@@ -211,7 +211,7 @@ class StateMachine(RuleBasedStateMachine):
         owner = self.owner_of[token]
         claimable_rewards = self.vaults[token].claimable_rewards()
         if claimable_rewards > 0:
-            self.renting.claim(token, sender=owner)
+            self.renting.claim([token], sender=owner)
             self.claimed[owner] += claimable_rewards
 
     @rule(token=tokens_in_rental)
@@ -219,7 +219,7 @@ class StateMachine(RuleBasedStateMachine):
         owner = self.owner_of[token]
         claimable_rewards = self.vaults[token].claimable_rewards()
         if claimable_rewards > 0:
-            self.renting.claim(token, sender=owner)
+            self.renting.claim([token], sender=owner)
             self.claimed[owner] += claimable_rewards
 
     @invariant()
