@@ -65,14 +65,3 @@ def empty_contract_def():
     return boa.loads_partial(dedent("""
         dummy: uint256
      """))
-
-# @pytest.fixture(scope="module")
-# def vault_contract(vault_contract_def):
-#     return vault_contract_def.deploy()
-
-
-# @pytest.fixture(scope="module")
-# def renting_contract(renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract):
-#     return renting_contract_def.deploy(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract)
-
-

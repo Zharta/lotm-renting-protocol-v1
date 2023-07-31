@@ -14,10 +14,6 @@ def setHotWallet(hot_wallet_address: address, expiration_timestamp: uint256, loc
 def setExpirationTimestamp(expiration_timestamp: uint256):
     pass
 
-@external
-def renounceHotWallet():
-    pass
-
 
 @view
 @external
