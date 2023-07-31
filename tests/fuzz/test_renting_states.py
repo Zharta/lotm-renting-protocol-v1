@@ -71,10 +71,14 @@ class StateMachine(RuleBasedStateMachine):
         self.tokens_of[owner].remove(token)
         self.tokens_of[new_owner].append(token)
 
-    @rule(token=tokens_in_vaults, new_price=st.integers(min_value=0, max_value=10**6))
-    def change_listing_price(self, token, new_price):
+    @rule(
+        token=tokens_in_vaults,
+        new_price=st.integers(min_value=0, max_value=10**6),
+        max_duration=st.integers(min_value=0, max_value=100),
+    )
+    def change_listing_price(self, token, new_price, max_duration):
         owner = self.owner_of[token]
-        self.renting.set_listing_price(token, new_price, sender=owner)
+        self.renting.set_listing_price(token, new_price, max_duration, sender=owner)
         self.listing_price[token] = new_price
 
     @rule(token=tokens_in_vaults)
@@ -83,13 +87,13 @@ class StateMachine(RuleBasedStateMachine):
         self.renting.cancel_listing(token, sender=owner)
         self.listing_price[token] = 0
 
-    # FAQ:
-    # fees
-    # delegaion to owner?
-    # max rental period?
-
-    @rule(target=tokens_in_vaults, token=consumes(tokens_not_in_vaults), price=st.integers(min_value=0, max_value=10**6))
-    def deposit(self, token, price):
+    @rule(
+        target=tokens_in_vaults,
+        token=consumes(tokens_not_in_vaults),
+        price=st.integers(min_value=0, max_value=10**6),
+        max_duration=st.integers(min_value=0, max_value=100),
+    )
+    def deposit(self, token, price, max_duration):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
 
@@ -98,9 +102,9 @@ class StateMachine(RuleBasedStateMachine):
         vault = self.renting.tokenid_to_vault(token)
         self.nft.approve(vault, token, sender=owner)
         if token in self.vaults:
-            self.renting.deposit(token, price, sender=owner)
+            self.renting.deposit(token, price, max_duration, sender=owner)
         else:
-            self.renting.create_vault_and_deposit(token, price, sender=owner)
+            self.renting.create_vault_and_deposit(token, price, max_duration, sender=owner)
 
         self.vaults[token] = self.vault.at(vault)
         self.listing_price[token] = price
@@ -137,10 +141,12 @@ class StateMachine(RuleBasedStateMachine):
     def start_rental_from_tokens_in_vaults(self, token, renter, hours):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
-        expiration = now + hours * 3600
+
+        max_duration = Listing(*self.vaults[token].listing()).max_duration
+        maxed_hours = min(hours, max_duration) if max_duration else hours
+        expiration = now + maxed_hours * 3600
 
         assume(self.listing_price[token] > 0)
-        # assume(token not in self.rentals or self.rentals[token].expiration < now)
 
         self.ape.approve(self.vaults[token], max(0, self.listing_price[token] * hours), sender=renter)
         self.renting.start_rental(token, expiration, sender=renter)
@@ -160,7 +166,10 @@ class StateMachine(RuleBasedStateMachine):
     def start_rental_from_tokens_in_rental(self, token, renter, hours):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
-        expiration = now + hours * 3600
+
+        max_duration = Listing(*self.vaults[token].listing()).max_duration
+        maxed_hours = min(hours, max_duration) if max_duration else hours
+        expiration = now + maxed_hours * 3600
 
         assume(self.listing_price[token] > 0)
         assume(self.rentals[token].expiration < now)

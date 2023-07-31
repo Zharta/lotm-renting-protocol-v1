@@ -95,3 +95,4 @@ class Rental:
 class Listing:
     token_id: int
     price: int
+    max_duration: int

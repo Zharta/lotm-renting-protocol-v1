@@ -10,8 +10,8 @@ interface ISelf:
 interface IVault:
     def is_initialised() -> bool: view
     def initialise(owner: address, caller: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
-    def deposit(token_id: uint256, price: uint256): nonpayable
-    def set_listing_price(sender: address, price: uint256): nonpayable
+    def deposit(token_id: uint256, price: uint256, max_duration: uint256): nonpayable
+    def set_listing_price(sender: address, price: uint256, max_duration: uint256): nonpayable
     def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
     def close_rental(sender: address) -> (Rental, uint256): nonpayable
     def claim(sender: address) -> uint256: nonpayable
@@ -44,6 +44,7 @@ event NFTDeposited:
     owner: address
     nft_contract: address
     token_id: uint256
+    max_duration: uint256
 
 event NFTWithdrawn:
     vault: address
@@ -58,6 +59,7 @@ event ListingPriceChanged:
     nft_contract: address
     token_id: uint256
     price: uint256
+    max_duration: uint256
 
 event ListingCancelled:
     vault: address
@@ -76,7 +78,7 @@ event RentalStarted:
     expiration: uint256
     amount: uint256
 
-event RentalClosedPrematurely:
+event RentalClosed:
     id: bytes32
     vault: address
     owner: address
@@ -126,7 +128,7 @@ def __init__(
 
 
 @external
-def create_vault_and_deposit(token_id: uint256, price: uint256):
+def create_vault_and_deposit(token_id: uint256, price: uint256, max_duration: uint256):
     assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
 
     vault: address = create_minimal_proxy_to(self.vault_impl_addr, salt=convert(token_id, bytes32))
@@ -147,18 +149,19 @@ def create_vault_and_deposit(token_id: uint256, price: uint256):
         nft_contract_addr,
         delegation_registry_addr
     )
-    IVault(vault).deposit(token_id, price)
+    IVault(vault).deposit(token_id, price, max_duration)
 
     log NFTDeposited(
         vault,
         msg.sender,
         nft_contract_addr,
-        token_id
+        token_id,
+        max_duration
     )
 
 
 @external
-def deposit(token_id: uint256, price: uint256):
+def deposit(token_id: uint256, price: uint256, max_duration: uint256):
     assert ISelf(self).is_vault_available(token_id), "vault is not available"
 
     vault: address = ISelf(self).tokenid_to_vault(token_id)
@@ -172,29 +175,31 @@ def deposit(token_id: uint256, price: uint256):
         delegation_registry_addr
     )
 
-    IVault(vault).deposit(token_id, price)
+    IVault(vault).deposit(token_id, price, max_duration)
 
     log NFTDeposited(
         vault,
         msg.sender,
         nft_contract_addr,
-        token_id
+        token_id,
+        max_duration
     )
 
 
 @external
-def set_listing_price(token_id:uint256, price: uint256):
+def set_listing_price(token_id:uint256, price: uint256, max_duration: uint256):
     vault_address: address = self.active_vaults[token_id]
     assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(vault_address).set_listing_price(msg.sender, price)
+    IVault(vault_address).set_listing_price(msg.sender, price, max_duration)
 
     log ListingPriceChanged(
         self.active_vaults[token_id],
         msg.sender,
         nft_contract_addr,
         token_id,
-        price
+        price,
+        max_duration
     )
 
 
@@ -203,7 +208,7 @@ def cancel_listing(token_id: uint256):
     vault_address: address = self.active_vaults[token_id]
     assert vault_address != empty(address), "no vault exists for token_id"
 
-    IVault(vault_address).set_listing_price(msg.sender, 0)
+    IVault(vault_address).set_listing_price(msg.sender, 0, 0)
 
     log ListingCancelled(
         self.active_vaults[token_id],
@@ -240,7 +245,7 @@ def close_rental(token_id: uint256):
     rental: Rental = empty(Rental)
     rental, amount = IVault(self.active_vaults[token_id]).close_rental(msg.sender)
 
-    log RentalClosedPrematurely(
+    log RentalClosed(
         rental.id,
         self.active_vaults[token_id],
         rental.owner,
