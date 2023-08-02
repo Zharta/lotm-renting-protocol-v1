@@ -96,3 +96,21 @@ class Listing:
     token_id: int
     price: int
     max_duration: int
+
+
+@dataclass
+class RentalLog:
+    id: bytes
+    vault: str
+    owner: str
+    token_id: int
+    start: int
+    expiration: int
+    amount: int
+
+
+@dataclass
+class RewardLog:
+    vault: str
+    token_id: int
+    amount: int
