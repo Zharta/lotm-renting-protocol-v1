@@ -47,39 +47,40 @@ struct RewardLog:
 
 # Events
 
-event VaultCreated:
-    vault: address
+event VaultsCreated:
     owner: address
     nft_contract: address
-    token_id: uint256
-
-event NFTDeposited:
-    vault: address
-    owner: address
-    nft_contract: address
-    token_id: uint256
     max_duration: uint256
+    vaults: DynArray[address, 32]
+    token_ids: DynArray[uint256, 32]
 
-event NFTWithdrawn:
+event NftsDeposited:
+    owner: address
+    nft_contract: address
+    max_duration: uint256
+    vaults: DynArray[address, 32]
+    token_ids: DynArray[uint256, 32]
+
+event NftWithdrawn:
     vault: address
     owner: address
     nft_contract: address
     token_id: uint256
     claimed_rewards: uint256
 
-event ListingPriceChanged:
-    vault: address
+event ListingsPricesChanged:
     owner: address
     nft_contract: address
-    token_id: uint256
-    price: uint256
     max_duration: uint256
+    price: uint256
+    vaults: DynArray[address, 32]
+    token_ids: DynArray[uint256, 32]
 
-event ListingCancelled:
-    vault: address
+event ListingsCancelled:
     owner: address
     nft_contract: address
-    token_id: uint256
+    vaults: DynArray[address, 32]
+    token_ids: DynArray[uint256, 32]
 
 event RentalStarted:
     id: bytes32
@@ -134,93 +135,78 @@ def __init__(
 
 
 @external
-def create_vault_and_deposit(token_id: uint256, price: uint256, max_duration: uint256):
-    assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
+def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
+    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
 
-    vault: address = create_minimal_proxy_to(self.vault_impl_addr, salt=convert(token_id, bytes32))
-    
-    log VaultCreated(
-        vault,
+    for token_id in token_ids:
+        vault: address = self._create_vault_and_deposit(token_id, price, max_duration)
+        vaults.append(vault)
+
+    log VaultsCreated(
         msg.sender,
         nft_contract_addr,
-        token_id
-    )
-
-    self.active_vaults[token_id] = vault
-
-    IVault(vault).initialise(
-        msg.sender,
-        self,
-        payment_token_addr,
-        nft_contract_addr,
-        delegation_registry_addr
-    )
-    IVault(vault).deposit(token_id, price, max_duration)
-
-    log NFTDeposited(
-        vault,
-        msg.sender,
-        nft_contract_addr,
-        token_id,
-        max_duration
+        max_duration,
+        vaults,
+        token_ids
     )
 
 
 @external
-def deposit(token_id: uint256, price: uint256, max_duration: uint256):
-    assert ISelf(self).is_vault_available(token_id), "vault is not available"
+def deposit(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
+    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
 
-    vault: address = ISelf(self).tokenid_to_vault(token_id)
-    self.active_vaults[token_id] = vault
-    
-    IVault(vault).initialise(
-        msg.sender,
-        self,
-        payment_token_addr,
-        nft_contract_addr,
-        delegation_registry_addr
-    )
+    for token_id in token_ids:
+        vault: address = self._deposit_nft(token_id, price, max_duration)
+        vaults.append(vault)
 
-    IVault(vault).deposit(token_id, price, max_duration)
-
-    log NFTDeposited(
-        vault,
+    log NftsDeposited(
         msg.sender,
         nft_contract_addr,
-        token_id,
-        max_duration
+        max_duration,
+        vaults,
+        token_ids,
     )
 
 
 @external
-def set_listing_price(token_id:uint256, price: uint256, max_duration: uint256):
-    vault: address = self.active_vaults[token_id]
-    assert vault != empty(address), "no vault exists for token_id"
+def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
+    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
 
-    IVault(vault).set_listing_price(msg.sender, price, max_duration)
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
 
-    log ListingPriceChanged(
-        vault,
+        IVault(vault).set_listing_price(msg.sender, price, max_duration)
+
+        vaults.append(vault)
+
+    log ListingsPricesChanged(
         msg.sender,
         nft_contract_addr,
-        token_id,
+        max_duration,
         price,
-        max_duration
+        vaults,
+        token_ids,
     )
 
 
 @external
-def cancel_listing(token_id: uint256):
-    vault: address = self.active_vaults[token_id]
-    assert vault != empty(address), "no vault exists for token_id"
+def cancel_listings(token_ids: DynArray[uint256, 32]):
+    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
 
-    IVault(vault).set_listing_price(msg.sender, 0, 0)
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
 
-    log ListingCancelled(
-        vault,
+        IVault(vault).set_listing_price(msg.sender, 0, 0)
+
+        vaults.append(vault)
+
+    log ListingsCancelled(
         msg.sender,
         nft_contract_addr,
-        token_id
+        vaults,
+        token_ids
     )
 
 
@@ -307,7 +293,7 @@ def withdraw(token_id: uint256):
 
     rewards: uint256 = IVault(vault).withdraw(msg.sender)
 
-    log NFTWithdrawn(
+    log NftWithdrawn(
         vault,
         msg.sender,
         nft_contract_addr,
@@ -346,6 +332,46 @@ def _convert_keccak256_2_address(digest: bytes32) -> address:
     @return address The converted 20-byte address.
     """
     return convert(convert(digest, uint256) & convert(max_value(uint160), uint256), address)
+
+
+@internal
+def _create_vault_and_deposit(token_id: uint256, price: uint256, max_duration: uint256) -> address:
+    assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
+
+    vault: address = create_minimal_proxy_to(self.vault_impl_addr, salt=convert(token_id, bytes32))
+
+    self.active_vaults[token_id] = vault
+
+    IVault(vault).initialise(
+        msg.sender,
+        self,
+        payment_token_addr,
+        nft_contract_addr,
+        delegation_registry_addr
+    )
+    IVault(vault).deposit(token_id, price, max_duration)
+
+    return vault
+
+
+@internal
+def _deposit_nft(token_id: uint256, price: uint256, max_duration: uint256) -> address:
+    assert ISelf(self).is_vault_available(token_id), "vault is not available"
+
+    vault: address = ISelf(self).tokenid_to_vault(token_id)
+    self.active_vaults[token_id] = vault
+    
+    IVault(vault).initialise(
+        msg.sender,
+        self,
+        payment_token_addr,
+        nft_contract_addr,
+        delegation_registry_addr
+    )
+
+    IVault(vault).deposit(token_id, price, max_duration)
+
+    return vault
 
 
 ##### EXTERNAL METHODS - VIEW #####
