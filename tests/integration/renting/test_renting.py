@@ -1,9 +1,7 @@
 import boa
-from dataclasses import dataclass
 
-from datetime import datetime as dt
 from decimal import Decimal
-from ...conftest_base import ZERO_ADDRESS, get_last_event, get_vault_from_proxy, Rental
+from ...conftest_base import ZERO_ADDRESS, get_last_event, get_vault_from_proxy, Rental, RentalLog, RewardLog
 
 
 def test_initial_state(
@@ -197,14 +195,48 @@ def test_close_rental(
     assert vault_contract.unclaimed_rewards() == real_rental_amount
     assert vault_contract.claimable_rewards() == real_rental_amount
 
-    assert event.vault == vault_addr
-    assert event.owner == nft_owner
+    rental_log = RentalLog(*event.rentals[-1])
+    assert rental_log.token_id == token_id
+    assert rental_log.vault == vault_addr
+    assert rental_log.owner == nft_owner
+    assert rental_log.start == start_time
+    assert rental_log.expiration == real_expiration
+    assert rental_log.amount == real_rental_amount
+    assert event.nft_contract == nft_contract.address
+    assert event.renter == renter
+
+
+def test_bulk_rentals_limits(contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter):
+    bulk_size = 32
+    token_ids = [token_id for token_id in range(bulk_size)]
+    price = int(1e18)
+    start_time = int(boa.eval("block.timestamp"))
+    expiration = start_time + 60
+    rental_amount = (expiration - start_time) * price // 3600
+
+    for token_id in token_ids:
+        vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+        nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+        ape_contract.approve(vault_addr, rental_amount, sender=renter)
+
+        renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
+        renting_contract.start_rental(token_id, expiration, sender=renter)
+
+    time_passed = 30
+    boa.env.time_travel(seconds=time_passed)
+
+    renting_contract.close_rentals(token_ids, sender=renter)
+    event = get_last_event(renting_contract, "RentalClosed")
     assert event.renter == renter
     assert event.nft_contract == nft_contract.address
-    assert event.token_id == token_id
-    assert event.start == start_time
-    assert event.expiration == real_expiration
-    assert event.amount == real_rental_amount
+    assert len(event.rentals) == bulk_size
+
+    renting_contract.claim(token_ids, sender=nft_owner)
+    event = get_last_event(renting_contract, "RewardsClaimed")
+    assert event.owner == nft_owner
+    assert event.nft_contract == nft_contract.address
+    assert len(event.rewards) == bulk_size
 
 
 def test_claim(
@@ -248,16 +280,17 @@ def test_claim(
     renting_contract.claim([token_id], sender=nft_owner)
     event = get_last_event(renting_contract, "RewardsClaimed")
 
+    event_reward = RewardLog(*event.rewards[0])
+    assert event_reward.vault == vault_addr
+    assert event_reward.token_id == token_id
+    assert event_reward.amount == rental_amount
+    assert event.owner == nft_owner
+    assert event.nft_contract == nft_contract.address
+
     active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.amount == 0
     assert vault_contract.claimable_rewards() == 0
     assert vault_contract.unclaimed_rewards() == 0
-
-    assert event.vault == vault_addr
-    assert event.owner == nft_owner
-    assert event.nft_contract == nft_contract.address
-    assert event.token_id == token_id
-    assert event.amount == rental_amount
 
 
 def test_withdraw(

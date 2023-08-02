@@ -30,6 +30,20 @@ struct Rental:
     expiration: uint256
     amount: uint256
 
+struct RentalLog:
+    id: bytes32
+    vault: address
+    owner: address
+    token_id: uint256
+    start: uint256
+    expiration: uint256
+    amount: uint256
+
+struct RewardLog:
+    vault: address
+    token_id: uint256
+    amount: uint256
+
 
 # Events
 
@@ -79,22 +93,14 @@ event RentalStarted:
     amount: uint256
 
 event RentalClosed:
-    id: bytes32
-    vault: address
-    owner: address
+    rentals: DynArray[RentalLog, 32]
     renter: address
     nft_contract: address
-    token_id: uint256
-    start: uint256
-    expiration: uint256
-    amount: uint256
 
 event RewardsClaimed:
-    vault: address
+    rewards: DynArray[RewardLog, 32]
     owner: address
     nft_contract: address
-    token_id: uint256
-    amount: uint256
 
 
 # Global Variables
@@ -243,6 +249,7 @@ def close_rentals(token_ids: DynArray[uint256, 32]):
 
     amount: uint256 = 0
     rental: Rental = empty(Rental)
+    rental_logs: DynArray[RentalLog, 32] = []
 
     for token_id in token_ids:
         vault: address = self.active_vaults[token_id]
@@ -250,34 +257,44 @@ def close_rentals(token_ids: DynArray[uint256, 32]):
 
         rental, amount = IVault(vault).close_rental(msg.sender)
 
-        log RentalClosed(
-            rental.id,
-            vault,
-            rental.owner,
-            msg.sender,
-            nft_contract_addr,
-            token_id,
-            rental.start,
-            block.timestamp,
-            amount
-        )
+        rental_logs.append(RentalLog({
+            id: rental.id,
+            vault: vault,
+            owner: rental.owner,
+            token_id: token_id,
+            start: rental.start,
+            expiration: block.timestamp,
+            amount: amount
+        }))
+
+    log RentalClosed(
+        rental_logs,
+        msg.sender,
+        nft_contract_addr
+    )
 
 
 @external
 def claim(token_ids: DynArray[uint256, 32]):
+    reward_logs: DynArray[RewardLog, 32] = []
+
     for token_id in token_ids:
         vault: address = self.active_vaults[token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
         rewards: uint256 = IVault(vault).claim(msg.sender)
 
-        log RewardsClaimed(
-            vault,
-            msg.sender,
-            nft_contract_addr,
-            token_id,
-            rewards
-        )
+        reward_logs.append(RewardLog({
+            vault: vault,
+            token_id: token_id,
+            amount: rewards
+        }))
+
+    log RewardsClaimed(
+        reward_logs,
+        msg.sender,
+        nft_contract_addr,
+    )
 
 
 @external
