@@ -217,6 +217,8 @@ def test_close_rentals(renting_contract, nft_contract, ape_contract, nft_owner, 
         Decimal(expiration - start_time) * Decimal(price) / Decimal(3600)
     )
 
+    vaults = {}
+
     for token_id in token_ids:
         nft_contract.mint(nft_owner, token_id, sender=owner)
         vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -224,9 +226,13 @@ def test_close_rentals(renting_contract, nft_contract, ape_contract, nft_owner, 
         nft_contract.approve(vault_addr, token_id, sender=nft_owner)
         ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-        renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
-        vault_contract = vault_contract_def.at(vault_addr)
+        vaults[token_id] = vault_addr
 
+    renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
+ 
+    # TODO: change once `start_rentals` accepts bulk operations
+    for token_id, vault_addr in vaults.items():
+        vault_contract = vault_contract_def.at(vault_addr)
         renting_contract.start_rental(token_id, expiration, sender=renter)
 
     time_passed = 30
@@ -328,6 +334,8 @@ def test_claim_multiple(renting_contract, nft_contract, ape_contract, nft_owner,
         Decimal(expiration - start_time) * Decimal(price) / Decimal(3600)
     )
 
+    vaults = {}
+
     for token_id in token_ids:
         nft_contract.mint(nft_owner, token_id, sender=owner)
         vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -335,9 +343,13 @@ def test_claim_multiple(renting_contract, nft_contract, ape_contract, nft_owner,
         nft_contract.approve(vault_addr, token_id, sender=nft_owner)
         ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-        renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
-        vault_contract = vault_contract_def.at(vault_addr)
+        vaults[token_id] = vault_addr
 
+    renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
+
+    # TODO: change once `start_rentals` accepts bulk operations
+    for token_id, vault_addr in vaults.items():    
+        vault_contract = vault_contract_def.at(vault_addr)
         renting_contract.start_rental(token_id, expiration, sender=renter)
 
         assert vault_contract.unclaimed_rewards() == 0

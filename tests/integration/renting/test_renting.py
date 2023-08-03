@@ -228,7 +228,10 @@ def test_bulk_rentals_limits(contracts_config, renting_contract, nft_contract, a
         nft_contract.approve(vault_addr, token_id, sender=nft_owner)
         ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-        renting_contract.create_vault_and_deposit(token_id, price, 0, sender=nft_owner)
+    renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
+    
+    # TODO: change once `start_rentals` accepts bulk operations
+    for token_id in token_ids:
         renting_contract.start_rental(token_id, expiration, sender=renter)
 
     time_passed = 30
