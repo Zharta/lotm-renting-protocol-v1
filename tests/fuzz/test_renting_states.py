@@ -76,15 +76,15 @@ class StateMachine(RuleBasedStateMachine):
         new_price=st.integers(min_value=0, max_value=10**6),
         max_duration=st.integers(min_value=0, max_value=100),
     )
-    def change_listing_price(self, token, new_price, max_duration):
+    def change_listings_prices(self, token, new_price, max_duration):
         owner = self.owner_of[token]
-        self.renting.set_listing_price(token, new_price, max_duration, sender=owner)
+        self.renting.set_listings_prices([token], new_price, max_duration, sender=owner)
         self.listing_price[token] = new_price
 
     @rule(token=tokens_in_vaults)
-    def cancel_listing(self, token):
+    def cancel_listings(self, token):
         owner = self.owner_of[token]
-        self.renting.cancel_listing(token, sender=owner)
+        self.renting.cancel_listings([token], sender=owner)
         self.listing_price[token] = 0
 
     @rule(
@@ -102,9 +102,9 @@ class StateMachine(RuleBasedStateMachine):
         vault = self.renting.tokenid_to_vault(token)
         self.nft.approve(vault, token, sender=owner)
         if token in self.vaults:
-            self.renting.deposit(token, price, max_duration, sender=owner)
+            self.renting.deposit([token], price, max_duration, sender=owner)
         else:
-            self.renting.create_vault_and_deposit(token, price, max_duration, sender=owner)
+            self.renting.create_vaults_and_deposit([token], price, max_duration, sender=owner)
 
         self.vaults[token] = self.vault.at(vault)
         self.listing_price[token] = price
