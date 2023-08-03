@@ -1,0 +1,38 @@
+{
+    "common": {
+        "ape_token": {
+            "address": "0x22B472Dd4fBC48F26B9695dc23445309aB50dec1",
+            "contract": "ERC20Contract",
+            "properties": {
+                "decimals": 18,
+                "name": "ApeCoin",
+                "supply": 1e+27,
+                "symbol": "APE"
+            }
+        },
+        "koda": {
+            "address": "0xFE141b482AC9c1d960b31238F121A69d449F6ef8",
+            "contract": "ERC721Contract"
+        },
+        "vault_impl": {
+            "address": "0x51A0daa404309364A619376A200239b95237c9Cd",
+            "contract": "VaultImplContract"
+        },
+        "warm": {
+            "address": "0xc875c879f4660ebF43369EF2f9C6c884d1919dd5",
+            "contract": "WarmDelegationContract"
+        }
+    },
+    "renting": {
+        "koda": {
+            "address": "0xFa0965ded2957bC8291257ee7E32639DB4d98819",
+            "contract": "RentingContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.koda",
+                "payment_token_key": "common.ape_token",
+                "vault_impl_key": "common.vault_impl"
+            }
+        }
+    }
+}
