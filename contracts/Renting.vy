@@ -83,25 +83,19 @@ event ListingsCancelled:
     vaults: DynArray[VaultLog, 32]
 
 event RentalStarted:
-    id: bytes32
-    vault: address
-    owner: address
     renter: address
     nft_contract: address
-    token_id: uint256
-    start: uint256
-    expiration: uint256
-    amount: uint256
+    rentals: DynArray[RentalLog, 32]
 
 event RentalClosed:
-    rentals: DynArray[RentalLog, 32]
     renter: address
     nft_contract: address
+    rentals: DynArray[RentalLog, 32]
 
 event RewardsClaimed:
-    rewards: DynArray[RewardLog, 32]
     owner: address
     nft_contract: address
+    rewards: DynArray[RewardLog, 32]
 
 
 # Global Variables
@@ -219,23 +213,26 @@ def cancel_listings(token_ids: DynArray[uint256, 32]):
 
 
 @external
-def start_rental(token_id: uint256, expiration: uint256):
-    vault: address = self.active_vaults[token_id]
-    assert vault != empty(address), "no vault exists for token_id"
+def start_rentals(token_ids: DynArray[uint256, 32], expiration: uint256):
+    rental_logs: DynArray[RentalLog, 32] = []
 
-    rental: Rental = IVault(vault).start_rental(msg.sender, expiration)
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
 
-    log RentalStarted(
-        rental.id,
-        vault,
-        rental.owner,
-        msg.sender,
-        nft_contract_addr,
-        token_id,
-        rental.start,
-        expiration,
-        rental.amount
-    )
+        rental: Rental = IVault(vault).start_rental(msg.sender, expiration)
+
+        rental_logs.append(RentalLog({
+            id: rental.id,
+            vault: vault,
+            owner: rental.owner,
+            token_id: token_id,
+            start: rental.start,
+            expiration: expiration,
+            amount: rental.amount
+        }))
+
+    log RentalStarted(msg.sender, nft_contract_addr, rental_logs)
 
 
 @external
@@ -261,11 +258,7 @@ def close_rentals(token_ids: DynArray[uint256, 32]):
             amount: amount
         }))
 
-    log RentalClosed(
-        rental_logs,
-        msg.sender,
-        nft_contract_addr
-    )
+    log RentalClosed(msg.sender, nft_contract_addr, rental_logs)
 
 
 @external
@@ -284,11 +277,7 @@ def claim(token_ids: DynArray[uint256, 32]):
             amount: rewards
         }))
 
-    log RewardsClaimed(
-        reward_logs,
-        msg.sender,
-        nft_contract_addr,
-    )
+    log RewardsClaimed(msg.sender, nft_contract_addr, reward_logs)
 
 
 @external

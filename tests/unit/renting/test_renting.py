@@ -130,8 +130,18 @@ def test_start_rental(renting_contract, nft_contract, ape_contract, nft_owner, r
     renting_contract.create_vaults_and_deposit([token_id], price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
-    renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals([token_id], expiration, sender=renter)
     event = get_last_event(renting_contract, "RentalStarted")
+
+    assert event.renter == renter
+    assert event.nft_contract == nft_contract.address
+    event_rental = RentalLog(*event.rentals[0])
+    assert event_rental.vault == vault_addr
+    assert event_rental.owner == nft_owner
+    assert event_rental.token_id == token_id
+    assert event_rental.start == start_time
+    assert event_rental.expiration == expiration
+    assert event_rental.amount == rental_amount
 
     active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.owner == nft_owner
@@ -141,14 +151,51 @@ def test_start_rental(renting_contract, nft_contract, ape_contract, nft_owner, r
     assert active_rental.expiration == expiration
     assert active_rental.amount == rental_amount
 
-    assert event.vault == vault_addr
-    assert event.owner == nft_owner
+
+def test_start_rentals(renting_contract, nft_contract, ape_contract, nft_owner, renter, vault_contract_def, owner):
+    token_id_base = 10
+    token_id_qty = 32
+    token_ids = [token_id_base + i for i in range(token_id_qty)]
+
+    token_id = 1
+    price = int(1e18)
+    start_time = boa.eval("block.timestamp")
+    expiration = start_time + 10
+    rental_amount = (expiration - start_time) * price // 3600
+
+    for token_id in token_ids:
+        nft_contract.mint(nft_owner, token_id, sender=owner)
+        vault_addr = renting_contract.tokenid_to_vault(token_id)
+        nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+        ape_contract.approve(vault_addr, rental_amount, sender=renter)
+
+    renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
+
+    renting_contract.start_rentals(token_ids, expiration, sender=renter)
+
+    event = get_last_event(renting_contract, "RentalStarted")
     assert event.renter == renter
     assert event.nft_contract == nft_contract.address
-    assert event.token_id == token_id
-    assert event.start == start_time
-    assert event.expiration == expiration
-    assert event.amount == rental_amount
+
+    for i, token_id in enumerate(token_ids):
+        vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+        event_rental = RentalLog(*event.rentals[i])
+        assert event_rental.vault == vault_addr
+        assert event_rental.owner == nft_owner
+        assert event_rental.token_id == token_id
+        assert event_rental.start == start_time
+        assert event_rental.expiration == expiration
+        assert event_rental.amount == rental_amount
+
+        vault_contract = vault_contract_def.at(vault_addr)
+        active_rental = Rental(*vault_contract.active_rental())
+        assert active_rental.owner == nft_owner
+        assert active_rental.renter == renter
+        assert active_rental.token_id == token_id
+        assert active_rental.start == start_time
+        assert active_rental.expiration == expiration
+        assert active_rental.amount == rental_amount
 
 
 def test_close_rental(renting_contract, nft_contract, ape_contract, nft_owner, renter, vault_contract_def):
@@ -168,7 +215,7 @@ def test_close_rental(renting_contract, nft_contract, ape_contract, nft_owner, r
     renting_contract.create_vaults_and_deposit([token_id], price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
-    renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals([token_id], expiration, sender=renter)
 
     active_rental = Rental(*vault_contract.active_rental())
     assert active_rental.owner == nft_owner
@@ -231,11 +278,8 @@ def test_close_rentals(renting_contract, nft_contract, ape_contract, nft_owner, 
         vaults[token_id] = vault_addr
 
     renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
- 
-    # TODO: change once `start_rentals` accepts bulk operations
-    for token_id, vault_addr in vaults.items():
-        vault_contract = vault_contract_def.at(vault_addr)
-        renting_contract.start_rental(token_id, expiration, sender=renter)
+
+    renting_contract.start_rentals(token_ids, expiration, sender=renter)
 
     time_passed = 30
     boa.env.time_travel(seconds=time_passed)
@@ -289,7 +333,7 @@ def test_claim(renting_contract, nft_contract, ape_contract, nft_owner, renter, 
     renting_contract.create_vaults_and_deposit([token_id], price, 0, sender=nft_owner)
     vault_contract = vault_contract_def.at(vault_addr)
 
-    renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals([token_id], expiration, sender=renter)
 
     assert vault_contract.unclaimed_rewards() == 0
     assert vault_contract.claimable_rewards() == 0
@@ -349,11 +393,10 @@ def test_claim_multiple(renting_contract, nft_contract, ape_contract, nft_owner,
 
     renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
 
-    # TODO: change once `start_rentals` accepts bulk operations
-    for token_id, vault_addr in vaults.items():    
-        vault_contract = vault_contract_def.at(vault_addr)
-        renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals(token_ids, expiration, sender=renter)
 
+    for token_id, vault_addr in vaults.items():
+        vault_contract = vault_contract_def.at(vault_addr)
         assert vault_contract.unclaimed_rewards() == 0
         assert vault_contract.claimable_rewards() == 0
 
@@ -390,7 +433,7 @@ def test_withdraw(renting_contract, nft_contract, ape_contract, nft_owner, rente
     ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
     renting_contract.create_vaults_and_deposit([token_id], price, 0, sender=nft_owner)
-    renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals([token_id], expiration, sender=renter)
 
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
@@ -448,7 +491,7 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
 
     assert nft_contract.ownerOf(token_id) == vault_addr
 
-    renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals([token_id], expiration, sender=renter)
 
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
