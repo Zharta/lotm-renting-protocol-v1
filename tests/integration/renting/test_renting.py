@@ -1,7 +1,7 @@
 import boa
 
 from decimal import Decimal
-from ...conftest_base import ZERO_ADDRESS, get_last_event, get_vault_from_proxy, Rental, RentalLog, RewardLog
+from ...conftest_base import ZERO_ADDRESS, get_last_event, get_vault_from_proxy, Rental, VaultLog, RentalLog, RewardLog
 
 
 def test_initial_state(
@@ -26,7 +26,7 @@ def test_create_vaults_and_deposit_not_approved(
         renting_contract.create_vaults_and_deposit([token_id], price, 0, sender=nft_owner)
 
 
-def test_create_vaults_and_deposit_multiple(
+def test_create_vaults_and_deposit(
     contracts_config, renting_contract, nft_contract, nft_owner, vault_contract
 ):
     token_ids = list(range(1, 6))
@@ -48,8 +48,10 @@ def test_create_vaults_and_deposit_multiple(
 
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
-    assert event.vaults == list(vaults.values())
-    assert event.token_ids == token_ids
+    for idx, entry in enumerate(vaults.items()):
+        vault_log = VaultLog(*event.vaults[idx])
+        assert vault_log.vault == entry[1]
+        assert vault_log.token_id == entry[0]
 
 
 def test_change_listings_price(
@@ -84,8 +86,10 @@ def test_change_listings_price(
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
     assert event.price == new_price
-    assert event.vaults == list(vaults.values())
-    assert event.token_ids == token_ids
+    for idx, entry in enumerate(vaults.items()):
+        vault_log = VaultLog(*event.vaults[idx])
+        assert vault_log.vault == entry[1]
+        assert vault_log.token_id == entry[0]
 
 
 def test_cancel_listings(contracts_config, renting_contract, nft_contract, nft_owner):
@@ -111,8 +115,10 @@ def test_cancel_listings(contracts_config, renting_contract, nft_contract, nft_o
 
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
-    assert event.vaults == list(vaults.values())
-    assert event.token_ids == token_ids
+    for idx, entry in enumerate(vaults.items()):
+        vault_log = VaultLog(*event.vaults[idx])
+        assert vault_log.vault == entry[1]
+        assert vault_log.token_id == entry[0]
 
 
 def test_start_rental(
@@ -369,6 +375,7 @@ def test_deposit(
 ):
     token_ids = list(range(1, 6))
     price = int(1e18)
+    max_duration = 0
     start_time = int(boa.eval("block.timestamp"))
     expiration = start_time + 60
     rental_amount = int(
@@ -384,7 +391,7 @@ def test_deposit(
 
         vaults[token_id] = vault_addr
 
-    renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
+    renting_contract.create_vaults_and_deposit(token_ids, price, max_duration, sender=nft_owner)
 
     for token_id, vault_addr in vaults.items():
         assert nft_contract.ownerOf(token_id) == vault_addr
@@ -403,9 +410,18 @@ def test_deposit(
 
         nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     
-    renting_contract.deposit(token_ids, price, 0, sender=nft_owner)
+    renting_contract.deposit(token_ids, price, max_duration, sender=nft_owner)
+    event = get_last_event(renting_contract, "NftsDeposited")
 
     for token_id, vault_addr in vaults.items():
         assert renting_contract.active_vaults(token_id) == vault_addr
         assert not renting_contract.is_vault_available(token_id)
         assert nft_contract.ownerOf(token_id) == vault_addr
+    
+    assert event.owner == nft_owner
+    assert event.nft_contract == nft_contract.address
+    assert event.max_duration == max_duration
+    for idx, entry in enumerate(vaults.items()):
+        vault_log = VaultLog(*event.vaults[idx])
+        assert vault_log.vault == entry[1]
+        assert vault_log.token_id == entry[0]

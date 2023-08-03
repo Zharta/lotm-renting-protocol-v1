@@ -99,6 +99,12 @@ class Listing:
 
 
 @dataclass
+class VaultLog:
+    vault: str
+    token_id: int
+
+
+@dataclass
 class RentalLog:
     id: bytes
     vault: str

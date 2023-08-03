@@ -30,6 +30,10 @@ struct Rental:
     expiration: uint256
     amount: uint256
 
+struct VaultLog:
+    vault: address
+    token_id: uint256
+
 struct RentalLog:
     id: bytes32
     vault: address
@@ -51,15 +55,13 @@ event VaultsCreated:
     owner: address
     nft_contract: address
     max_duration: uint256
-    vaults: DynArray[address, 32]
-    token_ids: DynArray[uint256, 32]
+    vaults: DynArray[VaultLog, 32]
 
 event NftsDeposited:
     owner: address
     nft_contract: address
     max_duration: uint256
-    vaults: DynArray[address, 32]
-    token_ids: DynArray[uint256, 32]
+    vaults: DynArray[VaultLog, 32]
 
 event NftWithdrawn:
     vault: address
@@ -73,14 +75,12 @@ event ListingsPricesChanged:
     nft_contract: address
     max_duration: uint256
     price: uint256
-    vaults: DynArray[address, 32]
-    token_ids: DynArray[uint256, 32]
+    vaults: DynArray[VaultLog, 32]
 
 event ListingsCancelled:
     owner: address
     nft_contract: address
-    vaults: DynArray[address, 32]
-    token_ids: DynArray[uint256, 32]
+    vaults: DynArray[VaultLog, 32]
 
 event RentalStarted:
     id: bytes32
@@ -136,41 +136,45 @@ def __init__(
 
 @external
 def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
-    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
+    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
         vault: address = self._create_vault_and_deposit(token_id, price, max_duration)
-        vaults.append(vault)
+        vaults.append(VaultLog({
+            vault: vault,
+            token_id: token_id
+        }))
 
     log VaultsCreated(
         msg.sender,
         nft_contract_addr,
         max_duration,
-        vaults,
-        token_ids
+        vaults
     )
 
 
 @external
 def deposit(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
-    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
+    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
         vault: address = self._deposit_nft(token_id, price, max_duration)
-        vaults.append(vault)
+        vaults.append(VaultLog({
+            vault: vault,
+            token_id: token_id
+        }))
 
     log NftsDeposited(
         msg.sender,
         nft_contract_addr,
         max_duration,
-        vaults,
-        token_ids,
+        vaults
     )
 
 
 @external
 def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
-    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
+    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
         vault: address = self.active_vaults[token_id]
@@ -178,21 +182,23 @@ def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, max_du
 
         IVault(vault).set_listing_price(msg.sender, price, max_duration)
 
-        vaults.append(vault)
+        vaults.append(VaultLog({
+            vault: vault,
+            token_id: token_id
+        }))
 
     log ListingsPricesChanged(
         msg.sender,
         nft_contract_addr,
         max_duration,
         price,
-        vaults,
-        token_ids,
+        vaults
     )
 
 
 @external
 def cancel_listings(token_ids: DynArray[uint256, 32]):
-    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
+    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
         vault: address = self.active_vaults[token_id]
@@ -200,13 +206,15 @@ def cancel_listings(token_ids: DynArray[uint256, 32]):
 
         IVault(vault).set_listing_price(msg.sender, 0, 0)
 
-        vaults.append(vault)
+        vaults.append(VaultLog({
+            vault: vault,
+            token_id: token_id
+        }))
 
     log ListingsCancelled(
         msg.sender,
         nft_contract_addr,
-        vaults,
-        token_ids
+        vaults
     )
 
 
