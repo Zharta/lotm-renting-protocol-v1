@@ -36,13 +36,13 @@ def renter():
 @pytest.fixture(scope="session")
 def nft_contract(owner):
     with boa.env.prank(owner):
-        return boa.load("tests/auxiliary/ERC721.vy")
+        return boa.load("contracts/auxiliary/ERC721.vy")
 
 
 @pytest.fixture(scope="session")
 def ape_contract(owner):
     with boa.env.prank(owner):
-        return boa.load("tests/auxiliary/ERC20.vy", "APE", "APE", 18, 0)
+        return boa.load("contracts/auxiliary/ERC20.vy", "APE", "APE", 18, 0)
 
 
 @pytest.fixture(scope="session")
