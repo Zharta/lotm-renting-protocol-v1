@@ -57,9 +57,8 @@ class ERC721Contract(ContractConfig):
 @dataclass
 class WarmDelegationContract(ContractConfig):
 
-    # TODO add mock contract
     def __init__(self, *, key: str, address: str | None = None):
-        super().__init__(key, None, project.ERC721, container_name="ERC721")
+        super().__init__(key, None, project.HotWalletMock, container_name="HotWalletMock")
         if address:
             self.load_contract(address)
 
