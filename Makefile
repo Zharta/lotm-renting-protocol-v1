@@ -71,14 +71,24 @@ console-dev:
 deploy-dev:
 	${VENV}/bin/ape run -I deployment --network https://network.dev.zharta.io
 
+publish-dev:
+	${VENV}/bin/ape run publish
+
 console-int:
 	${VENV}/bin/ape console --network ethereum:sepolia:alchemy
 
 deploy-int:
 	${VENV}/bin/ape run -I deployment --network ethereum:sepolia:alchemy
 
+publish-int:
+	${VENV}/bin/ape run publish
+
 console-prod:
 	${VENV}/bin/ape console --network ethereum:mainnet:alchemy
 
 deploy-prod:
 	${VENV}/bin/ape run -I deployment --network ethereum:mainnet:alchemy
+
+publish-prod:
+	${VENV}/bin/ape run publish
+
