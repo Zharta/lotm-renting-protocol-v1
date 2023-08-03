@@ -149,7 +149,7 @@ class StateMachine(RuleBasedStateMachine):
         assume(self.listing_price[token] > 0)
 
         self.ape.approve(self.vaults[token], max(0, self.listing_price[token] * hours), sender=renter)
-        self.renting.start_rental(token, expiration, sender=renter)
+        self.renting.start_rentals([token], expiration, sender=renter)
 
         rental = Rental(*self.vaults[token].active_rental())
         self.rentals[token] = rental
@@ -175,7 +175,7 @@ class StateMachine(RuleBasedStateMachine):
         assume(self.rentals[token].expiration < now)
 
         self.ape.approve(self.vaults[token], max(0, self.listing_price[token] * hours), sender=renter)
-        self.renting.start_rental(token, expiration, sender=renter)
+        self.renting.start_rentals([token], expiration, sender=renter)
 
         rental = Rental(*self.vaults[token].active_rental())
         self.rentals[token] = rental
