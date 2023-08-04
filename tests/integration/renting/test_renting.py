@@ -439,10 +439,7 @@ def test_withdraw_limits(
         vaults[token_id] = vault_addr
 
     renting_contract.create_vaults_and_deposit(token_ids, price, 0, sender=nft_owner)
-    
-    # TODO: change once `start_rentals` accepts bulk operations
-    for token_id in token_ids:
-        renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals(token_ids, expiration, sender=renter)
 
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
@@ -508,7 +505,7 @@ def test_deposit(
     renting_contract.create_vaults_and_deposit([token_id], price, max_duration, sender=nft_owner)
 
     assert nft_contract.ownerOf(token_id) == vault_addr
-    renting_contract.start_rental(token_id, expiration, sender=renter)
+    renting_contract.start_rentals([token_id], expiration, sender=renter)
 
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
