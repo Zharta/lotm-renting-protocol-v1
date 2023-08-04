@@ -368,9 +368,7 @@ def test_deposit_already_deposited(
         renting_contract.deposit([token_id], price, 0, sender=nft_owner)
 
 
-def test_deposit(
-    contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter
-):
+def test_deposit(contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter):
     token_ids = list(range(1, 6))
     price = int(1e18)
     max_duration = 0
@@ -393,7 +391,8 @@ def test_deposit(
 
     for token_id, vault_addr in vaults.items():
         assert nft_contract.ownerOf(token_id) == vault_addr
-        renting_contract.start_rentals([token_id], expiration, sender=renter)
+
+    renting_contract.start_rentals(token_ids, expiration, sender=renter)
 
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
