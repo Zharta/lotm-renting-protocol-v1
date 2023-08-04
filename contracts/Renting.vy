@@ -48,6 +48,11 @@ struct RewardLog:
     token_id: uint256
     amount: uint256
 
+struct WithdrawalLog:
+    vault: address
+    token_id: uint256
+    rewards: uint256
+
 
 # Events
 
@@ -63,12 +68,11 @@ event NftsDeposited:
     max_duration: uint256
     vaults: DynArray[VaultLog, 32]
 
-event NftWithdrawn:
-    vault: address
+event NftsWithdrawn:
     owner: address
     nft_contract: address
-    token_id: uint256
-    claimed_rewards: uint256
+    total_rewards: uint256
+    withdrawals: DynArray[WithdrawalLog, 32]
 
 event ListingsPricesChanged:
     owner: address
@@ -130,11 +134,11 @@ def __init__(
 
 @external
 def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
-    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+    vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
         vault: address = self._create_vault_and_deposit(token_id, price, max_duration)
-        vaults.append(VaultLog({
+        vault_logs.append(VaultLog({
             vault: vault,
             token_id: token_id
         }))
@@ -143,17 +147,17 @@ def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, 
         msg.sender,
         nft_contract_addr,
         max_duration,
-        vaults
+        vault_logs
     )
 
 
 @external
 def deposit(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
-    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+    vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
         vault: address = self._deposit_nft(token_id, price, max_duration)
-        vaults.append(VaultLog({
+        vault_logs.append(VaultLog({
             vault: vault,
             token_id: token_id
         }))
@@ -162,13 +166,13 @@ def deposit(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint
         msg.sender,
         nft_contract_addr,
         max_duration,
-        vaults
+        vault_logs
     )
 
 
 @external
 def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, max_duration: uint256):
-    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+    vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
         vault: address = self.active_vaults[token_id]
@@ -176,7 +180,7 @@ def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, max_du
 
         IVault(vault).set_listing_price(msg.sender, price, max_duration)
 
-        vaults.append(VaultLog({
+        vault_logs.append(VaultLog({
             vault: vault,
             token_id: token_id
         }))
@@ -186,7 +190,7 @@ def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, max_du
         nft_contract_addr,
         max_duration,
         price,
-        vaults
+        vault_logs
     )
 
 
@@ -281,21 +285,30 @@ def claim(token_ids: DynArray[uint256, 32]):
 
 
 @external
-def withdraw(token_id: uint256):
-    vault: address = self.active_vaults[token_id]
+def withdraw(token_ids: DynArray[uint256, 32]):
+    withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
+    total_rewards: uint256 = 0
 
-    assert vault != empty(address), "no vault exists for token_id"
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
 
-    self.active_vaults[token_id] = empty(address)
+        self.active_vaults[token_id] = empty(address)
 
-    rewards: uint256 = IVault(vault).withdraw(msg.sender)
+        rewards: uint256 = IVault(vault).withdraw(msg.sender)
 
-    log NftWithdrawn(
-        vault,
+        withdrawal_log.append(WithdrawalLog({
+            vault: vault,
+            token_id: token_id,
+            rewards: rewards
+        }))
+        total_rewards += rewards
+
+    log NftsWithdrawn(
         msg.sender,
         nft_contract_addr,
-        token_id,
-        rewards
+        total_rewards,
+        withdrawal_log
     )
 
 

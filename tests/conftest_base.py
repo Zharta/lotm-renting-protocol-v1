@@ -120,3 +120,10 @@ class RewardLog:
     vault: str
     token_id: int
     amount: int
+
+
+@dataclass
+class WithdrawalLog:
+    vault: str
+    token_id: int
+    rewards: int
