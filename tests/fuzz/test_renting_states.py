@@ -124,7 +124,7 @@ class StateMachine(RuleBasedStateMachine):
         assert claimable_rewards <= self.ape.balanceOf(self.vaults[token])
 
         self.claimed[owner] += claimable_rewards
-        self.renting.withdraw(token, sender=owner)
+        self.renting.withdraw([token], sender=owner)
 
         del self.listing_price[token]
         if token in self.rentals:

@@ -2,7 +2,7 @@ import boa
 import pytest
 
 from decimal import Decimal
-from ...conftest_base import ZERO_ADDRESS, get_last_event, Rental, VaultLog, RentalLog, RewardLog
+from ...conftest_base import ZERO_ADDRESS, get_last_event, Rental, VaultLog, RentalLog, RewardLog, WithdrawalLog
 
 
 @pytest.fixture(scope="module")
@@ -421,6 +421,7 @@ def test_claim_multiple(renting_contract, nft_contract, ape_contract, nft_owner,
 def test_withdraw(renting_contract, nft_contract, ape_contract, nft_owner, renter):
     token_id = 1
     price = int(1e18)
+    max_duration = 0
     start_time = int(boa.eval("block.timestamp"))
     expiration = start_time + 60
     rental_amount = int(
@@ -432,22 +433,25 @@ def test_withdraw(renting_contract, nft_contract, ape_contract, nft_owner, rente
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract.create_vaults_and_deposit([token_id], price, 0, sender=nft_owner)
+    renting_contract.create_vaults_and_deposit([token_id], price, max_duration, sender=nft_owner)
     renting_contract.start_rentals([token_id], expiration, sender=renter)
 
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
 
-    renting_contract.withdraw(token_id, sender=nft_owner)
-    event = get_last_event(renting_contract, "NftWithdrawn")
+    renting_contract.withdraw([token_id], sender=nft_owner)
+    event = get_last_event(renting_contract, "NftsWithdrawn")
 
     assert renting_contract.active_vaults(token_id) == ZERO_ADDRESS
 
-    assert event.vault == vault_addr
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
-    assert event.token_id == token_id
-    assert event.claimed_rewards == rental_amount
+    assert event.total_rewards == rental_amount
+    withdrawal_log = WithdrawalLog(*event.withdrawals[-1])
+    assert withdrawal_log.vault == vault_addr
+    assert withdrawal_log.token_id == token_id
+    assert withdrawal_log.rewards == rental_amount
+    
 
 
 def test_deposit_no_vaults(renting_contract, nft_contract, nft_owner, renter):
@@ -496,7 +500,7 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     time_passed = 61
     boa.env.time_travel(seconds=time_passed)
 
-    renting_contract.withdraw(token_id, sender=nft_owner)
+    renting_contract.withdraw([token_id], sender=nft_owner)
 
     assert renting_contract.active_vaults(token_id) == ZERO_ADDRESS
     assert renting_contract.tokenid_to_vault(token_id) == vault_addr
