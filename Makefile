@@ -26,7 +26,7 @@ unit-tests: ${VENV}
 	${VENV}/bin/pytest tests/unit --durations=0 -n auto
 
 integration-tests: ${VENV}
-	${VENV}/bin/pytest -n auto tests/integration --durations=0
+	${VENV}/bin/pytest -n auto tests/integration -m "not profile" --durations=0
 
 fuzz-tests:
 	${VENV}/bin/pytest tests/fuzz --durations=0 -n auto
@@ -36,7 +36,7 @@ coverage:
 	${VENV}/bin/coverage report | tee coverage.txt
 
 gas:
-	${VENV}/bin/pytest tests/integration --durations=0 --gas-profile
+	${VENV}/bin/pytest tests/integration -m "profile" --durations=0 --gas-profile
 	
 
 interfaces:
