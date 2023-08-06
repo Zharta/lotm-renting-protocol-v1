@@ -1,6 +1,6 @@
 [run]
 plugins = boa.coverage
 omit =
-    tests/auxiliary/*
+    contracts/auxiliary/*
     tests/stubs/*
 

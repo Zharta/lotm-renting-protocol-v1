@@ -1,4 +1,5 @@
 import boa
+import pytest
 
 from decimal import Decimal
 from ...conftest_base import ZERO_ADDRESS, get_last_event, get_vault_from_proxy, Rental, VaultLog, RentalLog, RewardLog, WithdrawalLog
@@ -47,9 +48,8 @@ def test_create_vaults_and_deposit(
     assert vault_log.token_id == token_id
 
 
-def test_create_vaults_and_deposit_limits(
-    contracts_config, renting_contract, nft_contract, nft_owner, vault_contract
-):
+@pytest.mark.profile
+def test_create_vaults_and_deposit_limits(contracts_config, renting_contract, nft_contract, nft_owner, vault_contract):
     token_ids = list(range(32))
     price = 1
 
@@ -82,12 +82,12 @@ def test_change_listings_price(
     price = int(1e18)
     new_price = int(2e18)
     max_duration = 1
-    
+
     vault_addr = renting_contract.tokenid_to_vault(token_id)
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
 
     renting_contract.create_vaults_and_deposit([token_id], price, 0, sender=nft_owner)
-    
+
     vault = get_vault_from_proxy(vault_addr)
     assert vault.listing() == (token_id, price, 0)
 
@@ -105,9 +105,8 @@ def test_change_listings_price(
     assert vault_log.token_id == token_id
 
 
-def test_change_listings_price_limits(
-    contracts_config, renting_contract, nft_contract, nft_owner
-):
+@pytest.mark.profile
+def test_change_listings_price_limits(contracts_config, renting_contract, nft_contract, nft_owner):
     token_ids = list(range(32))
     price = int(1e18)
     new_price = int(2e18)
@@ -163,8 +162,9 @@ def test_cancel_listings(contracts_config, renting_contract, nft_contract, nft_o
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
-        
 
+
+@pytest.mark.profile
 def test_cancel_listings_limits(contracts_config, renting_contract, nft_contract, nft_owner):
     token_ids = list(range(32))
     price = int(1e18)
@@ -293,6 +293,7 @@ def test_close_rental(
     assert event.renter == renter
 
 
+@pytest.mark.profile
 def test_bulk_rentals_limits(contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter):
     bulk_size = 32
     token_ids = [token_id for token_id in range(bulk_size)]
@@ -417,9 +418,8 @@ def test_withdraw(
     assert withdrawal_log.rewards == rental_amount
 
 
-def test_withdraw_limits(
-    contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter
-):
+@pytest.mark.profile
+def test_withdraw_limits(contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter):
     token_ids = list(range(32))
     price = int(1e18)
     start_time = int(boa.eval("block.timestamp"))
@@ -534,9 +534,8 @@ def test_deposit(
     assert vault_log.token_id == token_id
 
 
-def test_deposit_limits(
-    contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter
-):
+@pytest.mark.profile
+def test_deposit_limits(contracts_config, renting_contract, nft_contract, ape_contract, nft_owner, renter):
     token_ids = list(range(32))
     price = int(1e18)
     max_duration = 0
