@@ -31,4 +31,4 @@ jobs:
       run: make install-dev
 
     - name: Run project integration tests
-      run: make integration
+      run: make integration-tests
