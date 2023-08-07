@@ -1,4 +1,5 @@
 import boa
+import random
 
 from ..conftest_base import Rental, Listing, ZERO_ADDRESS
 
@@ -73,12 +74,13 @@ class StateMachine(RuleBasedStateMachine):
 
     @rule(
         token=tokens_in_vaults,
-        new_price=st.integers(min_value=0, max_value=10**6),
-        max_duration=st.integers(min_value=0, max_value=100),
+        new_price=st.integers(min_value=1, max_value=10**6),
+        min_duration=st.integers(min_value=0, max_value=50),
+        max_duration=st.integers(min_value=50, max_value=100),
     )
-    def change_listings_prices(self, token, new_price, max_duration):
+    def change_listings_prices(self, token, new_price, min_duration, max_duration):
         owner = self.owner_of[token]
-        self.renting.set_listings_prices([token], new_price, max_duration, sender=owner)
+        self.renting.set_listings_prices([token], new_price, min_duration, max_duration, sender=owner)
         self.listing_price[token] = new_price
 
     @rule(token=tokens_in_vaults)
@@ -90,10 +92,11 @@ class StateMachine(RuleBasedStateMachine):
     @rule(
         target=tokens_in_vaults,
         token=consumes(tokens_not_in_vaults),
-        price=st.integers(min_value=0, max_value=10**6),
-        max_duration=st.integers(min_value=0, max_value=100),
+        price=st.integers(min_value=1, max_value=10**6),
+        min_duration=st.integers(min_value=0, max_value=50),
+        max_duration=st.integers(min_value=50, max_value=100),
     )
-    def deposit(self, token, price, max_duration):
+    def deposit(self, token, price, min_duration, max_duration):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
 
@@ -102,9 +105,9 @@ class StateMachine(RuleBasedStateMachine):
         vault = self.renting.tokenid_to_vault(token)
         self.nft.approve(vault, token, sender=owner)
         if token in self.vaults:
-            self.renting.deposit([token], price, max_duration, sender=owner)
+            self.renting.deposit([token], price, min_duration, max_duration, sender=owner)
         else:
-            self.renting.create_vaults_and_deposit([token], price, max_duration, sender=owner)
+            self.renting.create_vaults_and_deposit([token], price, min_duration, max_duration, sender=owner)
 
         self.vaults[token] = self.vault.at(vault)
         self.listing_price[token] = price
@@ -135,16 +138,17 @@ class StateMachine(RuleBasedStateMachine):
     @rule(
         target=tokens_in_rental,
         token=consumes(tokens_in_vaults),
-        renter=st.sampled_from(renters),
-        hours=st.integers(min_value=0, max_value=100),
+        renter=st.sampled_from(renters)
     )
-    def start_rental_from_tokens_in_vaults(self, token, renter, hours):
+    def start_rental_from_tokens_in_vaults(self, token, renter):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
 
-        max_duration = Listing(*self.vaults[token].listing()).max_duration
-        maxed_hours = min(hours, max_duration) if max_duration else hours
-        expiration = now + maxed_hours * 3600
+        listing = Listing(*self.vaults[token].listing())
+        min_duration = listing.min_duration
+        max_duration = listing.max_duration
+        hours = random.randint(min_duration, max_duration) if max_duration else random.randint(min_duration, 100)
+        expiration = now + hours * 3600
 
         assume(self.listing_price[token] > 0)
 
@@ -160,16 +164,17 @@ class StateMachine(RuleBasedStateMachine):
 
     @rule(
         token=tokens_in_rental,
-        renter=st.sampled_from(renters),
-        hours=st.integers(min_value=0, max_value=100),
+        renter=st.sampled_from(renters)
     )
-    def start_rental_from_tokens_in_rental(self, token, renter, hours):
+    def start_rental_from_tokens_in_rental(self, token, renter):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
 
-        max_duration = Listing(*self.vaults[token].listing()).max_duration
-        maxed_hours = min(hours, max_duration) if max_duration else hours
-        expiration = now + maxed_hours * 3600
+        listing = Listing(*self.vaults[token].listing())
+        min_duration = listing.min_duration
+        max_duration = listing.max_duration
+        hours = random.randint(min_duration, max_duration) if max_duration else random.randint(min_duration, 100)
+        expiration = now + hours * 3600
 
         assume(self.listing_price[token] > 0)
         assume(self.rentals[token].expiration < now)
@@ -188,7 +193,8 @@ class StateMachine(RuleBasedStateMachine):
         rental = self.rentals[token]
 
         assume(rental.expiration >= now)
-        rental_amount = (now - rental.start) * rental.amount // (rental.expiration - rental.start)
+
+        rental_amount = (max(now, rental.min_expiration) - rental.start) * rental.amount // (rental.expiration - rental.start)
         amount_to_return = rental.amount - rental_amount
 
         balance_before = self.ape.balanceOf(rental.renter)
