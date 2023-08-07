@@ -1,10 +1,9 @@
-import boa
-import pytest
 import os
 
+import boa
+import pytest
 from boa.environment import Env
 from eth_account import Account
-
 
 DELEGATION_REGISTRY_ADDRESS = "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c"
 

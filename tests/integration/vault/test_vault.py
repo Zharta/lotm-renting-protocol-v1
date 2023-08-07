@@ -1,6 +1,7 @@
+from decimal import Decimal
+
 import boa
 
-from decimal import Decimal
 from ...conftest_base import ZERO_ADDRESS, Listing, Rental
 
 
@@ -61,9 +62,7 @@ def test_deposit_not_approved(contracts_config, vault_contract, renting_contract
         vault_contract.deposit(1, 1, 0, 0, sender=renting_contract.address)
 
 
-def test_deposit(
-    contracts_config, vault_contract, nft_owner, renting_contract, nft_contract
-):
+def test_deposit(contracts_config, vault_contract, nft_owner, renting_contract, nft_contract):
     token_id = 1
     price = 1
 
@@ -84,9 +83,7 @@ def test_set_listing_price_not_caller(contracts_config, vault_contract, nft_owne
         vault_contract.set_listing_price(nft_owner, 1, 0, 0, sender=nft_owner)
 
 
-def test_change_listing_price(
-    contracts_config, vault_contract, renting_contract, nft_contract, nft_owner
-):
+def test_change_listing_price(contracts_config, vault_contract, renting_contract, nft_contract, nft_owner):
     token_id = 1
     price = 1
     new_price = 2
@@ -96,9 +93,7 @@ def test_change_listing_price(
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
-    vault_contract.set_listing_price(
-        nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address
-    )
+    vault_contract.set_listing_price(nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address)
 
     listing = Listing(*vault_contract.listing())
     assert listing.token_id == token_id
@@ -112,9 +107,7 @@ def test_cancel_listing_not_caller(contracts_config, vault_contract, nft_owner):
         vault_contract.set_listing_price(nft_owner, 0, 0, 0, sender=nft_owner)
 
 
-def test_cancel_listing(
-    contracts_config, vault_contract, renting_contract, nft_contract, nft_owner
-):
+def test_cancel_listing(contracts_config, vault_contract, renting_contract, nft_contract, nft_owner):
     token_id = 1
     price = 1
 
@@ -135,9 +128,7 @@ def test_start_rental_not_caller(contracts_config, vault_contract, nft_owner, re
         vault_contract.start_rental(renter, 1, sender=nft_owner)
 
 
-def test_start_rental_no_listing(
-    contracts_config, vault_contract, renting_contract, renter
-):
+def test_start_rental_no_listing(contracts_config, vault_contract, renting_contract, renter):
     with boa.reverts("listing does not exist"):
         vault_contract.start_rental(renter, 1, sender=renting_contract.address)
 
@@ -180,9 +171,7 @@ def test_start_rental(
 
     start_time = boa.eval("block.timestamp")
     min_expiration = boa.eval("block.timestamp")
-    rental_amount = int(
-        Decimal(expiration - start_time) * Decimal(price) / Decimal(3600)
-    )
+    rental_amount = int(Decimal(expiration - start_time) * Decimal(price) / Decimal(3600))
 
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
 
@@ -217,9 +206,7 @@ def test_start_rental_ongoing(
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
-    rental_amount = int(
-        Decimal(expiration - start_time) * Decimal(price) / Decimal(3600)
-    )
+    rental_amount = int(Decimal(expiration - start_time) * Decimal(price) / Decimal(3600))
 
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
 
@@ -233,9 +220,7 @@ def test_close_rental_not_caller(contracts_config, vault_contract, nft_owner, re
         vault_contract.close_rental(renter, sender=nft_owner)
 
 
-def test_close_rental_no_active_rental(
-    contracts_config, vault_contract, renting_contract, renter
-):
+def test_close_rental_no_active_rental(contracts_config, vault_contract, renting_contract, renter):
     boa.env.time_travel(seconds=1)
     with boa.reverts("active rental does not exist"):
         vault_contract.close_rental(renter, sender=renting_contract.address)
@@ -259,9 +244,7 @@ def test_close_rental(
 
     start_time = boa.eval("block.timestamp")
     min_expiration = int(boa.eval("block.timestamp"))
-    rental_amount = int(
-        Decimal(expiration - start_time) / Decimal(3600) * Decimal(price)
-    )
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
 
     vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
@@ -290,9 +273,7 @@ def test_claim_not_caller(contracts_config, vault_contract, nft_owner):
         vault_contract.claim(nft_owner, sender=nft_owner)
 
 
-def test_claim_no_rewards(
-    contracts_config, vault_contract, renting_contract, nft_owner
-):
+def test_claim_no_rewards(contracts_config, vault_contract, renting_contract, nft_owner):
     with boa.reverts("no rewards to claim"):
         vault_contract.claim(nft_owner, sender=renting_contract.address)
 
@@ -314,9 +295,7 @@ def test_claim(
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
-    rental_amount = int(
-        Decimal(expiration - start_time) / Decimal(3600) * Decimal(price)
-    )
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
 
     vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
@@ -348,9 +327,7 @@ def test_claim2(
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
-    rental_amount = int(
-        Decimal(expiration - start_time) / Decimal(3600) * Decimal(price)
-    )
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
     vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
 
@@ -399,9 +376,7 @@ def test_withdraw_rental_ongoing(
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
-    rental_amount = int(
-        Decimal(expiration - start_time) / Decimal(3600) * Decimal(price)
-    )
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
     vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
 
@@ -426,9 +401,7 @@ def test_withdraw(
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
-    rental_amount = int(
-        Decimal(expiration - start_time) / Decimal(3600) * Decimal(price)
-    )
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
     vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
 

@@ -1,11 +1,13 @@
-import logging
-import warnings
-import os
 import json
-import click
-import boto3
-from ._helpers.deployment import DeploymentManager, Environment
+import logging
+import os
+import warnings
 from pathlib import Path
+
+import boto3
+import click
+
+from ._helpers.deployment import DeploymentManager, Environment
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -19,7 +21,6 @@ KEY_ATTRIBUTES = ["renting_key"]
 
 
 def get_renting_configs(context, env: Environment) -> dict:
-
     config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
     with open(config_file, "r") as f:
         config = json.load(f)
@@ -38,9 +39,7 @@ def update_renting_config(renting_key: str, renting: dict):
     update_expr = ", ".join(f"{k}=:v{i}" for i, (k, v) in indexed_attrs if k not in KEY_ATTRIBUTES)
     values = {f":v{i}": v for i, (k, v) in indexed_attrs if k not in KEY_ATTRIBUTES}
     RENTING.update_item(
-        Key={"renting_key": renting_key},
-        UpdateExpression=f"SET {update_expr}",
-        ExpressionAttributeValues=values
+        Key={"renting_key": renting_key}, UpdateExpression=f"SET {update_expr}", ExpressionAttributeValues=values
     )
 
 

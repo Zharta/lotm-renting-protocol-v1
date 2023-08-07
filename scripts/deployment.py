@@ -1,10 +1,10 @@
 import logging
-import warnings
 import os
-import click
-from ape.cli import network_option, NetworkBoundCommand
+import warnings
 
+import click
 from ape import convert
+from ape.cli import NetworkBoundCommand, network_option
 
 from ._helpers.deployment import DeploymentManager, Environment
 
@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 
 
 def gas_cost(context):
-    return {'gas_price': convert('10 gwei', int)}
+    return {"gas_price": convert("10 gwei", int)}
 
 
 @click.command(cls=NetworkBoundCommand)
@@ -32,4 +32,3 @@ def cli(network):
 
     print("Done")
     return 0
-

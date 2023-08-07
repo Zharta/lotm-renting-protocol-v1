@@ -24,10 +24,9 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.11"
- 
+
     - name: Install dependencies
       run: make install-dev
 
-    - name: Run project stateful tests 
+    - name: Run project stateful tests
       run: make fuzz-tests
-

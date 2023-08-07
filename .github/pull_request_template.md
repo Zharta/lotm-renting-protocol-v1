@@ -6,7 +6,7 @@
 -   [ ] Patch;
 -   [ ] Tests;
 -   [ ] Refactoring;
--   [ ] Build or CI/CD; 
+-   [ ] Build or CI/CD;
 -   [ ] Documentation;
 -   [ ] Code Styling;
 -   [ ] Other. Please describe:
