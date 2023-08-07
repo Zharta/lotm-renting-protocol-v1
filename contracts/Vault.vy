@@ -22,8 +22,8 @@ struct Rental:
     renter: address
     token_id: uint256
     start: uint256
-    expiration: uint256
     min_expiration: uint256
+    expiration: uint256
     amount: uint256
     
 
@@ -80,7 +80,9 @@ def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_durati
     assert msg.sender == self.caller, "not caller"
     assert IERC721(self.nft_contract_addr).ownerOf(token_id) == self.owner, "not owner of token"
     assert IERC721(self.nft_contract_addr).getApproved(token_id) == self, "not approved for token"
-    assert min_duration <= max_duration, "min duration higher max duration"
+    
+    if max_duration != 0 and min_duration > max_duration:
+        raise "min duration > max duration"
 
     self.listing = Listing({
         token_id: token_id,
@@ -98,7 +100,9 @@ def set_listing_price(sender: address, price: uint256, min_duration: uint256, ma
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
-    assert min_duration <= max_duration, "min duration higher max duration"
+    
+    if max_duration != 0 and min_duration > max_duration:
+        raise "min duration > max duration"
 
     self.listing.price = price
     self.listing.min_duration = min_duration
@@ -129,8 +133,8 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
         renter: renter,
         token_id: listing.token_id,
         start: block.timestamp,
-        expiration: expiration,
         min_expiration: block.timestamp + listing.min_duration * 3600,
+        expiration: expiration,
         amount: rental_amount
     })
 

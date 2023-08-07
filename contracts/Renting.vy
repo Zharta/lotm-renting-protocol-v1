@@ -27,8 +27,8 @@ struct Rental:
     renter: address
     token_id: uint256
     start: uint256
-    expiration: uint256
     min_expiration: uint256
+    expiration: uint256
     amount: uint256
 
 struct VaultLog:
@@ -41,6 +41,7 @@ struct RentalLog:
     owner: address
     token_id: uint256
     start: uint256
+    min_expiration: uint256
     expiration: uint256
     amount: uint256
 
@@ -60,12 +61,14 @@ struct WithdrawalLog:
 event VaultsCreated:
     owner: address
     nft_contract: address
+    min_duration: uint256
     max_duration: uint256
     vaults: DynArray[VaultLog, 32]
 
 event NftsDeposited:
     owner: address
     nft_contract: address
+    min_duration: uint256
     max_duration: uint256
     vaults: DynArray[VaultLog, 32]
 
@@ -147,6 +150,7 @@ def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, 
     log VaultsCreated(
         msg.sender,
         nft_contract_addr,
+        min_duration,
         max_duration,
         vault_logs
     )
@@ -166,6 +170,7 @@ def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint
     log NftsDeposited(
         msg.sender,
         nft_contract_addr,
+        min_duration,
         max_duration,
         vault_logs
     )
@@ -233,6 +238,7 @@ def start_rentals(token_ids: DynArray[uint256, 32], expiration: uint256):
             owner: rental.owner,
             token_id: token_id,
             start: rental.start,
+            min_expiration: rental.min_expiration,
             expiration: expiration,
             amount: rental.amount
         }))
@@ -259,6 +265,7 @@ def close_rentals(token_ids: DynArray[uint256, 32]):
             owner: rental.owner,
             token_id: token_id,
             start: rental.start,
+            min_expiration: rental.min_expiration,
             expiration: block.timestamp,
             amount: amount
         }))
