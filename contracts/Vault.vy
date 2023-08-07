@@ -25,7 +25,7 @@ struct Rental:
     min_expiration: uint256
     expiration: uint256
     amount: uint256
-    
+
 
 struct Listing:
     token_id: uint256
@@ -64,7 +64,7 @@ def initialise(
     delegation_registry_addr: address
 ):
     assert not self.is_initialised, "already initialised"
-    
+
     self.owner = owner
     self.caller = caller
     self.is_initialised = True
@@ -80,7 +80,7 @@ def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_durati
     assert msg.sender == self.caller, "not caller"
     assert IERC721(self.nft_contract_addr).ownerOf(token_id) == self.owner, "not owner of token"
     assert IERC721(self.nft_contract_addr).getApproved(token_id) == self, "not approved for token"
-    
+
     if max_duration != 0 and min_duration > max_duration:
         raise "min duration > max duration"
 
@@ -100,7 +100,7 @@ def set_listing_price(sender: address, price: uint256, min_duration: uint256, ma
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
-    
+
     if max_duration != 0 and min_duration > max_duration:
         raise "min duration > max duration"
 
@@ -143,7 +143,7 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
         IDelegationRegistry(self.delegation_registry_addr).setExpirationTimestamp(expiration)
     else:
         IDelegationRegistry(self.delegation_registry_addr).setHotWallet(renter, expiration, False)
-    
+
     # transfer rental amount from renter to this contract
     IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount)
 
@@ -154,12 +154,12 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
 def close_rental(sender: address) -> (Rental, uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
-    
+
     rental: Rental = self.active_rental
 
     assert rental.expiration >= block.timestamp, "active rental does not exist"
     assert sender == rental.renter, "not renter of active rental"
-    
+
     # compute amount to send back to renter
     real_expiration_adjusted: uint256 = block.timestamp
     if block.timestamp < rental.min_expiration:
@@ -215,7 +215,7 @@ def withdraw(sender: address) -> uint256:
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
     assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
-    
+
     # consolidate last renting rewards if existing
     self._consolidate_claims()
 

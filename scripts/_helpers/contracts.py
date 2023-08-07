@@ -1,19 +1,14 @@
-from typing import Any
 from dataclasses import dataclass
-from .basetypes import ContractConfig, DeploymentContext
+from typing import Any
 
 from ape import project
+
+from .basetypes import ContractConfig, DeploymentContext
 
 
 @dataclass
 class VaultImplContract(ContractConfig):
-
-    def __init__(
-        self,
-        *,
-        key: str,
-        address: str | None = None
-    ):
+    def __init__(self, *, key: str, address: str | None = None):
         super().__init__(
             key,
             None,
@@ -26,7 +21,6 @@ class VaultImplContract(ContractConfig):
 
 @dataclass
 class ERC20Contract(ContractConfig):
-
     def __init__(self, *, key: str, name: str, symbol: str, decimals: int, supply: int, address: str | None = None):
         super().__init__(
             key,
@@ -47,7 +41,6 @@ class ERC20Contract(ContractConfig):
 
 @dataclass
 class ERC721Contract(ContractConfig):
-
     def __init__(self, *, key: str, address: str | None = None):
         super().__init__(key, None, project.ERC721, container_name="ERC721")
         if address:
@@ -56,7 +49,6 @@ class ERC721Contract(ContractConfig):
 
 @dataclass
 class WarmDelegationContract(ContractConfig):
-
     def __init__(self, *, key: str, address: str | None = None):
         super().__init__(key, None, project.HotWalletMock, container_name="HotWalletMock")
         if address:
@@ -65,7 +57,6 @@ class WarmDelegationContract(ContractConfig):
 
 @dataclass
 class RentingContract(ContractConfig):
-
     def __init__(
         self,
         *,
@@ -74,7 +65,7 @@ class RentingContract(ContractConfig):
         payment_token_key: str,
         nft_contract_key: int,
         delegation_registry_key: int,
-        address: str | None = None
+        address: str | None = None,
     ):
         super().__init__(
             key,
@@ -88,10 +79,13 @@ class RentingContract(ContractConfig):
             self.load_contract(address)
 
 
-contract_map = {k.__name__: k for k in [
-    ERC20Contract,
-    ERC721Contract,
-    RentingContract,
-    VaultImplContract,
-    WarmDelegationContract,
-]}
+contract_map = {
+    k.__name__: k
+    for k in [
+        ERC20Contract,
+        ERC721Contract,
+        RentingContract,
+        VaultImplContract,
+        WarmDelegationContract,
+    ]
+}

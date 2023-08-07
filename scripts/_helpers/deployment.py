@@ -1,15 +1,15 @@
 import json
 import logging
-import warnings
 import os
-
-from typing import Any
-from ape import accounts
+import warnings
 from pathlib import Path
+from typing import Any
 
-from .dependency import DependencyManager
+from ape import accounts
+
 from .basetypes import ContractConfig, DeploymentContext, Environment
 from .contracts import contract_map
+from .dependency import DependencyManager
 
 ENV = Environment[os.environ.get("ENV", "local")]
 
@@ -19,7 +19,6 @@ warnings.filterwarnings("ignore")
 
 
 def load_contracts(env: Environment) -> list[ContractConfig]:
-
     config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
     with open(config_file, "r") as f:
         config = json.load(f)
@@ -55,7 +54,6 @@ def store_contracts(env: Environment, contracts: list[ContractConfig]):
 
 class DeploymentManager:
     def __init__(self, env: Environment):
-
         self.env = env
         match env:
             case Environment.local:

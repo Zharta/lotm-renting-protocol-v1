@@ -11,6 +11,7 @@ coverage.txt
 .venv
 .pytest_cache
 __pycache__
+*.egg-info
 pytest-logs.txt
 
 # Local

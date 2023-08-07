@@ -1,6 +1,7 @@
+from textwrap import dedent
+
 import boa
 import pytest
-from textwrap import dedent
 
 
 @pytest.fixture(scope="session")
@@ -62,14 +63,20 @@ def renting_contract_def():
 
 @pytest.fixture(scope="session")
 def empty_contract_def():
-    return boa.loads_partial(dedent("""
+    return boa.loads_partial(
+        dedent(
+            """
         dummy: uint256
-     """))
+     """
+        )
+    )
 
 
 @pytest.fixture(scope="session")
 def delegation_registry_mock():
-    return boa.loads(dedent("""
+    return boa.loads(
+        dedent(
+            """
     hot: HashMap[address, address]
     exp: HashMap[address, uint256]
 
@@ -86,7 +93,9 @@ def delegation_registry_mock():
     @external
     def getHotWallet(cold_wallet: address) -> address:
         return self.hot[cold_wallet] if self.exp[cold_wallet] > block.timestamp else empty(address)
-     """))
+     """
+        )
+    )
 
 
 @pytest.fixture(scope="module")

@@ -1,15 +1,15 @@
-from enum import Enum
-from typing import Optional, Callable, Any
-from ape_accounts.accounts import KeyfileAccount
-from ape.contracts.base import ContractContainer, ContractInstance
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Optional
 
-Environment = Enum('Environment', ['local', 'dev', 'int', 'prod'])
+from ape.contracts.base import ContractContainer, ContractInstance
+from ape_accounts.accounts import KeyfileAccount
+
+Environment = Enum("Environment", ["local", "dev", "int", "prod"])
 
 
 @dataclass
-class DeploymentContext():
-
+class DeploymentContext:
     contracts: dict[str, Any]
     env: Environment
     owner: KeyfileAccount
@@ -30,8 +30,7 @@ class DeploymentContext():
 
 
 @dataclass
-class ContractConfig():
-
+class ContractConfig:
     key: str
     contract: Optional[ContractInstance]
     container: ContractContainer
@@ -50,7 +49,7 @@ class ContractConfig():
         return [context[c].contract for c in self.deployment_args_contracts]
 
     def deployment_options(self, context: DeploymentContext) -> dict[str, Any]:
-        return {'sender': context.owner} | context.gas_options()
+        return {"sender": context.owner} | context.gas_options()
 
     def config_dependencies(self, context: DeploymentContext) -> dict[str, Callable]:
         return self.config_deps

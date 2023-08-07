@@ -2,7 +2,7 @@
 
 ##
 ## Quick mock of [HotWalletProxy](https://etherscan.io/address/0xf4fbf314e8819a8d4d496bfb3cdcd3687d0bbcb8#code#F1#L51)
-## TODO add the remaining functions 
+## TODO add the remaining functions
 ##
 
 
