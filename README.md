@@ -49,7 +49,7 @@ Users and other protocols should always interact with the [`Renting.vy`](https:/
 
 Each NFT put for rental needs to be in its own vault (see the 3rd point in [General considerations](#general-considerations)). This means that when an NFT owner wants to deposit an NFT in the protocol, the users may need to create the vault prior to depositing the NFT. If the vault for that specific NFT has already been created before, it can be reused.
 
-The protocol creates the vaults using minimal proxies and the CREATE2 opcode. This means that when a vault for a specific NFT needs to be created, the protocol is able to compute the destination address of the vault before creating it and the user may approve the NFT to be transferred. Therefore, creating the vault and depositing the NFT can be done atomically.
+The protocol creates the vaults using minimal proxies and the `CREATE2` opcode. This means that when a vault for a specific NFT needs to be created, the protocol is able to compute the destination address of the vault before creating it and the user may approve the NFT to be transferred. Therefore, creating the vault and depositing the NFT can be done atomically.
 
 ### Rentals
 
