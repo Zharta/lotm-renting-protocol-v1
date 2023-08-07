@@ -1,0 +1,50 @@
+[project]
+name = "lotm-renting-protocol-v1"
+description = "Koda Renting Protocol by Zharta"
+classifiers = ["Private :: Do Not Upload"]
+version = "0"
+dependencies = [
+    "eth-ape",
+    "vyper==0.3.9",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "titanoboa @ git+https://github.com/vyperlang/titanoboa#[forking-recommended]",
+    "black",
+    "boto3",
+    "click",
+    "coverage",
+    "hypothesis",
+    "ipython",
+    "mypy",
+    "pre-commit",
+    "pytest",
+    "pytest-xdist",
+    "python-lsp-server[flake8]",
+    "rope",
+]
+
+[build-system]
+requires = ["setuptools>=63", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["scripts"]
+
+[tool.pytest.ini_options]
+log_file = "pytest-logs.txt"
+addopts = """
+    -p no:ape_test
+    -vv
+    --durations=10
+"""
+
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 127
+target-version = ['py311']
