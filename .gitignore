@@ -12,3 +12,6 @@ coverage.txt
 .pytest_cache
 __pycache__
 pytest-logs.txt
+
+# Local
+.DS_Store
