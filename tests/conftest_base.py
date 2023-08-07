@@ -87,6 +87,7 @@ class Rental:
     renter: str
     token_id: int
     start: int
+    min_expiration: int
     expiration: int
     amount: int
 
@@ -95,6 +96,7 @@ class Rental:
 class Listing:
     token_id: int
     price: int
+    min_duration: int
     max_duration: int
 
 
@@ -111,6 +113,7 @@ class RentalLog:
     owner: str
     token_id: int
     start: int
+    min_expiration: int
     expiration: int
     amount: int
 

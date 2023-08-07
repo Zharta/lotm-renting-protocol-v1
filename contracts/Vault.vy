@@ -22,6 +22,7 @@ struct Rental:
     renter: address
     token_id: uint256
     start: uint256
+    min_expiration: uint256
     expiration: uint256
     amount: uint256
     
@@ -29,6 +30,7 @@ struct Rental:
 struct Listing:
     token_id: uint256
     price: uint256 # price per hour, 0 means not listed
+    min_duration: uint256 # min duration in hours
     max_duration: uint256 # max duration in hours, 0 means unlimited
 
 
@@ -73,15 +75,19 @@ def initialise(
 
 
 @external
-def deposit(token_id: uint256, price: uint256, max_duration: uint256):
+def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert IERC721(self.nft_contract_addr).ownerOf(token_id) == self.owner, "not owner of token"
     assert IERC721(self.nft_contract_addr).getApproved(token_id) == self, "not approved for token"
+    
+    if max_duration != 0 and min_duration > max_duration:
+        raise "min duration > max duration"
 
     self.listing = Listing({
         token_id: token_id,
         price: price,
+        min_duration: min_duration,
         max_duration: max_duration
     })
 
@@ -90,12 +96,16 @@ def deposit(token_id: uint256, price: uint256, max_duration: uint256):
 
 
 @external
-def set_listing_price(sender: address, price: uint256, max_duration: uint256):
+def set_listing_price(sender: address, price: uint256, min_duration: uint256, max_duration: uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
+    
+    if max_duration != 0 and min_duration > max_duration:
+        raise "min duration > max duration"
 
     self.listing.price = price
+    self.listing.min_duration = min_duration
     self.listing.max_duration = max_duration
 
 
@@ -105,7 +115,7 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
     assert msg.sender == self.caller, "not caller"
     assert self._is_active(), "listing does not exist"
     assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
-    assert self._is_within_max_duration(block.timestamp, expiration), "max duration exceeded"
+    assert self._is_within_duration_range(block.timestamp, expiration), "duration not respected"
 
     listing: Listing = self.listing
 
@@ -123,6 +133,7 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
         renter: renter,
         token_id: listing.token_id,
         start: block.timestamp,
+        min_expiration: block.timestamp + listing.min_duration * 3600,
         expiration: expiration,
         amount: rental_amount
     })
@@ -150,7 +161,14 @@ def close_rental(sender: address) -> (Rental, uint256):
     assert sender == rental.renter, "not renter of active rental"
     
     # compute amount to send back to renter
-    pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(rental.expiration - rental.start, block.timestamp - rental.start, rental.amount)
+    real_expiration_adjusted: uint256 = block.timestamp
+    if block.timestamp < rental.min_expiration:
+        real_expiration_adjusted = rental.min_expiration
+    pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
+        rental.expiration - rental.start,
+        real_expiration_adjusted - rental.start,
+        rental.amount
+    )
     payback_amount: uint256 = rental.amount - pro_rata_rental_amount
 
     # clear active rental
@@ -235,8 +253,8 @@ def _consolidate_claims():
         self.active_rental.amount = 0
 
 @internal
-def _is_within_max_duration(start: uint256, expiration: uint256) -> bool:
-    return self.listing.max_duration == 0 or expiration - start <= self.listing.max_duration * 3600
+def _is_within_duration_range(start: uint256, expiration: uint256) -> bool:
+    return expiration - start >= self.listing.min_duration * 3600 and (self.listing.max_duration == 0 or expiration - start <= self.listing.max_duration * 3600)
 
 
 @pure
@@ -248,7 +266,6 @@ def _compute_rental_id(renter: address, token_id: uint256, start: uint256, expir
 @pure
 @internal
 def _compute_rental_amount(start: uint256, expiration: uint256, price: uint256) -> uint256:
-    ## TODO calc uses listing price which can change
     return (expiration - start) * price / 3600
 
 
