@@ -88,6 +88,7 @@ class Rental:
     token_id: int
     start: int
     expiration: int
+    min_expiration: int
     amount: int
 
 
@@ -95,6 +96,7 @@ class Rental:
 class Listing:
     token_id: int
     price: int
+    min_duration: int
     max_duration: int
 
 
