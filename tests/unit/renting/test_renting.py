@@ -287,6 +287,56 @@ def test_close_rental(renting_contract, nft_contract, ape_contract, nft_owner, r
     assert event_rental.amount == real_rental_amount
 
 
+def test_close_rental_before_min_duration(renting_contract, nft_contract, ape_contract, nft_owner, renter, vault_contract_def):
+    token_id = 1
+    price = int(1e18)
+    start_time = boa.eval("block.timestamp")
+    min_duration = 2
+    min_expiration = start_time + min_duration * 3600
+    expiration = min_expiration
+    rental_amount = (expiration - start_time) * price // 3600
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    ape_contract.approve(vault_addr, rental_amount, sender=renter)
+
+    renting_contract.create_vaults_and_deposit([token_id], price, min_duration, 0, sender=nft_owner)
+    vault_contract = vault_contract_def.at(vault_addr)
+
+    renting_contract.start_rentals([token_id], expiration, sender=renter)
+
+    time_passed = 3600
+    boa.env.time_travel(seconds=time_passed)
+    real_expiration = int(boa.eval("block.timestamp"))
+
+    renting_contract.close_rentals([token_id], sender=renter)
+    event = get_last_event(renting_contract, "RentalClosed")
+
+    active_rental = Rental(*vault_contract.active_rental())
+    assert active_rental.owner == nft_owner
+    assert active_rental.renter == renter
+    assert active_rental.token_id == token_id
+    assert active_rental.start == start_time
+    assert active_rental.min_expiration == min_expiration
+    assert active_rental.expiration == real_expiration
+    assert active_rental.amount == 0
+
+    assert vault_contract.unclaimed_rewards() == rental_amount
+    assert vault_contract.claimable_rewards() == rental_amount
+
+    assert event.renter == renter
+    assert event.nft_contract == nft_contract.address
+    event_rental = RentalLog(*event.rentals[0])
+    assert event_rental.vault == vault_addr
+    assert event_rental.owner == nft_owner
+    assert event_rental.token_id == token_id
+    assert event_rental.start == start_time
+    assert event_rental.min_expiration == min_expiration
+    assert event_rental.expiration == real_expiration
+    assert event_rental.amount == rental_amount
+
+
 def test_close_rentals(renting_contract, nft_contract, ape_contract, nft_owner, renter, vault_contract_def, owner):
     token_id_base = 10
     token_id_qty = 32
