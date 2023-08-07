@@ -13,3 +13,6 @@ coverage.txt
 __pycache__
 *.egg-info
 pytest-logs.txt
+
+# Local
+.DS_Store
