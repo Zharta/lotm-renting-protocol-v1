@@ -1,10 +1,8 @@
-import boa
 import random
 
-from ..conftest_base import Rental, Listing, ZERO_ADDRESS
-
+import boa
 import hypothesis.strategies as st
-from hypothesis import Verbosity, Phase, settings, assume
+from hypothesis import Phase, assume, settings
 from hypothesis.stateful import (
     Bundle,
     RuleBasedStateMachine,
@@ -15,6 +13,8 @@ from hypothesis.stateful import (
     rule,
     run_state_machine_as_test,
 )
+
+from ..conftest_base import ZERO_ADDRESS, Listing, Rental
 
 INITIAL_BALANCE = int(1e21)
 
@@ -135,11 +135,7 @@ class StateMachine(RuleBasedStateMachine):
 
         return token
 
-    @rule(
-        target=tokens_in_rental,
-        token=consumes(tokens_in_vaults),
-        renter=st.sampled_from(renters)
-    )
+    @rule(target=tokens_in_rental, token=consumes(tokens_in_vaults), renter=st.sampled_from(renters))
     def start_rental_from_tokens_in_vaults(self, token, renter):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
@@ -162,10 +158,7 @@ class StateMachine(RuleBasedStateMachine):
 
         return token
 
-    @rule(
-        token=tokens_in_rental,
-        renter=st.sampled_from(renters)
-    )
+    @rule(token=tokens_in_rental, renter=st.sampled_from(renters))
     def start_rental_from_tokens_in_rental(self, token, renter):
         now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
@@ -283,10 +276,7 @@ def test_renting_states(renting_contract, ape_contract, nft_contract, delegation
     StateMachine.vault = vault_contract_def
 
     StateMachine.TestCase.settings = settings(
-        # max_examples=1000,
-        # stateful_step_count=10,
-        # verbosity=Verbosity.verbose,
-        phases=tuple(Phase)[:Phase.shrink],
+        phases=tuple(Phase)[: Phase.shrink],
         deadline=300 * 1000,
     )
     run_state_machine_as_test(StateMachine)

@@ -1,6 +1,7 @@
-from typing import Callable
 from collections import defaultdict
-from .basetypes import DeploymentContext, ContractConfig
+from typing import Callable
+
+from .basetypes import ContractConfig, DeploymentContext
 
 
 class DependencyManager:
@@ -15,7 +16,9 @@ class DependencyManager:
         internal_contracts = [c for c in self.context.contracts.values()]
         dep_dependencies_set = {(dep, c.key) for c in internal_contracts for dep in c.deployment_dependencies(self.context)}
         config_dependencies_set1 = {(k, v) for c in internal_contracts for k, v in c.config_dependencies(self.context).items()}
-        config_dependencies_set2 = {(c.key, v) for c in internal_contracts for k, v in c.config_dependencies(self.context).items()}
+        config_dependencies_set2 = {
+            (c.key, v) for c in internal_contracts for k, v in c.config_dependencies(self.context).items()
+        }
         self.deployment_dependencies = groupby_first(dep_dependencies_set, set(self.context.keys()))
         self.config_dependencies = groupby_first(config_dependencies_set1 | config_dependencies_set2, set(self.context.keys()))
 
@@ -38,9 +41,7 @@ class DependencyManager:
 
         self.deployment_set = {k for k in vis if vis[k] and k in self.context.contracts}
         self.transaction_set = {
-            k: set(txs)
-            for k, txs in self.config_dependencies.items()
-            if k in (self.deployment_set | self.changed)
+            k: set(txs) for k, txs in self.config_dependencies.items() if k in (self.deployment_set | self.changed)
         }
 
     def _build_deployment_order(self):
@@ -55,11 +56,7 @@ class DependencyManager:
         return set(tx_dict.values())
 
     def build_contract_deploy_set(self) -> list[ContractConfig]:
-        return [
-            self.context.contracts[k]
-            for k in self.deployment_order
-            if k in self.deployment_set
-        ]
+        return [self.context.contracts[k] for k in self.deployment_order if k in self.deployment_set]
 
 
 def topological_sort(dependencies: dict[str, set[str]]) -> list[str]:
@@ -82,7 +79,7 @@ def topological_sort(dependencies: dict[str, set[str]]) -> list[str]:
 
 def groupby_first(tuples: set[tuple], extended_keys: set[str] = None) -> dict[str, set[str]]:
     res = defaultdict(set)
-    for k in (extended_keys or set()):
+    for k in extended_keys or set():
         res[k] = set()
     for k, v in tuples:
         res[k].add(v)

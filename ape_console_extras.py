@@ -1,7 +1,8 @@
 import os
-import web3
-from scripts.deployment import DeploymentManager, Environment
 
+import web3
+
+from scripts.deployment import DeploymentManager, Environment
 
 ENV = Environment[os.environ.get("ENV", "local")]
 

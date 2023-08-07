@@ -378,7 +378,7 @@ def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_d
 
     vault: address = ISelf(self).tokenid_to_vault(token_id)
     self.active_vaults[token_id] = vault
-    
+
     IVault(vault).initialise(
         msg.sender,
         self,

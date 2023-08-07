@@ -10,17 +10,25 @@ PATH := ${VENV}/bin:${PATH}
 
 vpath %.vy ./contracts
 
-$(VENV): requirements.txt
+$(VENV):
 	python3 -m venv $(VENV)
 	${PIP} install -U pip
-	${PIP} install wheel
+	${PIP} install pip-tools wheel
 
-install: ${VENV}
+install: $(VENV) requirements.txt
 	${PIP} install -r requirements.txt
 	${VENV}/bin/ape plugins install --upgrade .
 
-install-dev: ${VENV}
+install-dev: $(VENV) requirements-dev.txt
 	${PIP} install -r requirements-dev.txt
+	${VENV}/bin/ape plugins install --upgrade .
+	$(VENV)/bin/pre-commit install
+
+requirements.txt: pyproject.toml
+	$(VENV)/bin/pip-compile -o requirements.txt pyproject.toml
+
+requirements-dev.txt: pyproject.toml
+	$(VENV)/bin/pip-compile -o requirements-dev.txt --extra dev pyproject.toml
 
 unit-tests: ${VENV}
 	${VENV}/bin/pytest tests/unit --durations=0 -n auto
@@ -37,7 +45,7 @@ coverage:
 
 gas:
 	${VENV}/bin/pytest tests/integration -m "profile" --durations=0 --gas-profile
-	
+
 
 interfaces:
 	${VENV}/bin/python scripts/build_interfaces.py contracts/*.vy
@@ -91,4 +99,3 @@ deploy-prod:
 
 publish-prod:
 	${VENV}/bin/ape run publish
-

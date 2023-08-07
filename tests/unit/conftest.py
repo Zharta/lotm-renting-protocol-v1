@@ -1,6 +1,7 @@
+from textwrap import dedent
+
 import boa
 import pytest
-from textwrap import dedent
 
 
 @pytest.fixture(scope="session")
@@ -62,6 +63,10 @@ def renting_contract_def():
 
 @pytest.fixture(scope="module")
 def empty_contract_def():
-    return boa.loads_partial(dedent("""
+    return boa.loads_partial(
+        dedent(
+            """
         dummy: uint256
-     """))
+     """
+        )
+    )

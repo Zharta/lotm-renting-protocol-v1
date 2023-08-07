@@ -30,7 +30,7 @@ jobs:
     - name: Install dependencies
       run: make install-dev
 
-    - name: Run project unit tests 
+    - name: Run project unit tests
       run: |
         make coverage
         sed -i '1s/^/coverage: platform marker \n/' coverage.txt

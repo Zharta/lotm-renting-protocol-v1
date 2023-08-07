@@ -1,10 +1,9 @@
-import boa
-import vyper
-
 from dataclasses import dataclass
 from functools import cached_property
-from web3 import Web3
 
+import boa
+import vyper
+from web3 import Web3
 
 ZERO_ADDRESS = boa.eval("empty(address)")
 
@@ -12,16 +11,21 @@ ZERO_ADDRESS = boa.eval("empty(address)")
 def get_last_event(contract: boa.vyper.contract.VyperContract, name: str = None):
     print("CONTRACT LOGS", contract.get_logs())
     print("\n\n\n")
-    matching_events = [e for e in contract.get_logs() if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)]
+    matching_events = [
+        e for e in contract.get_logs() if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)
+    ]
     return EventWrapper(matching_events[-1])
 
 
 def get_events(contract: boa.vyper.contract.VyperContract, name: str = None):
-    return [EventWrapper(e) for e in contract.get_logs() if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)]
+    return [
+        EventWrapper(e)
+        for e in contract.get_logs()
+        if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)
+    ]
 
 
-class EventWrapper():
-
+class EventWrapper:
     def __init__(self, event: boa.vyper.event.Event):
         self.event = event
         self.event_name = event.event_type.name
@@ -67,9 +71,9 @@ def checksummed(obj, vyper_type=None):
         return tuple(checksummed(*arg) for arg in zip(obj, vyper_type.tuple_members()))
 
     elif isinstance(vyper_type, vyper.codegen.types.types.BaseType):
-        if vyper_type.typ == 'address':
+        if vyper_type.typ == "address":
             return Web3.toChecksumAddress(obj)
-        elif vyper_type.typ == 'bytes32':
+        elif vyper_type.typ == "bytes32":
             return f"0x{obj.hex()}"
 
     return obj

@@ -3,4 +3,3 @@ plugins = boa.coverage
 omit =
     contracts/auxiliary/*
     tests/stubs/*
-
