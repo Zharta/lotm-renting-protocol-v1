@@ -114,9 +114,9 @@ _PRE: constant(bytes10) = 0x363d3d373d3d3d363d73
 _POST: constant(bytes15) = 0x5af43d82803e903d91602b57fd5bf3
 
 vault_impl_addr: public(address)
-payment_token_addr: immutable(address)
-nft_contract_addr: immutable(address)
-delegation_registry_addr: immutable(address)
+payment_token_addr: public(immutable(address))
+nft_contract_addr: public(immutable(address))
+delegation_registry_addr: public(immutable(address))
 
 active_vaults: public(HashMap[uint256, address]) # token_id -> vault
 
