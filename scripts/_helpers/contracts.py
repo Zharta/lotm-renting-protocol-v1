@@ -63,8 +63,8 @@ class RentingContract(ContractConfig):
         key: str,
         vault_impl_key: str,
         payment_token_key: str,
-        nft_contract_key: int,
-        delegation_registry_key: int,
+        nft_contract_key: str,
+        delegation_registry_key: str,
         address: str | None = None,
     ):
         super().__init__(

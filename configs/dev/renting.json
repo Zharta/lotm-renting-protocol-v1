@@ -1,7 +1,7 @@
 {
     "common": {
         "ape_token": {
-            "address": "0xCd5F3dcbfcC152179244932f81FFeC0bdfcbcE8F",
+            "address": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
             "contract": "ERC20Contract",
             "properties": {
                 "decimals": 18,
@@ -11,21 +11,21 @@
             }
         },
         "koda": {
-            "address": "0xd77835FEd88Df0737b1955A0A5660AE810edf4ee",
+            "address": "0xefe35f775921cA02D5826223eA5D3c039026aF38",
             "contract": "ERC721Contract"
         },
         "vault_impl": {
-            "address": "0xDBDBEa6d193826396BEa243EFC7A4B9894acD054",
+            "address": "0xfD0c52e8B15443a41d4CCaD7fE6ca67ecD49E2a4",
             "contract": "VaultImplContract"
         },
         "warm": {
-            "address": "0x03d7657e8ED903a60744F7218794668636c0704F",
+            "address": "0xd62F2607372553C10d6A66477a79602621366392",
             "contract": "WarmDelegationContract"
         }
     },
     "renting": {
         "koda": {
-            "address": "0xC53C8343bcFA5c6C4C05C03c626514A095849A34",
+            "address": "0x96b3bC38322aD5f0849e7d233b4B6dAA646455AE",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
