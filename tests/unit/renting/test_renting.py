@@ -106,6 +106,7 @@ def test_change_listings_prices(renting_contract, nft_contract, nft_owner, vault
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
     assert event.price == new_price
+    assert event.min_duration == min_duration
     assert event.max_duration == max_duration
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
