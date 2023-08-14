@@ -25,7 +25,7 @@
     },
     "renting": {
         "koda": {
-            "address": "0x96b3bC38322aD5f0849e7d233b4B6dAA646455AE",
+            "address": "0x77AF33C06841A4E2F283823a01076d8F9c73a8e2",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
