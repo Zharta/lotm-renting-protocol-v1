@@ -52,6 +52,7 @@ def test_create_vaults_and_deposit(contracts_config, renting_contract, nft_contr
     assert event.nft_contract == nft_contract.address
     assert event.min_duration == 0
     assert event.max_duration == 0
+    assert event.price == price
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
@@ -80,6 +81,7 @@ def test_create_vaults_and_deposit_limits(contracts_config, renting_contract, nf
     assert event.nft_contract == nft_contract.address
     assert event.min_duration == 0
     assert event.max_duration == 0
+    assert event.price == price
     for idx, entry in enumerate(vaults.items()):
         vault_log = VaultLog(*event.vaults[idx])
         assert vault_log.vault == entry[1]
@@ -552,6 +554,7 @@ def test_deposit(contracts_config, renting_contract, nft_contract, ape_contract,
     assert event.nft_contract == nft_contract.address
     assert event.min_duration == min_duration
     assert event.max_duration == max_duration
+    assert event.price == price
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
@@ -608,6 +611,7 @@ def test_deposit_limits(contracts_config, renting_contract, nft_contract, ape_co
     assert event.nft_contract == nft_contract.address
     assert event.min_duration == min_duration
     assert event.max_duration == max_duration
+    assert event.price == price
     for idx, entry in enumerate(vaults.items()):
         vault_log = VaultLog(*event.vaults[idx])
         assert vault_log.vault == entry[1]

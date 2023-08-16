@@ -63,6 +63,7 @@ event VaultsCreated:
     nft_contract: address
     min_duration: uint256
     max_duration: uint256
+    price: uint256
     vaults: DynArray[VaultLog, 32]
 
 event NftsDeposited:
@@ -70,6 +71,7 @@ event NftsDeposited:
     nft_contract: address
     min_duration: uint256
     max_duration: uint256
+    price: uint256
     vaults: DynArray[VaultLog, 32]
 
 event NftsWithdrawn:
@@ -153,6 +155,7 @@ def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, 
         nft_contract_addr,
         min_duration,
         max_duration,
+        price,
         vault_logs
     )
 
@@ -173,6 +176,7 @@ def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint
         nft_contract_addr,
         min_duration,
         max_duration,
+        price,
         vault_logs
     )
 
