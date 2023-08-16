@@ -69,6 +69,8 @@ def test_create_vaults_and_deposit(renting_contract, nft_contract, nft_owner, va
     assert event.nft_contract == nft_contract.address
     assert event.min_duration == min_duration
     assert event.max_duration == max_duration
+    assert event.price == price
+
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
@@ -660,6 +662,7 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     assert event.nft_contract == nft_contract.address
     assert event.min_duration == min_duration
     assert event.max_duration == max_duration
+    assert event.price == price
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
