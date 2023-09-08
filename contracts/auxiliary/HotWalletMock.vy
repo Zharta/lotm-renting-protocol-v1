@@ -1,9 +1,12 @@
+"""
+@title Quick mock of warm.xyz HotWalletProxy
+@notice This impementation is for test purposes ONLY and IS NOT part of the protocol
+@dev Implementation of basic mock functionality for mock of [HotWalletProxy](https://etherscan.io/address/0xf4fbf314e8819a8d4d496bfb3cdcd3687d0bbcb8#code#F1#L51)
+"""
+
 # @version 0.3.9
 
-##
-## Quick mock of [HotWalletProxy](https://etherscan.io/address/0xf4fbf314e8819a8d4d496bfb3cdcd3687d0bbcb8#code#F1#L51)
 ## TODO add the remaining functions
-##
 
 
 event HotWalletChanged:

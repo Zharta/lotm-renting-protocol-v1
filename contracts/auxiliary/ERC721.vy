@@ -1,8 +1,12 @@
-# @dev Implementation of ERC-721 non-fungible token standard.
-# @author Ryuya Nakamura (@nrryuya)
-# Modified from: https://github.com/vyperlang/vyper/blob/de74722bf2d8718cca46902be165f9fe0e3641dd/examples/tokens/ERC721.vy
+"""
+@title ERC721 implementation for mocking
+@notice This impementation is for test purposes ONLY and IS NOT part of the protocol
+@dev Implementation of ERC-721 non-fungible token standard.
+@dev Modified from: https://github.com/vyperlang/vyper/blob/de74722bf2d8718cca46902be165f9fe0e3641dd/examples/tokens/ERC721.vy
+@author Takayuki Jimba (@yudetamago)
+"""
 
-# @version ^0.3.3
+# @version 0.3.9
 
 from vyper.interfaces import ERC165
 from vyper.interfaces import ERC721
@@ -393,11 +397,6 @@ def burn(_tokenId: uint256):
     self._decreaseTotalSupply()
     log Transfer(owner, ZERO_ADDRESS, _tokenId)
 
-
-# @view
-# @external
-# def tokenURL(tokenId: uint256) -> String[132]:
-#     return concat(self.baseURL, uint2str(tokenId))
 
 @view
 @external

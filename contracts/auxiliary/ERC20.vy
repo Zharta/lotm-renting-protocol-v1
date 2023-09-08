@@ -1,8 +1,12 @@
-# @dev Implementation of ERC-20 token standard.
-# @author Takayuki Jimba (@yudetamago)
-# https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
+"""
+@title ERC20 implementation for mocking
+@notice This impementation is for test purposes ONLY and IS NOT part of the protocol
+@dev Implementation of ERC-20 token standard.
+@dev https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
+@author Takayuki Jimba (@yudetamago)
+"""
 
-# @version ^0.3.3
+# @version 0.3.9
 
 from vyper.interfaces import ERC20
 from vyper.interfaces import ERC20Detailed
