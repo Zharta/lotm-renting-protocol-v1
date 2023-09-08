@@ -140,7 +140,7 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
         IDelegationRegistry(self.delegation_registry_addr).setHotWallet(renter, expiration, False)
 
     # transfer rental amount from renter to this contract
-    IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount)
+    assert IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount), "transferFrom failed"
 
     return self.active_rental
 
@@ -178,7 +178,7 @@ def close_rental(sender: address) -> (Rental, uint256):
     IDelegationRegistry(self.delegation_registry_addr).setHotWallet(empty(address), 0, False)
 
     # transfer unused payment to renter
-    IERC20(self.payment_token_addr).transfer(rental.renter, payback_amount)
+    assert IERC20(self.payment_token_addr).transfer(rental.renter, payback_amount), "transfer failed"
 
     return rental, pro_rata_rental_amount
 
@@ -199,7 +199,7 @@ def claim(sender: address) -> uint256:
     self.unclaimed_rewards = 0
 
     # transfer reward to nft owner
-    IERC20(self.payment_token_addr).transfer(self.active_rental.owner, rewards_to_claim)
+    assert IERC20(self.payment_token_addr).transfer(self.active_rental.owner, rewards_to_claim), "transfer failed"
 
     return rewards_to_claim
 
@@ -230,7 +230,7 @@ def withdraw(sender: address) -> uint256:
 
     # transfer unclaimed rewards to owner
     if rewards_to_claim > 0:
-        IERC20(self.payment_token_addr).transfer(owner, rewards_to_claim)
+        assert IERC20(self.payment_token_addr).transfer(owner, rewards_to_claim), "transfer failed"
 
     return rewards_to_claim
 

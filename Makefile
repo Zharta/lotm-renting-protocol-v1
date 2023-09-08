@@ -31,10 +31,10 @@ requirements-dev.txt: pyproject.toml
 	$(VENV)/bin/pip-compile -o requirements-dev.txt --extra dev pyproject.toml
 
 unit-tests: ${VENV}
-	${VENV}/bin/pytest tests/unit --durations=0 -n auto
+	${VENV}/bin/pytest tests/unit --durations=20 -n auto
 
 integration-tests: ${VENV}
-	${VENV}/bin/pytest -n auto tests/integration -m "not profile" --durations=0
+	${VENV}/bin/pytest -n auto tests/integration -m "not profile" --durations=20
 
 fuzz-tests:
 	${VENV}/bin/pytest tests/fuzz --durations=0 -n auto
