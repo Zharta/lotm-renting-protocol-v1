@@ -51,11 +51,6 @@ delegation_registry_addr: public(address)
 ##### EXTERNAL METHODS - WRITE #####
 
 @external
-def __init__():
-    pass
-
-
-@external
 def initialise(
     owner: address,
     caller: address,
