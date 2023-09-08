@@ -1,4 +1,5 @@
 from decimal import Decimal
+from textwrap import dedent
 
 import boa
 import pytest
@@ -33,6 +34,28 @@ def mint(nft_owner, owner, renter, nft_contract, ape_contract):
         nft_contract.mint(nft_owner, 1, sender=owner)
         ape_contract.mint(renter, int(1000 * 1e18), sender=owner)
         yield
+
+
+@pytest.fixture(scope="module")
+def erc20_not_reverting():
+    return boa.loads(
+        dedent(
+            """
+        @external
+        def transfer(dst: address, wallet: uint256) -> bool:
+            return False
+
+        @external
+        def transferFrom(src: address, dst: address, wallet: uint256) -> bool:
+            return False
+
+        @external
+        def allowance(src: address, dst: address) -> uint256:
+            return max_value(uint256)
+
+             """
+        )
+    )
 
 
 def test_initial_state(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract):
@@ -276,6 +299,48 @@ def test_close_rental_no_active_rental(vault_contract, renting_contract, renter)
         vault_contract.close_rental(renter, sender=renting_contract.address)
 
 
+def test_close_rental_erc20_not_reverting(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    erc20_not_reverting,
+):
+    token_id = 1
+    price = int(1e18)
+    expiration = boa.eval("block.timestamp") + 86400
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
+
+    with boa.reverts("transferFrom failed"):
+        vault_contract.eval(f"self.payment_token_addr = {erc20_not_reverting.address}")
+        vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
+
+    vault_contract.eval(f"self.payment_token_addr = {ape_contract.address}")
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+
+    vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
+
+    time_passed = 43200
+    boa.env.time_travel(seconds=time_passed)
+
+    with boa.reverts("transfer failed"):
+        vault_contract.eval(f"self.payment_token_addr = {erc20_not_reverting.address}")
+        vault_contract.close_rental(renter, sender=renting_contract.address)
+
+    active_rental = Rental(*vault_contract.active_rental())
+    assert active_rental.owner == nft_owner
+    assert active_rental.renter == renter
+    assert active_rental.token_id == token_id
+    assert active_rental.amount == rental_amount
+
+
 def test_close_rental(
     vault_contract,
     renting_contract,
@@ -325,6 +390,41 @@ def test_claim_not_caller(vault_contract, nft_owner):
 def test_claim_no_rewards(vault_contract, renting_contract, nft_owner):
     with boa.reverts("no rewards to claim"):
         vault_contract.claim(nft_owner, sender=renting_contract.address)
+
+
+def test_claim_erc20_not_reverting(
+    vault_contract_def,
+    erc20_not_reverting,
+    delegation_registry_warm_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+):
+    token_id = 1
+    price = int(1e18)
+    rewards = int(1e18)
+
+    vault_contract = vault_contract_def.deploy()
+    vault_contract.initialise(
+        nft_owner,
+        renting_contract.address,
+        erc20_not_reverting,
+        nft_contract,
+        delegation_registry_warm_contract,
+        sender=renting_contract.address,
+    )
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+    vault_contract.eval(f"self.unclaimed_rewards = {rewards}")
+
+    with boa.reverts("transfer failed"):
+        vault_contract.claim(nft_owner, sender=renting_contract.address)
+
+    with boa.reverts("transfer failed"):
+        vault_contract.withdraw(nft_owner, sender=renting_contract.address)
+
+    assert nft_contract.ownerOf(token_id) == vault_contract.address
+    assert vault_contract.unclaimed_rewards() == rewards
 
 
 def test_claim(
