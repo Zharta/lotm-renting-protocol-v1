@@ -54,19 +54,21 @@ delegation_registry_addr: public(address)
 def __init__():
     pass
 
-
 @external
 def initialise(
     owner: address,
-    caller: address,
     payment_token_addr: address,
     nft_contract_addr: address,
     delegation_registry_addr: address
 ):
     assert not self.is_initialised, "already initialised"
 
+    if self.caller != empty(address):
+        assert msg.sender == self.caller, "not caller"
+    else:
+        self.caller = msg.sender
+
     self.owner = owner
-    self.caller = caller
     self.is_initialised = True
 
     self.payment_token_addr = payment_token_addr

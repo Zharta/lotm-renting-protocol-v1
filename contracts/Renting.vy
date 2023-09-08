@@ -9,7 +9,7 @@ interface ISelf:
 
 interface IVault:
     def is_initialised() -> bool: view
-    def initialise(owner: address, caller: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
+    def initialise(owner: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
     def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
     def set_listing_price(sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
     def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
@@ -368,7 +368,6 @@ def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: u
 
     IVault(vault).initialise(
         msg.sender,
-        self,
         payment_token_addr,
         nft_contract_addr,
         delegation_registry_addr
@@ -387,7 +386,6 @@ def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_d
 
     IVault(vault).initialise(
         msg.sender,
-        self,
         payment_token_addr,
         nft_contract_addr,
         delegation_registry_addr

@@ -31,7 +31,6 @@ def test_initialise_twice(
     with boa.reverts("already initialised"):
         vault_contract.initialise(
             nft_owner,
-            renting_contract.address,
             ape_contract,
             nft_contract,
             ZERO_ADDRESS,

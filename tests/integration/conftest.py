@@ -99,7 +99,6 @@ def contracts_config(
     with boa.env.anchor():
         vault_contract.initialise(
             nft_owner,
-            renting_contract.address,
             ape_contract,
             nft_contract,
             delegation_registry_warm_contract,
