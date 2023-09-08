@@ -53,12 +53,29 @@ The protocol creates the vaults using minimal proxies and the `CREATE2` opcode. 
 
 ### Rentals
 
-Whenever a rental starts, the renter pays the full amount of the rental upfront. This amount is locked in the NFT vault until the end of the rental. Once the rental finishes, the rental amount is released to the NFT owner for claiming. Since the protocol is using [warm.xyz](https://warm.xyz) which supports setting 
+Whenever a rental starts, the renter pays the full amount of the rental upfront. This amount is locked in the NFT vault until the end of the rental. Once the rental finishes, the rental amount is released to the NFT owner for claiming. Since the protocol is using [warm.xyz](https://warm.xyz) which supports setting
 a specific timestamp for the end of the delegation, the protocol computes the amount of fees that are claimable taking this into consideration. Unclaimed fees are only set explicitly for certain actions:
 1. `claim`: the NFT owner claims unclaimed fees
 2. `withdraw`: the NFT owner withdraws the NFT from the vault, together it any unclaimed fees
 3. `start_rental`: a renter starts the rental and the previous rental fees, if not claimed, are set explicitly as unclaimed
 4. `close_rental`: a renter may finish a rental before its due date and pays only for the time used, and unclaimed fees are explicitly set
+
+
+### Testing
+
+There are three types of tests implemented, running on py-evm using titanoboa:
+1. Unit tests focus on individual functions for each contract, mocking external dependencies (ERC20, ERC721 and warm.xyz HotWallet)
+2. Integration tests run on a forked chain, testing the integration between the contracts in the protocol and real implementations of the external dependencies
+3. Fuzz tests implement stateful testing, validating that invariants are kept over multiple interactions with the protocol
+
+Additionaly, under `contracts/auxiliary` there are mock implementations of external dependencies which are NOT part of the protocol and are used to support deployments in private and test networks:
+```
+contracts/
+└── auxiliary
+    ├── ERC20.vy
+    ├── ERC721.vy
+    └── HotWalletMock.vy
+```
 
 
 ## Run the project
