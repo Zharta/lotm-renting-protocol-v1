@@ -77,12 +77,12 @@ def test_deposit(contracts_config, vault_contract, nft_owner, renting_contract, 
     assert listing.max_duration == 0
 
 
-def test_set_listing_price_not_caller(contracts_config, vault_contract, nft_owner):
+def test_set_listing_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.set_listing_price(nft_owner, 1, 0, 0, sender=nft_owner)
+        vault_contract.set_listing(nft_owner, 1, 0, 0, sender=nft_owner)
 
 
-def test_change_listing_price(contracts_config, vault_contract, renting_contract, nft_contract, nft_owner):
+def test_change_listing(contracts_config, vault_contract, renting_contract, nft_contract, nft_owner):
     token_id = 1
     price = 1
     new_price = 2
@@ -92,7 +92,7 @@ def test_change_listing_price(contracts_config, vault_contract, renting_contract
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
-    vault_contract.set_listing_price(nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address)
+    vault_contract.set_listing(nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address)
 
     listing = Listing(*vault_contract.listing())
     assert listing.token_id == token_id
@@ -103,7 +103,7 @@ def test_change_listing_price(contracts_config, vault_contract, renting_contract
 
 def test_cancel_listing_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.set_listing_price(nft_owner, 0, 0, 0, sender=nft_owner)
+        vault_contract.set_listing(nft_owner, 0, 0, 0, sender=nft_owner)
 
 
 def test_cancel_listing(contracts_config, vault_contract, renting_contract, nft_contract, nft_owner):
@@ -113,7 +113,7 @@ def test_cancel_listing(contracts_config, vault_contract, renting_contract, nft_
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
-    vault_contract.set_listing_price(nft_owner, 0, 0, 0, sender=renting_contract.address)
+    vault_contract.set_listing(nft_owner, 0, 0, 0, sender=renting_contract.address)
 
     listing = Listing(*vault_contract.listing())
     assert listing.token_id == token_id

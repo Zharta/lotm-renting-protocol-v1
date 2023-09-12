@@ -11,7 +11,7 @@ interface IVault:
     def is_initialised() -> bool: view
     def initialise(owner: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
     def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
-    def set_listing_price(sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
+    def set_listing(sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
     def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
     def close_rental(sender: address) -> (Rental, uint256): nonpayable
     def claim(sender: address) -> uint256: nonpayable
@@ -189,7 +189,7 @@ def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, min_du
         vault: address = self.active_vaults[token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing_price(msg.sender, price, min_duration, max_duration)
+        IVault(vault).set_listing(msg.sender, price, min_duration, max_duration)
 
         vault_logs.append(VaultLog({
             vault: vault,
@@ -214,7 +214,7 @@ def cancel_listings(token_ids: DynArray[uint256, 32]):
         vault: address = self.active_vaults[token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing_price(msg.sender, 0, 0, 0)
+        IVault(vault).set_listing(msg.sender, 0, 0, 0)
 
         vaults.append(VaultLog({
             vault: vault,
