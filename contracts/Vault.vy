@@ -94,7 +94,7 @@ def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_durati
 
 
 @external
-def set_listing_price(sender: address, price: uint256, min_duration: uint256, max_duration: uint256):
+def set_listing(sender: address, price: uint256, min_duration: uint256, max_duration: uint256):
     assert self.is_initialised, "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
