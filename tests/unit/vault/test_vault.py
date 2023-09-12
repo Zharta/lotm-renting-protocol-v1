@@ -19,7 +19,6 @@ def vault_contract(
     contract = vault_contract_def.deploy()
     contract.initialise(
         nft_owner,
-        renting_contract.address,
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
@@ -70,7 +69,6 @@ def test_initialise_twice(vault_contract, renting_contract, nft_owner, nft_contr
     with boa.reverts("already initialised"):
         vault_contract.initialise(
             nft_owner,
-            renting_contract.address,
             ape_contract,
             nft_contract,
             ZERO_ADDRESS,
@@ -565,3 +563,50 @@ def test_withdraw(vault_contract, renting_contract, nft_contract, nft_owner, ren
     assert nft_contract.ownerOf(token_id) == nft_owner
     assert ape_contract.balanceOf(renting_contract.address) == 0
     assert ape_contract.balanceOf(nft_owner) == rental_amount
+
+
+def test_initialise_after_withdraw(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+):
+    token_id = 1
+    price = int(1e18)
+    expiration = int(boa.eval("block.timestamp")) + 86400
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+    vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
+
+    boa.env.time_travel(seconds=86401)
+
+    vault_contract.withdraw(nft_owner, sender=renting_contract.address)
+
+    assert not vault_contract.is_initialised()
+    assert vault_contract.owner() == ZERO_ADDRESS
+    assert vault_contract.caller() == renting_contract.address
+
+    other_user = boa.env.generate_address("other_user")
+    with boa.reverts("not caller"):
+        vault_contract.initialise(
+            other_user,
+            ape_contract,
+            nft_contract,
+            ZERO_ADDRESS,
+            sender=other_user,
+        )
+
+    vault_contract.initialise(
+        other_user,
+        ape_contract,
+        nft_contract,
+        ZERO_ADDRESS,
+        sender=renting_contract.address,
+    )
