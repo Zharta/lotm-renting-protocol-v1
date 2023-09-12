@@ -11,7 +11,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "titanoboa @ git+https://github.com/vyperlang/titanoboa#[forking-recommended]",
+    "titanoboa @ git+https://github.com/vyperlang/titanoboa@44c14406eda4fefc0dad99a287dff7fae2172a18#[forking-recommended]",
     "black",
     "boto3",
     "click",
