@@ -116,7 +116,7 @@ _DEPLOYMENT_CODE: constant(bytes9) = 0x602D3D8160093D39F3
 _PRE: constant(bytes10) = 0x363d3d373d3d3d363d73
 _POST: constant(bytes15) = 0x5af43d82803e903d91602b57fd5bf3
 
-vault_impl_addr: public(address)
+vault_impl_addr: public(immutable(address))
 payment_token_addr: public(immutable(address))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
@@ -128,12 +128,12 @@ active_vaults: public(HashMap[uint256, address]) # token_id -> vault
 
 @external
 def __init__(
-    vault_impl_addr: address,
+    _vault_impl_addr: address,
     _payment_token_addr: address,
     _nft_contract_addr: address,
     _delegation_registry_addr: address
 ):
-    self.vault_impl_addr = vault_impl_addr
+    vault_impl_addr = _vault_impl_addr
     payment_token_addr = _payment_token_addr
     nft_contract_addr = _nft_contract_addr
     delegation_registry_addr = _delegation_registry_addr
@@ -362,7 +362,7 @@ def _convert_keccak256_2_address(digest: bytes32) -> address:
 def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256) -> address:
     assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
 
-    vault: address = create_minimal_proxy_to(self.vault_impl_addr, salt=convert(token_id, bytes32))
+    vault: address = create_minimal_proxy_to(vault_impl_addr, salt=convert(token_id, bytes32))
 
     self.active_vaults[token_id] = vault
 
@@ -413,7 +413,7 @@ def tokenid_to_vault(token_id: uint256) -> address:
         keccak256(concat(
             _DEPLOYMENT_CODE,
             _PRE,
-            convert(self.vault_impl_addr, bytes20),
+            convert(vault_impl_addr, bytes20),
             _POST
         )),
         self
