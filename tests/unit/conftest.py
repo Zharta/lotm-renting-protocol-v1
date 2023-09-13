@@ -48,7 +48,7 @@ def ape_contract(owner):
 
 @pytest.fixture(scope="session")
 def delegation_registry_warm_contract():
-    return boa.load("tests/stubs/DelegationRegistry.vy")
+    return boa.load("contracts/auxiliary/HotWalletMock.vy")
 
 
 @pytest.fixture(scope="session")

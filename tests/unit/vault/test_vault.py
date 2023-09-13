@@ -260,6 +260,49 @@ def test_start_rental(
     assert active_rental.expiration == expiration
     assert active_rental.amount == rental_amount
 
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == renter
+    assert delegation_registry_warm_contract.eval(f"self.exp[{vault_contract.address}]") == expiration
+
+
+def test_start_rental_with_existing_delegation(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    delegation_registry_warm_contract,
+):
+    token_id = 1
+    price = int(1e18)
+    expiration = boa.eval("block.timestamp") + 86400
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    min_expiration = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) * Decimal(price) / Decimal(3600))
+
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+
+    delegation_registry_warm_contract.setHotWallet(renter, expiration - 1, False, sender=vault_contract.address)
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == renter
+
+    vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
+
+    active_rental = Rental(*vault_contract.active_rental())
+    assert active_rental.owner == nft_owner
+    assert active_rental.renter == renter
+    assert active_rental.token_id == token_id
+    assert active_rental.start == start_time
+    assert active_rental.min_expiration == min_expiration
+    assert active_rental.expiration == expiration
+    assert active_rental.amount == rental_amount
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == renter
+    assert delegation_registry_warm_contract.eval(f"self.exp[{vault_contract.address}]") == expiration
+
 
 def test_start_rental_ongoing(
     vault_contract,
