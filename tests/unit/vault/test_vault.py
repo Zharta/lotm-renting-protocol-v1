@@ -405,7 +405,6 @@ def test_claim_erc20_not_reverting(
     vault_contract = vault_contract_def.deploy()
     vault_contract.initialise(
         nft_owner,
-        renting_contract.address,
         erc20_not_reverting,
         nft_contract,
         delegation_registry_warm_contract,
