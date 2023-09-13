@@ -120,6 +120,15 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
     rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, listing.price)
     assert IERC20(self.payment_token_addr).allowance(renter, self) >= rental_amount, "insufficient allowance"
 
+    # create delegation
+    if IDelegationRegistry(self.delegation_registry_addr).getHotWallet(self) == renter:
+        IDelegationRegistry(self.delegation_registry_addr).setExpirationTimestamp(expiration)
+    else:
+        IDelegationRegistry(self.delegation_registry_addr).setHotWallet(renter, expiration, False)
+
+    # transfer rental amount from renter to this contract
+    assert IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount), "transferFrom failed"
+
     # store unclaimed rewards
     self._consolidate_claims()
 
@@ -135,15 +144,6 @@ def start_rental(renter: address, expiration: uint256) -> Rental:
         expiration: expiration,
         amount: rental_amount
     })
-
-    # create delegation
-    if IDelegationRegistry(self.delegation_registry_addr).getHotWallet(self) == renter:
-        IDelegationRegistry(self.delegation_registry_addr).setExpirationTimestamp(expiration)
-    else:
-        IDelegationRegistry(self.delegation_registry_addr).setHotWallet(renter, expiration, False)
-
-    # transfer rental amount from renter to this contract
-    assert IERC20(self.payment_token_addr).transferFrom(renter, self, rental_amount), "transferFrom failed"
 
     return self.active_rental
 
