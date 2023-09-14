@@ -34,7 +34,7 @@ The current status of the protocol follows certain assumptions that must be vali
 The assumptions are the following:
 1. delegation is supported using [warm.xyz](https://warm.xyz)
 2. the current version of [warm.xyz](https://warm.xyz) if the same as the last verified version seen [here](https://etherscan.io/address/0xad0b7f45750f2211b55a1218f907e67dfac841fa#code)
-3. because [warm.xyz](https://warm.xyz) doesn't support NFT-level delegation and only supports wallet-level delegation, one vault per NFT needs to be created
+3. because [warm.xyz](https://warm.xyz) does not support NFT-level delegation and only supports wallet-level delegation, one vault per NFT needs to be created
 
 
 ## Security
@@ -98,7 +98,7 @@ contracts/
     ├── ERC721.vy
     └── HotWalletMock.vy
 ```
-
+The `ERC20.vy` and `ERC721.vy` contracts are used to deploy mock ERC20 and ERC721 tokens, respectively. The `HotWalletMock.vy` contract is used to deploy a mock implementation of the [warm.xyz](https://warm.xyz) delegation contract.
 
 ### Run the project
 
