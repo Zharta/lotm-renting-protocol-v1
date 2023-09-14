@@ -96,7 +96,7 @@ def test_change_listings_prices(renting_contract, nft_contract, nft_owner, vault
     assert listing.min_duration == 0
     assert listing.max_duration == 0
 
-    renting_contract.set_listings_prices([token_id], new_price, min_duration, max_duration, sender=nft_owner)
+    renting_contract.set_listings([token_id], new_price, min_duration, max_duration, sender=nft_owner)
     event = get_last_event(renting_contract, "ListingsPricesChanged")
 
     listing = Listing(*vault_contract.listing())
@@ -369,7 +369,7 @@ def test_close_rental_with_changed_list_price(
 
     renting_contract.start_rentals([token_id], expiration, sender=renter)
 
-    renting_contract.set_listings_prices([token_id], changed_price, 0, 0, sender=nft_owner)
+    renting_contract.set_listings([token_id], changed_price, 0, 0, sender=nft_owner)
 
     time_passed = 3600
     boa.env.time_travel(seconds=time_passed)

@@ -107,7 +107,7 @@ def test_change_listings_price(contracts_config, renting_contract, nft_contract,
     assert listing.min_duration == 0
     assert listing.max_duration == 0
 
-    renting_contract.set_listings_prices([token_id], new_price, min_duration, max_duration, sender=nft_owner)
+    renting_contract.set_listings([token_id], new_price, min_duration, max_duration, sender=nft_owner)
     event = get_last_event(renting_contract, "ListingsPricesChanged")
 
     vault = get_vault_from_proxy(vault_addr)
@@ -151,7 +151,7 @@ def test_change_listings_price_limits(contracts_config, renting_contract, nft_co
         assert listing.min_duration == 0
         assert listing.max_duration == 0
 
-    renting_contract.set_listings_prices(token_ids, new_price, min_duration, max_duration, sender=nft_owner)
+    renting_contract.set_listings(token_ids, new_price, min_duration, max_duration, sender=nft_owner)
     event = get_last_event(renting_contract, "ListingsPricesChanged")
 
     for token_id, vault_addr in vaults.items():
