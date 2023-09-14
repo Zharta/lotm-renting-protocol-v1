@@ -80,7 +80,7 @@ class StateMachine(RuleBasedStateMachine):
     )
     def change_listings_prices(self, token, new_price, min_duration, max_duration):
         owner = self.owner_of[token]
-        self.renting.set_listings_prices([token], new_price, min_duration, max_duration, sender=owner)
+        self.renting.set_listings([token], new_price, min_duration, max_duration, sender=owner)
         self.listing_price[token] = new_price
 
     @rule(token=tokens_in_vaults)

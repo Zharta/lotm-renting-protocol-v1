@@ -182,7 +182,7 @@ def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint
 
 
 @external
-def set_listings_prices(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256):
+def set_listings(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
