@@ -80,7 +80,7 @@ event NftsWithdrawn:
     total_rewards: uint256
     withdrawals: DynArray[WithdrawalLog, 32]
 
-event ListingsPricesChanged:
+event ListingsChanged:
     owner: address
     nft_contract: address
     min_duration: uint256
@@ -196,7 +196,7 @@ def set_listings(token_ids: DynArray[uint256, 32], price: uint256, min_duration:
             token_id: token_id
         }))
 
-    log ListingsPricesChanged(
+    log ListingsChanged(
         msg.sender,
         nft_contract_addr,
         min_duration,

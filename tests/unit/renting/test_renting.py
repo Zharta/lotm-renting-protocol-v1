@@ -97,7 +97,7 @@ def test_change_listings_prices(renting_contract, nft_contract, nft_owner, vault
     assert listing.max_duration == 0
 
     renting_contract.set_listings([token_id], new_price, min_duration, max_duration, sender=nft_owner)
-    event = get_last_event(renting_contract, "ListingsPricesChanged")
+    event = get_last_event(renting_contract, "ListingsChanged")
 
     listing = Listing(*vault_contract.listing())
     assert listing.token_id == token_id
