@@ -24,7 +24,7 @@ There are two major domains in the protocol:
 The renting of an NFT in the context of this protocol means that:
 1. an asset owner deposits the NFT in a vault, setting the terms of the rental: price and minimum/maximum rental duration
 2. a user (renter) selects the NFT put for rental and starts the rental by paying for the rental upfront
-3. the vault where the NFTasset is escrowed delegates it to the renter's wallet for a specific duration
+3. the vault where the NFT asset is escrowed delegates it to the renter's wallet for a specific duration
 4. once the duration of the rental is reached, the rental finishes
 
 ## General considerations
