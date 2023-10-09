@@ -47,6 +47,12 @@ def store_contracts(env: Environment, contracts: list[ContractConfig]):
             key = f"{scope}.{name}"
             if key in contracts_dict:
                 c["address"] = contracts_dict[key].address()
+            properties = c.get("properties", {})
+            addresses = c.get("properties_addresses", {})
+            for prop_key, prop_val in properties.items():
+                if prop_key.endswith("_key"):
+                    addresses[prop_key[:-4]] = contracts_dict[prop_val].address()
+            c["properties_addresses"] = addresses
 
     with open(config_file, "w") as f:
         f.write(json.dumps(config, indent=4, sort_keys=True))
