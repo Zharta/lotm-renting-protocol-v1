@@ -42,7 +42,7 @@ Below are the smart contract audits performed for the protocol so far:
 
 | **Auditor** 	| **Status** 	| **PDF** 	|
 |:-----------:	|:----------:	|---------	|
-| Hacken      	| Ongoing    	| _TBA_   	|
+| Hacken      	| Ongoing    	| [PDF](audits/Audit_Hacken.pdf)  	|
 
 ## Architecture
 
