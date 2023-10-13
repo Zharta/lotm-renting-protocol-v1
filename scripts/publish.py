@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -17,7 +18,14 @@ warnings.filterwarnings("ignore")
 ENV = Environment[os.environ.get("ENV", "local")]
 DYNAMODB = boto3.resource("dynamodb")
 RENTING = DYNAMODB.Table(f"renting-configs-{ENV.name}")
+ABI = DYNAMODB.Table(f"abis-{ENV.name}")
 KEY_ATTRIBUTES = ["renting_key"]
+
+
+def abi_key(abi: list) -> str:
+    json_dump = json.dumps(abi, sort_keys=True)
+    hash = hashlib.sha1(json_dump.encode("utf8"))
+    return hash.hexdigest()
 
 
 def get_renting_configs(context, env: Environment) -> dict:
@@ -29,6 +37,7 @@ def get_renting_configs(context, env: Environment) -> dict:
     for k, config in renting_configs.items():
         contract = context[f"renting.{k}"].contract
         config["abi"] = contract.contract_type.dict()["abi"]
+        config["abi_key"] = abi_key(contract.contract_type.dict()["abi"])
 
     return renting_configs
 
@@ -43,6 +52,10 @@ def update_renting_config(renting_key: str, renting: dict):
     )
 
 
+def update_abi(abi_key: str, abi: list[dict]):
+    ABI.update_item(Key={"abi_key": abi_key}, UpdateExpression="SET abi=:v", ExpressionAttributeValues={":v": abi})
+
+
 @click.command()
 def cli():
     dm = DeploymentManager(ENV)
@@ -52,6 +65,7 @@ def cli():
     renting_configs = get_renting_configs(dm.context, dm.env)
 
     for k, v in renting_configs.items():
+        update_abi(v["abi_key"], v["abi"])
         update_renting_config(k, v)
 
     print(f"Renting configs updated in {ENV.name}")
