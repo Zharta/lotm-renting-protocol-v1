@@ -70,7 +70,7 @@ The protocol creates the vaults using minimal proxies and the `CREATE2` opcode. 
 
 Whenever a rental starts, the renter pays the full amount of the rental upfront. This amount is locked in the NFT vault until the end of the rental. Once the rental finishes, the rental amount is released to the NFT owner for claiming. Since the protocol is using [warm.xyz](https://warm.xyz) which supports setting a specific timestamp for the end of the delegation, the protocol computes the amount of fees that are claimable taking this into consideration. Unclaimed fees are only set explicitly for certain actions:
 1. `claim`: the NFT owner claims unclaimed fees
-2. `withdraw`: the NFT owner withdraws the NFT from the vault, together it any unclaimed fees
+2. `withdraw`: the NFT owner withdraws the NFT from the vault, along with any unclaimed fees
 3. `start_rental`: a renter starts the rental and the previous rental fees, if not claimed, are set explicitly as unclaimed
 4. `close_rental`: a renter may finish a rental before its due date and pays only for the time used, and unclaimed fees are explicitly set
 
