@@ -16,6 +16,11 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
+        "mara": {
+            "address": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
         "vault_impl": {
             "address": "0xcB1180c78538A18A22C1b1dd70754918B07fB320",
             "contract": "VaultImplContract",
@@ -40,6 +45,22 @@
             "properties_addresses": {
                 "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
                 "nft_contract": "0xADeD61D42dE86f9058386D1D0d739d20C7eAfC43",
+                "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
+                "vault_impl": "0xcB1180c78538A18A22C1b1dd70754918B07fB320"
+            }
+        },
+        "mara": {
+            "address": "0xE5a729d0FD1Dd1c199C19dC47a82c665Fd6C18D8",
+            "contract": "RentingContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.mara",
+                "payment_token_key": "common.ape_token",
+                "vault_impl_key": "common.vault_impl"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "nft_contract": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
                 "vault_impl": "0xcB1180c78538A18A22C1b1dd70754918B07fB320"
             }
