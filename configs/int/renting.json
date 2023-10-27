@@ -34,7 +34,7 @@
     },
     "renting": {
         "koda": {
-            "address": "0xccA56557F445c0744E1ba0Ff743DFaE9E5537e27",
+            "address": "0x8c4369d3eB8207D65836c61a5c124f8f98Da756B",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -50,7 +50,7 @@
             }
         },
         "mara": {
-            "address": "0x01819C89B5906B2606c2532aE5B12cde20211be0",
+            "address": "0x49e3293043D51c407f225472B5dC1c288c9617DA",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",

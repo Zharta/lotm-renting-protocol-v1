@@ -137,19 +137,17 @@ class StateMachine(RuleBasedStateMachine):
 
     @rule(target=tokens_in_rental, token=consumes(tokens_in_vaults), renter=st.sampled_from(renters))
     def start_rental_from_tokens_in_vaults(self, token, renter):
-        now = boa.eval("block.timestamp")
         owner = self.owner_of[token]
 
         listing = Listing(*self.vaults[token].listing())
         min_duration = listing.min_duration
         max_duration = listing.max_duration
         hours = random.randint(min_duration, max_duration) if max_duration else random.randint(min_duration, 100)
-        expiration = now + hours * 3600
 
         assume(self.listing_price[token] > 0)
 
         self.ape.approve(self.vaults[token], max(0, self.listing_price[token] * hours), sender=renter)
-        self.renting.start_rentals([token], expiration, sender=renter)
+        self.renting.start_rentals([token], hours, sender=renter)
 
         rental = Rental(*self.vaults[token].active_rental())
         self.rentals[token] = rental
@@ -167,13 +165,12 @@ class StateMachine(RuleBasedStateMachine):
         min_duration = listing.min_duration
         max_duration = listing.max_duration
         hours = random.randint(min_duration, max_duration) if max_duration else random.randint(min_duration, 100)
-        expiration = now + hours * 3600
 
         assume(self.listing_price[token] > 0)
         assume(self.rentals[token].expiration < now)
 
         self.ape.approve(self.vaults[token], max(0, self.listing_price[token] * hours), sender=renter)
-        self.renting.start_rentals([token], expiration, sender=renter)
+        self.renting.start_rentals([token], hours, sender=renter)
 
         rental = Rental(*self.vaults[token].active_rental())
         self.rentals[token] = rental
