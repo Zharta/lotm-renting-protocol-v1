@@ -229,8 +229,10 @@ def cancel_listings(token_ids: DynArray[uint256, 32]):
 
 
 @external
-def start_rentals(token_ids: DynArray[uint256, 32], expiration: uint256):
+def start_rentals(token_ids: DynArray[uint256, 32], duration: uint256):
     rental_logs: DynArray[RentalLog, 32] = []
+
+    expiration: uint256 = block.timestamp + duration * 3600
 
     for token_id in token_ids:
         vault: address = self.active_vaults[token_id]
