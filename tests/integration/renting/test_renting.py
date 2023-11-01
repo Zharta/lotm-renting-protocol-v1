@@ -36,7 +36,9 @@ def test_create_vaults_and_deposit_not_approved(contracts_config, renting_contra
         renting_contract.create_vaults_and_deposit([token_id], price, 0, 0, sender=nft_owner)
 
 
-def test_create_vaults_and_deposit(contracts_config, renting_contract, nft_contract, nft_owner, vault_contract):
+def test_create_vaults_and_deposit(
+    contracts_config, renting_contract, nft_contract, nft_owner, vault_contract, delegation_registry_warm_contract
+):
     token_id = 1
     price = 1
 
@@ -56,6 +58,8 @@ def test_create_vaults_and_deposit(contracts_config, renting_contract, nft_contr
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner
 
 
 @pytest.mark.profile
@@ -613,3 +617,38 @@ def test_deposit_limits(contracts_config, renting_contract, nft_contract, ape_co
         vault_log = VaultLog(*event.vaults[idx])
         assert vault_log.vault == entry[1]
         assert vault_log.token_id == entry[0]
+
+
+def test_self_delegation(contracts_config, renting_contract, nft_contract, nft_owner, delegation_registry_warm_contract):
+    token_id = 1
+    price = int(1e18)
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+
+    # create_vaults_and_deposit creates self delegation
+    renting_contract.create_vaults_and_deposit([token_id], price, 0, 0, sender=nft_owner)
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner
+    delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_addr)
+
+    # cancel_listings does not creates self delegation
+    renting_contract.cancel_listings([token_id], sender=nft_owner)
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == ZERO_ADDRESS
+
+    # set_listings does not creates self delegation
+    renting_contract.set_listings([token_id], price, 0, 0, sender=nft_owner)
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == ZERO_ADDRESS
+
+    # cancel_listings_and_delegate_to_owner creates self delegation
+    renting_contract.cancel_listings_and_delegate_to_owner([token_id], sender=nft_owner)
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner
+    delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_addr)
+
+    # set_listings_and_delegate_to_owner creates self delegation
+    renting_contract.set_listings_and_delegate_to_owner([token_id], price, 0, 0, sender=nft_owner)
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner
+    delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_addr)
+
+    # delegate_to_owner creates self delegation
+    renting_contract.delegate_to_owner([token_id], sender=nft_owner)
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner

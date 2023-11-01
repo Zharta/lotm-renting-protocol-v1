@@ -115,6 +115,45 @@ def test_change_listings_prices(renting_contract, nft_contract, nft_owner, vault
     assert vault_log.token_id == token_id
 
 
+def test_change_listings_prices_and_delegate_to_owner(renting_contract, nft_contract, nft_owner, vault_contract_def):
+    token_id = 1
+    price = int(1e18)
+    new_price = int(2e18)
+    min_duration = 1
+    max_duration = 2
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+
+    renting_contract.create_vaults_and_deposit([token_id], price, 0, 0, sender=nft_owner)
+    vault_contract = vault_contract_def.at(vault_addr)
+
+    listing = Listing(*vault_contract.listing())
+    assert listing.token_id == token_id
+    assert listing.price == price
+    assert listing.min_duration == 0
+    assert listing.max_duration == 0
+
+    renting_contract.set_listings_and_delegate_to_owner([token_id], new_price, min_duration, max_duration, sender=nft_owner)
+    event = get_last_event(renting_contract, "ListingsChanged")
+
+    listing = Listing(*vault_contract.listing())
+    assert listing.token_id == token_id
+    assert listing.price == new_price
+    assert listing.min_duration == min_duration
+    assert listing.max_duration == max_duration
+
+    assert event.owner == nft_owner
+    assert event.nft_contract == nft_contract.address
+    assert event.price == new_price
+    assert event.min_duration == min_duration
+    assert event.max_duration == max_duration
+    vault_log = VaultLog(*event.vaults[-1])
+    assert vault_log.vault == vault_addr
+    assert vault_log.token_id == token_id
+
+
 def test_cancel_listings(renting_contract, nft_contract, nft_owner, vault_contract_def):
     token_id = 1
     price = int(1e18)
@@ -135,6 +174,41 @@ def test_cancel_listings(renting_contract, nft_contract, nft_owner, vault_contra
     assert listing.max_duration == max_duration
 
     renting_contract.cancel_listings([token_id], sender=nft_owner)
+    event = get_last_event(renting_contract, "ListingsCancelled")
+
+    listing = Listing(*vault_contract.listing())
+    assert listing.token_id == token_id
+    assert listing.price == 0
+    assert listing.min_duration == 0
+    assert listing.max_duration == 0
+
+    assert event.owner == nft_owner
+    assert event.nft_contract == nft_contract.address
+    vault_log = VaultLog(*event.vaults[-1])
+    assert vault_log.vault == vault_addr
+    assert vault_log.token_id == token_id
+
+
+def test_cancel_listings_and_delegate_to_owner(renting_contract, nft_contract, nft_owner, vault_contract_def):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 1
+    max_duration = 2
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+
+    renting_contract.create_vaults_and_deposit([token_id], price, min_duration, max_duration, sender=nft_owner)
+    vault_contract = vault_contract_def.at(vault_addr)
+
+    listing = Listing(*vault_contract.listing())
+    assert listing.token_id == token_id
+    assert listing.price == price
+    assert listing.min_duration == min_duration
+    assert listing.max_duration == max_duration
+
+    renting_contract.cancel_listings_and_delegate_to_owner([token_id], sender=nft_owner)
     event = get_last_event(renting_contract, "ListingsCancelled")
 
     listing = Listing(*vault_contract.listing())
@@ -669,3 +743,45 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
+
+
+def test_delegate_to_owner(
+    renting_contract,
+    nft_contract,
+    ape_contract,
+    nft_owner,
+    renter,
+    vault_contract_def,
+    owner,
+    delegation_registry_warm_contract,
+):
+    token_id_base = 10
+    token_id_qty = 32
+    token_ids = [token_id_base + i for i in range(token_id_qty)]
+    price = int(1e18)
+    duration = 6
+    rental_amount = duration * price
+
+    vaults = {}
+
+    for token_id in token_ids:
+        nft_contract.mint(nft_owner, token_id, sender=owner)
+        vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+        nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+        ape_contract.approve(vault_addr, rental_amount, sender=renter)
+
+        vaults[token_id] = vault_addr
+
+    renting_contract.create_vaults_and_deposit(token_ids, price, 0, 0, sender=nft_owner)
+
+    for i, token_id in enumerate(token_ids):
+        vault_addr = renting_contract.tokenid_to_vault(token_id)
+        delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_addr)
+        assert delegation_registry_warm_contract.getHotWallet(vault_addr) == ZERO_ADDRESS
+
+    renting_contract.delegate_to_owner(token_ids, sender=nft_owner)
+
+    for i, token_id in enumerate(token_ids):
+        vault_addr = renting_contract.tokenid_to_vault(token_id)
+        assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner

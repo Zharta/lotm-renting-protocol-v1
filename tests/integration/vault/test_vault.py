@@ -61,7 +61,9 @@ def test_deposit_not_approved(contracts_config, vault_contract, renting_contract
         vault_contract.deposit(1, 1, 0, 0, sender=renting_contract.address)
 
 
-def test_deposit(contracts_config, vault_contract, nft_owner, renting_contract, nft_contract):
+def test_deposit(
+    contracts_config, vault_contract, nft_owner, renting_contract, nft_contract, delegation_registry_warm_contract
+):
     token_id = 1
     price = 1
 
@@ -75,6 +77,8 @@ def test_deposit(contracts_config, vault_contract, nft_owner, renting_contract, 
     assert listing.price == price
     assert listing.min_duration == 0
     assert listing.max_duration == 0
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == nft_owner
 
 
 def test_set_listing_not_caller(contracts_config, vault_contract, nft_owner):
@@ -93,6 +97,36 @@ def test_change_listing(contracts_config, vault_contract, renting_contract, nft_
     vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
 
     vault_contract.set_listing(nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address)
+
+    listing = Listing(*vault_contract.listing())
+    assert listing.token_id == token_id
+    assert listing.price == new_price
+    assert listing.min_duration == min_duration
+    assert listing.max_duration == max_duration
+
+
+def test_set_listing_and_delegate_to_owner(
+    contracts_config, vault_contract, renting_contract, nft_contract, nft_owner, delegation_registry_warm_contract
+):
+    token_id = 1
+    price = 1
+    new_price = 2
+    min_duration = 0
+    max_duration = 1
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_contract.address)
+
+    vault_contract.set_listing(nft_owner, new_price, 0, 0, sender=renting_contract.address)
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
+
+    vault_contract.set_listing_and_delegate_to_owner(
+        nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address
+    )
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == nft_owner
 
     listing = Listing(*vault_contract.listing())
     assert listing.token_id == token_id
