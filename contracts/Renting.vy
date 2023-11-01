@@ -12,10 +12,12 @@ interface IVault:
     def initialise(owner: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
     def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
     def set_listing(sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
+    def set_listing_and_delegate_to_owner(sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
     def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
     def close_rental(sender: address) -> (Rental, uint256): nonpayable
     def claim(sender: address) -> uint256: nonpayable
     def withdraw(sender: address) -> uint256: nonpayable
+    def delegate_to_owner(sender: address): nonpayable
     def owner() -> address: view
 
 
@@ -207,6 +209,30 @@ def set_listings(token_ids: DynArray[uint256, 32], price: uint256, min_duration:
 
 
 @external
+def set_listings_and_delegate_to_owner(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256):
+    vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
+
+        IVault(vault).set_listing_and_delegate_to_owner(msg.sender, price, min_duration, max_duration)
+
+        vault_logs.append(VaultLog({
+            vault: vault,
+            token_id: token_id
+        }))
+
+    log ListingsChanged(
+        msg.sender,
+        nft_contract_addr,
+        min_duration,
+        max_duration,
+        price,
+        vault_logs
+    )
+
+@external
 def cancel_listings(token_ids: DynArray[uint256, 32]):
     vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
@@ -215,6 +241,28 @@ def cancel_listings(token_ids: DynArray[uint256, 32]):
         assert vault != empty(address), "no vault exists for token_id"
 
         IVault(vault).set_listing(msg.sender, 0, 0, 0)
+
+        vaults.append(VaultLog({
+            vault: vault,
+            token_id: token_id
+        }))
+
+    log ListingsCancelled(
+        msg.sender,
+        nft_contract_addr,
+        vaults
+    )
+
+
+@external
+def cancel_listings_and_delegate_to_owner(token_ids: DynArray[uint256, 32]):
+    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
+
+        IVault(vault).set_listing_and_delegate_to_owner(msg.sender, 0, 0, 0)
 
         vaults.append(VaultLog({
             vault: vault,
@@ -326,6 +374,18 @@ def withdraw(token_ids: DynArray[uint256, 32]):
         total_rewards,
         withdrawal_log
     )
+
+@external
+def delegate_to_owner(token_ids: DynArray[uint256, 32]):
+    withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
+    total_rewards: uint256 = 0
+
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
+
+        IVault(vault).delegate_to_owner(msg.sender)
+
 
 
 ##### INTERNAL METHODS #####

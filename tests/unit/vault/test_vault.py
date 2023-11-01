@@ -6,6 +6,8 @@ import pytest
 
 from ...conftest_base import ZERO_ADDRESS, Listing, Rental
 
+FOREVER = 2**256 - 1
+
 
 @pytest.fixture(scope="module")
 def renting_contract(empty_contract_def):
@@ -102,7 +104,7 @@ def test_deposit_not_min_duration_higher_than_max(vault_contract, renting_contra
         vault_contract.deposit(token_id, price, 2, 1, sender=renting_contract.address)
 
 
-def test_deposit(vault_contract, nft_owner, renting_contract, nft_contract):
+def test_deposit(vault_contract, nft_owner, renting_contract, nft_contract, delegation_registry_warm_contract):
     token_id = 1
     price = 1
     min_duration = 0
@@ -117,6 +119,40 @@ def test_deposit(vault_contract, nft_owner, renting_contract, nft_contract):
     assert listing.price == price
     assert listing.min_duration == min_duration
     assert listing.max_duration == max_duration
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == nft_owner
+    assert delegation_registry_warm_contract.eval(f"self.exp[{vault_contract.address}]") == FOREVER
+
+
+def test_deposit_overrides_delegation(
+    vault_contract,
+    nft_owner,
+    renting_contract,
+    nft_contract,
+    ape_contract,
+    delegation_registry_warm_contract,
+):
+    token_id = 1
+    price = 1
+    second_owner = boa.env.generate_address("second_owner")
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == nft_owner
+
+    vault_contract.withdraw(nft_owner, sender=renting_contract.address)
+    nft_contract.transferFrom(nft_owner, second_owner, token_id, sender=nft_owner)
+
+    nft_contract.approve(vault_contract, token_id, sender=second_owner)
+
+    vault_contract.initialise(
+        second_owner, ape_contract, nft_contract, delegation_registry_warm_contract, sender=renting_contract.address
+    )
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == second_owner
+    assert delegation_registry_warm_contract.eval(f"self.exp[{vault_contract.address}]") == FOREVER
 
 
 def test_set_listing_not_caller(vault_contract, nft_owner):
@@ -152,6 +188,34 @@ def test_set_listing(vault_contract, renting_contract, nft_contract, nft_owner):
     assert listing.price == new_price
     assert listing.min_duration == min_duration
     assert listing.max_duration == max_duration
+
+
+def test_set_listing_and_delegate_to_owner(
+    vault_contract, renting_contract, nft_contract, nft_owner, delegation_registry_warm_contract
+):
+    token_id = 1
+    price = 1
+    new_price = 2
+    min_duration = 1
+    max_duration = 2
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_contract.address)
+
+    vault_contract.set_listing_and_delegate_to_owner(
+        nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address
+    )
+
+    listing = Listing(*vault_contract.listing())
+    assert listing.token_id == token_id
+    assert listing.price == new_price
+    assert listing.min_duration == min_duration
+    assert listing.max_duration == max_duration
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == nft_owner
+    assert delegation_registry_warm_contract.eval(f"self.exp[{vault_contract.address}]") == FOREVER
 
 
 def test_cancel_listing_not_caller(vault_contract, nft_owner):
@@ -652,3 +716,64 @@ def test_initialise_after_withdraw(
         ZERO_ADDRESS,
         sender=renting_contract.address,
     )
+
+
+def test_delegate_to_owner(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    delegation_registry_warm_contract,
+):
+    token_id = 1
+    price = int(1e18)
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_contract.address)
+
+    vault_contract.delegate_to_owner(nft_owner, sender=renting_contract.address)
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == nft_owner
+    assert delegation_registry_warm_contract.eval(f"self.exp[{vault_contract.address}]") == FOREVER
+
+
+def test_delegate_to_owner_active_rental(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    delegation_registry_warm_contract,
+):
+    token_id = 1
+    price = int(1e18)
+
+    start_time = boa.eval("block.timestamp")
+    duration = 24
+    expiration = start_time + duration * 3600
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, 0, 0, sender=renting_contract.address)
+
+    rental_amount = duration * price
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+    vault_contract.start_rental(renter, expiration, sender=renting_contract.address)
+
+    with boa.reverts("active rental ongoing"):
+        vault_contract.delegate_to_owner(nft_owner, sender=renting_contract.address)
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == renter
+
+
+def test_delegate_to_owner_not_caller(vault_contract, nft_owner):
+    with boa.reverts("not caller"):
+        vault_contract.delegate_to_owner(nft_owner, sender=nft_owner)
+
+
+def test_delegate_to_owner_not_owner(vault_contract, renting_contract):
+    wallet = boa.env.generate_address("some dude")
+    with boa.reverts("not owner of vault"):
+        vault_contract.delegate_to_owner(wallet, sender=renting_contract.address)

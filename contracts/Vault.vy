@@ -92,6 +92,9 @@ def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_durati
     # transfer token to this contract
     IERC721(self.nft_contract_addr).safeTransferFrom(self.owner, self, token_id, b"")
 
+    # create delegation
+    self._delegate_to_owner()
+
 
 @external
 def set_listing(sender: address, price: uint256, min_duration: uint256, max_duration: uint256):
@@ -99,12 +102,19 @@ def set_listing(sender: address, price: uint256, min_duration: uint256, max_dura
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
 
-    if max_duration != 0 and min_duration > max_duration:
-        raise "min duration > max duration"
+    self._set_listing(sender, price, min_duration, max_duration)
 
-    self.listing.price = price
-    self.listing.min_duration = min_duration
-    self.listing.max_duration = max_duration
+
+@external
+def set_listing_and_delegate_to_owner(sender: address, price: uint256, min_duration: uint256, max_duration: uint256):
+    assert self.is_initialised, "not initialised"
+    assert msg.sender == self.caller, "not caller"
+    assert sender == self.owner, "not owner of vault"
+    assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
+
+    self._set_listing(sender, price, min_duration, max_duration)
+    self._delegate_to_owner()
+
 
 
 @external
@@ -238,6 +248,18 @@ def withdraw(sender: address) -> uint256:
     return rewards_to_claim
 
 
+@external
+def delegate_to_owner(sender: address):
+    assert self.is_initialised, "not initialised"
+    assert msg.sender == self.caller, "not caller"
+    assert sender == self.owner, "not owner of vault"
+    assert self.active_rental.expiration < block.timestamp, "active rental ongoing"
+
+    self._delegate_to_owner()
+
+
+
+
 ##### INTERNAL METHODS #####
 
 @internal
@@ -280,6 +302,22 @@ def _claimable_rewards() -> uint256:
         return self.unclaimed_rewards + self.active_rental.amount
     else:
         return self.unclaimed_rewards
+
+@internal
+def _delegate_to_owner():
+    if IDelegationRegistry(self.delegation_registry_addr).getHotWallet(self) != self.owner:
+        IDelegationRegistry(self.delegation_registry_addr).setHotWallet(self.owner, max_value(uint256), False)
+
+
+@internal
+def _set_listing(sender: address, price: uint256, min_duration: uint256, max_duration: uint256):
+    if max_duration != 0 and min_duration > max_duration:
+        raise "min duration > max duration"
+
+    self.listing.price = price
+    self.listing.min_duration = min_duration
+    self.listing.max_duration = max_duration
+
 
 
 ##### EXTERNAL METHODS - VIEW #####
