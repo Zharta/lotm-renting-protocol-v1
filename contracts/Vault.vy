@@ -305,8 +305,10 @@ def _claimable_rewards() -> uint256:
 
 @internal
 def _delegate_to_owner():
-    if IDelegationRegistry(self.delegation_registry_addr).getHotWallet(self) != self.owner:
-        IDelegationRegistry(self.delegation_registry_addr).setHotWallet(self.owner, max_value(uint256), False)
+    delegation_registry: IDelegationRegistry = IDelegationRegistry(self.delegation_registry_addr)
+    owner: address = self.owner
+    if delegation_registry.getHotWallet(self) != owner:
+        delegation_registry.setHotWallet(owner, max_value(uint256), False)
 
 
 @internal
