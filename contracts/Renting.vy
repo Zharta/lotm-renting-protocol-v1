@@ -377,9 +377,6 @@ def withdraw(token_ids: DynArray[uint256, 32]):
 
 @external
 def delegate_to_owner(token_ids: DynArray[uint256, 32]):
-    withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
-    total_rewards: uint256 = 0
-
     for token_id in token_ids:
         vault: address = self.active_vaults[token_id]
         assert vault != empty(address), "no vault exists for token_id"
