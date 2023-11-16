@@ -22,7 +22,7 @@
             "properties_addresses": {}
         },
         "vault_impl": {
-            "address": "",
+            "address": "0xcb1Bd8f8aE14beb58e647d0641bba816dbA446e7",
             "contract": "VaultImplContract",
             "properties_addresses": {}
         },
@@ -34,7 +34,7 @@
     },
     "renting": {
         "koda": {
-            "address": "0x6b81cAE58B81bbb660d75EC61179E2f63a069500",
+            "address": "0xEE5c149313a95184F71C812ee3b9c6DE7901fDBC",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -43,14 +43,14 @@
                 "vault_impl_key": "common.vault_impl"
             },
             "properties_addresses": {
-                "delegation_registry": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
-                "nft_contract": "0x4Dc251DC5d8dBc96305bD4B73C3f8Cfe485BBceF",
-                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
-                "vault_impl": "0xadA6300bc39A2114c06f9F313A4071c3d81E694f"
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0xE012Baf811CF9c05c408e879C399960D1f305903",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
+                "vault_impl": "0xcb1Bd8f8aE14beb58e647d0641bba816dbA446e7"
             }
         },
         "mara": {
-            "address": "0x000000000000000000000000000000000000dEaD",
+            "address": "0x99a4EC7d9EeEd97C9b9A4411368F64309ca279aD",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -59,10 +59,10 @@
                 "vault_impl_key": "common.vault_impl"
             },
             "properties_addresses": {
-                "delegation_registry": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
                 "nft_contract": "0x3Bdca51226202Fc2a64211Aa35A8d95D61C6ca99",
-                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
-                "vault_impl": "0xadA6300bc39A2114c06f9F313A4071c3d81E694f"
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
+                "vault_impl": "0xcb1Bd8f8aE14beb58e647d0641bba816dbA446e7"
             }
         }
     }
