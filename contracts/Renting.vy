@@ -10,18 +10,23 @@ interface ISelf:
 interface IVault:
     def is_initialised() -> bool: view
     def initialise(owner: address, payment_token_addr: address, nft_contract_addr: address, delegation_registry_addr: address): nonpayable
-    def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
-    def set_listing(sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
-    def set_listing_and_delegate_to_owner(sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
-    def start_rental(renter: address, expiration: uint256) -> Rental: nonpayable
-    def close_rental(sender: address) -> (Rental, uint256): nonpayable
-    def claim(sender: address) -> uint256: nonpayable
-    def withdraw(sender: address) -> uint256: nonpayable
-    def delegate_to_owner(sender: address): nonpayable
+    def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool): nonpayable
+    def set_listing(token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
+    def set_listing_and_delegate_to_owner(active_rental: Rental, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
+    def start_rental(listing: Listing, active_rental: Rental, renter: address, expiration: uint256) -> Rental: nonpayable
+    def close_rental(rental: Rental, sender: address) -> uint256: nonpayable
+    def claim(active_rental: Rental, sender: address) -> (Rental, uint256): nonpayable
+    def withdraw(listing: Listing, active_rental: Rental, sender: address) -> uint256: nonpayable
+    def delegate_to_owner(active_rental: Rental, sender: address): nonpayable
     def owner() -> address: view
 
 
 # Structs
+
+struct TokenContext:
+    token_id: uint256
+    active_rental: Rental
+    listing: Listing
 
 struct Rental:
     id: bytes32 # keccak256 of the renter, token_id, start and expiration
@@ -32,6 +37,12 @@ struct Rental:
     min_expiration: uint256
     expiration: uint256
     amount: uint256
+
+struct Listing:
+    token_id: uint256
+    price: uint256 # price per hour, 0 means not listed
+    min_duration: uint256 # min duration in hours
+    max_duration: uint256 # max duration in hours, 0 means unlimited
 
 struct VaultLog:
     vault: address
@@ -51,6 +62,7 @@ struct RewardLog:
     vault: address
     token_id: uint256
     amount: uint256
+    active_rental_amount: uint256
 
 struct WithdrawalLog:
     vault: address
@@ -105,7 +117,7 @@ event RentalClosed:
     nft_contract: address
     rentals: DynArray[RentalLog, 32]
 
-event RewardsClaimed:
+event RewardsClaimed2:
     owner: address
     nft_contract: address
     rewards: DynArray[RewardLog, 32]
@@ -142,11 +154,11 @@ def __init__(
 
 
 @external
-def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256):
+def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
-        vault: address = self._create_vault_and_deposit(token_id, price, min_duration, max_duration)
+        vault: address = self._create_vault_and_deposit(token_id, price, min_duration, max_duration, delegate)
         vault_logs.append(VaultLog({
             vault: vault,
             token_id: token_id
@@ -163,11 +175,11 @@ def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, 
 
 
 @external
-def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256):
+def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
-        vault: address = self._deposit_nft(token_id, price, min_duration, max_duration)
+        vault: address = self._deposit_nft(token_id, price, min_duration, max_duration, delegate)
         vault_logs.append(VaultLog({
             vault: vault,
             token_id: token_id
@@ -191,7 +203,7 @@ def set_listings(token_ids: DynArray[uint256, 32], price: uint256, min_duration:
         vault: address = self.active_vaults[token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing(msg.sender, price, min_duration, max_duration)
+        IVault(vault).set_listing(token_id, msg.sender, price, min_duration, max_duration)
 
         vault_logs.append(VaultLog({
             vault: vault,
@@ -209,18 +221,18 @@ def set_listings(token_ids: DynArray[uint256, 32], price: uint256, min_duration:
 
 
 @external
-def set_listings_and_delegate_to_owner(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256):
+def set_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext, 32], price: uint256, min_duration: uint256, max_duration: uint256):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
-    for token_id in token_ids:
-        vault: address = self.active_vaults[token_id]
+    for token_context in token_contexts:
+        vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing_and_delegate_to_owner(msg.sender, price, min_duration, max_duration)
+        IVault(vault).set_listing_and_delegate_to_owner(token_context.active_rental, token_context.token_id, msg.sender, price, min_duration, max_duration)
 
         vault_logs.append(VaultLog({
             vault: vault,
-            token_id: token_id
+            token_id: token_context.token_id
         }))
 
     log ListingsChanged(
@@ -240,7 +252,7 @@ def cancel_listings(token_ids: DynArray[uint256, 32]):
         vault: address = self.active_vaults[token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing(msg.sender, 0, 0, 0)
+        IVault(vault).set_listing(token_id, msg.sender, 0, 0, 0)
 
         vaults.append(VaultLog({
             vault: vault,
@@ -255,18 +267,18 @@ def cancel_listings(token_ids: DynArray[uint256, 32]):
 
 
 @external
-def cancel_listings_and_delegate_to_owner(token_ids: DynArray[uint256, 32]):
+def cancel_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
     vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
-    for token_id in token_ids:
-        vault: address = self.active_vaults[token_id]
+    for token_context in token_contexts:
+        vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing_and_delegate_to_owner(msg.sender, 0, 0, 0)
+        IVault(vault).set_listing_and_delegate_to_owner(token_context.active_rental, token_context.token_id, msg.sender, 0, 0, 0)
 
         vaults.append(VaultLog({
             vault: vault,
-            token_id: token_id
+            token_id: token_context.token_id
         }))
 
     log ListingsCancelled(
@@ -277,22 +289,22 @@ def cancel_listings_and_delegate_to_owner(token_ids: DynArray[uint256, 32]):
 
 
 @external
-def start_rentals(token_ids: DynArray[uint256, 32], duration: uint256):
+def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256):
     rental_logs: DynArray[RentalLog, 32] = []
 
     expiration: uint256 = block.timestamp + duration * 3600
 
-    for token_id in token_ids:
-        vault: address = self.active_vaults[token_id]
+    for token_context in token_contexts:
+        vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        rental: Rental = IVault(vault).start_rental(msg.sender, expiration)
+        rental: Rental = IVault(vault).start_rental(token_context.listing, token_context.active_rental, msg.sender, expiration)
 
         rental_logs.append(RentalLog({
             id: rental.id,
             vault: vault,
             owner: rental.owner,
-            token_id: token_id,
+            token_id: token_context.token_id,
             start: rental.start,
             min_expiration: rental.min_expiration,
             expiration: expiration,
@@ -303,23 +315,22 @@ def start_rentals(token_ids: DynArray[uint256, 32], duration: uint256):
 
 
 @external
-def close_rentals(token_ids: DynArray[uint256, 32]):
+def close_rentals(rentals: DynArray[Rental, 32]):
 
     amount: uint256 = 0
-    rental: Rental = empty(Rental)
     rental_logs: DynArray[RentalLog, 32] = []
 
-    for token_id in token_ids:
-        vault: address = self.active_vaults[token_id]
+    for rental in rentals:
+        vault: address = self.active_vaults[rental.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        rental, amount = IVault(vault).close_rental(msg.sender)
+        amount = IVault(vault).close_rental(rental, msg.sender)
 
         rental_logs.append(RentalLog({
             id: rental.id,
             vault: vault,
             owner: rental.owner,
-            token_id: token_id,
+            token_id: rental.token_id,
             start: rental.start,
             min_expiration: rental.min_expiration,
             expiration: block.timestamp,
@@ -330,40 +341,43 @@ def close_rentals(token_ids: DynArray[uint256, 32]):
 
 
 @external
-def claim(token_ids: DynArray[uint256, 32]):
+def claim(token_contexts: DynArray[TokenContext, 32]):
     reward_logs: DynArray[RewardLog, 32] = []
+    active_rental: Rental = empty(Rental)
+    rewards: uint256 = 0
 
-    for token_id in token_ids:
-        vault: address = self.active_vaults[token_id]
+    for token_context in token_contexts:
+        vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        rewards: uint256 = IVault(vault).claim(msg.sender)
+        active_rental, rewards = IVault(vault).claim(token_context.active_rental, msg.sender)
 
         reward_logs.append(RewardLog({
             vault: vault,
-            token_id: token_id,
-            amount: rewards
+            token_id: token_context.token_id,
+            amount: rewards,
+            active_rental_amount: active_rental.amount
         }))
 
-    log RewardsClaimed(msg.sender, nft_contract_addr, reward_logs)
+    log RewardsClaimed2(msg.sender, nft_contract_addr, reward_logs)
 
 
 @external
-def withdraw(token_ids: DynArray[uint256, 32]):
+def withdraw(token_contexts: DynArray[TokenContext, 32]):
     withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
     total_rewards: uint256 = 0
 
-    for token_id in token_ids:
-        vault: address = self.active_vaults[token_id]
+    for token_context in token_contexts:
+        vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        self.active_vaults[token_id] = empty(address)
+        self.active_vaults[token_context.token_id] = empty(address)
 
-        rewards: uint256 = IVault(vault).withdraw(msg.sender)
+        rewards: uint256 = IVault(vault).withdraw(token_context.listing, token_context.active_rental, msg.sender)
 
         withdrawal_log.append(WithdrawalLog({
             vault: vault,
-            token_id: token_id,
+            token_id: token_context.token_id,
             rewards: rewards
         }))
         total_rewards += rewards
@@ -376,12 +390,12 @@ def withdraw(token_ids: DynArray[uint256, 32]):
     )
 
 @external
-def delegate_to_owner(token_ids: DynArray[uint256, 32]):
-    for token_id in token_ids:
-        vault: address = self.active_vaults[token_id]
+def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
+    for token_context in token_contexts:
+        vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).delegate_to_owner(msg.sender)
+        IVault(vault).delegate_to_owner(token_context.active_rental, msg.sender)
 
 
 
@@ -418,7 +432,7 @@ def _convert_keccak256_2_address(digest: bytes32) -> address:
 
 
 @internal
-def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256) -> address:
+def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool) -> address:
     assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
 
     vault: address = create_minimal_proxy_to(vault_impl_addr, salt=convert(token_id, bytes32))
@@ -431,13 +445,13 @@ def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: u
         nft_contract_addr,
         delegation_registry_addr
     )
-    IVault(vault).deposit(token_id, price, min_duration, max_duration)
+    IVault(vault).deposit(token_id, price, min_duration, max_duration, delegate)
 
     return vault
 
 
 @internal
-def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256) -> address:
+def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool) -> address:
     assert ISelf(self).is_vault_available(token_id), "vault is not available"
 
     vault: address = ISelf(self).tokenid_to_vault(token_id)
@@ -450,7 +464,7 @@ def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_d
         delegation_registry_addr
     )
 
-    IVault(vault).deposit(token_id, price, min_duration, max_duration)
+    IVault(vault).deposit(token_id, price, min_duration, max_duration, delegate)
 
     return vault
 
