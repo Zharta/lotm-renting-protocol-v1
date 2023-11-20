@@ -244,7 +244,7 @@ def withdraw(listing: Listing, active_rental: Rental, sender: address) -> uint25
 
     # clear vault and set listing to zero to uninitialize
     self.unclaimed_rewards = 0
-    self.listing = empty_listing_hash
+    self.listing = empty(bytes32)
     self.active_rental = empty_rental_hash
     self.owner = empty(address)
 
