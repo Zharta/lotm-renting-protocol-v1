@@ -117,7 +117,7 @@ event RentalClosed:
     nft_contract: address
     rentals: DynArray[RentalLog, 32]
 
-event RewardsClaimed2:
+event RewardsClaimed:
     owner: address
     nft_contract: address
     rewards: DynArray[RewardLog, 32]
@@ -359,7 +359,7 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
             active_rental_amount: active_rental.amount
         }))
 
-    log RewardsClaimed2(msg.sender, nft_contract_addr, reward_logs)
+    log RewardsClaimed(msg.sender, nft_contract_addr, reward_logs)
 
 
 @external
