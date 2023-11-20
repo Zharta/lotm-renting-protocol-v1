@@ -11,9 +11,6 @@ interface IDelegationRegistry:
     def setExpirationTimestamp(expiration_timestamp: uint256): nonpayable
 
 
-# Events
-
-
 # Structs
 
 struct Rental:
@@ -86,8 +83,6 @@ def initialise(
 def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
-    assert IERC721(self.nft_contract_addr).ownerOf(token_id) == self.owner, "not owner of token"
-    assert IERC721(self.nft_contract_addr).getApproved(token_id) == self, "not approved for token"
 
     if max_duration != 0 and min_duration > max_duration:
         raise "min duration > max duration"
@@ -130,7 +125,6 @@ def set_listing_and_delegate_to_owner(active_rental: Rental, token_id: uint256, 
 
     self._set_listing(token_id, sender, price, min_duration, max_duration)
     self._delegate_to_owner()
-
 
 
 @external
@@ -182,7 +176,7 @@ def close_rental(rental: Rental, sender: address) -> uint256:
     assert msg.sender == self.caller, "not caller"
     assert self.active_rental == self._rental_hash(rental), "invalid rental"
 
-    assert rental.expiration >= block.timestamp, "active rental does not exist"
+    assert rental.expiration > block.timestamp, "active rental does not exist"
     assert sender == rental.renter, "not renter of active rental"
 
     # compute amount to send back to renter
@@ -273,8 +267,6 @@ def delegate_to_owner(active_rental: Rental, sender: address):
     assert self.active_rental == self._rental_hash(active_rental), "invalid rental"
 
     self._delegate_to_owner()
-
-
 
 
 ##### INTERNAL METHODS #####
@@ -386,6 +378,7 @@ def _rental_hash(rental: Rental) -> bytes32:
 @internal
 def _is_initialised() -> bool:
     return self.listing != empty(bytes32)
+
 
 ##### EXTERNAL METHODS - VIEW #####
 
