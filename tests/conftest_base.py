@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from functools import cached_property
+from textwrap import dedent
 
 import boa
 import vyper
@@ -24,27 +25,6 @@ def get_events(contract: boa.vyper.contract.VyperContract, name: str = None):
         for e in contract.get_logs()
         if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)
     ]
-
-
-def compute_listing_hash(token_id: int, price: int, min_duration: int, max_duration: int):
-    return Web3.solidity_keccak(
-        ['uint256', 'uint256', 'uint256', 'uint256'],
-        [token_id, price, min_duration, max_duration]
-    ).hex()[2:]
-
-
-def compute_rental_hash(rental_id: bytes, owner: str, renter: str, token_id: int, start: int, min_expiration: int, expiration: int, amount: int):
-    return Web3.solidity_keccak(
-        ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
-        [rental_id, owner, renter, token_id, start, min_expiration, expiration, amount]
-    ).hex()[2:]
-
-
-def compute_rental_id(renter: str, token_id: int, start: int, expiration: int) -> str:
-    return Web3.solidity_keccak(
-        ['address', 'uint256', 'uint256', 'uint256'],
-        [renter, token_id, start, expiration]
-    ).hex()[2:]
 
 
 class EventWrapper:
@@ -172,3 +152,33 @@ class TokenContext:
 
     def to_tuple(self):
         return (self.token_id, self.active_rental.to_tuple(), self.listing.to_tuple())
+
+
+@dataclass
+class VaultState:
+    active_rental: Rental
+    listing: Listing
+
+    def to_tuple(self):
+        return (self.active_rental.to_tuple(), self.listing.to_tuple())
+
+
+def compute_state_hash(rental: Rental, listing: Listing):
+    return boa.eval(
+        dedent(f"""keccak256(
+            concat(
+                {rental.id},
+                convert({rental.owner}, bytes32),
+                convert({rental.renter}, bytes32),
+                convert({rental.token_id}, bytes32),
+                convert({rental.start}, bytes32),
+                convert({rental.min_expiration}, bytes32),
+                convert({rental.expiration}, bytes32),
+                convert({rental.amount}, bytes32),
+                convert({listing.token_id}, bytes32),
+                convert({listing.price}, bytes32),
+                convert({listing.min_duration}, bytes32),
+                convert({listing.max_duration}, bytes32)
+            ))"""
+        )
+    )
