@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from textwrap import dedent
 
@@ -156,8 +156,8 @@ class TokenContext:
 
 @dataclass
 class VaultState:
-    active_rental: Rental
-    listing: Listing
+    active_rental: Rental = field(default_factory=Rental)
+    listing: Listing = field(default_factory=Listing)
 
     def to_tuple(self):
         return (self.active_rental.to_tuple(), self.listing.to_tuple())
