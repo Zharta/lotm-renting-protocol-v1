@@ -308,6 +308,17 @@ def _compute_rental_id(renter: address, token_id: uint256, start: uint256, expir
     return keccak256(concat(convert(renter, bytes32), convert(token_id, bytes32), convert(start, bytes32), convert(expiration, bytes32)))
 
 
+# @view
+# @external
+# def compute_rental_id(renter: address, token_id: uint256, start: uint256, expiration: uint256) -> bytes32:
+#     return keccak256(concat(convert(renter, bytes32), convert(token_id, bytes32), convert(start, bytes32), convert(expiration, bytes32)))
+
+# @view
+# @external
+# def compute_rental_id_hash(rental_id: bytes32) -> bytes32:
+#     return keccak256(rental_id)
+
+
 @pure
 @internal
 def _compute_rental_amount(start: uint256, expiration: uint256, price: uint256) -> uint256:
@@ -377,6 +388,23 @@ def _state_hash2(listing: Listing, rental: Rental) -> bytes32:
             convert(listing.max_duration, bytes32),
         )
     )
+
+# @view
+# @external
+# def get_rental_hash(rental_id: bytes32, owner: address, renter: address, token_id: uint256, start: uint256, min_expiration: uint256, expiration: uint256, amount: uint256) -> bytes32:
+#     return keccak256(
+#         concat(
+#             rental_id,
+#             convert(owner, bytes32),
+#             convert(renter, bytes32),
+#             convert(token_id, bytes32),
+#             convert(start, bytes32),
+#             convert(min_expiration, bytes32),
+#             convert(expiration, bytes32),
+#             convert(amount, bytes32),
+#         )
+#     )
+
 
 @view
 @internal

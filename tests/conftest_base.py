@@ -26,6 +26,27 @@ def get_events(contract: boa.vyper.contract.VyperContract, name: str = None):
     ]
 
 
+def compute_listing_hash(token_id: int, price: int, min_duration: int, max_duration: int):
+    return Web3.solidity_keccak(
+        ['uint256', 'uint256', 'uint256', 'uint256'],
+        [token_id, price, min_duration, max_duration]
+    ).hex()[2:]
+
+
+def compute_rental_hash(rental_id: bytes, owner: str, renter: str, token_id: int, start: int, min_expiration: int, expiration: int, amount: int):
+    return Web3.solidity_keccak(
+        ['bytes32', 'address', 'address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+        [rental_id, owner, renter, token_id, start, min_expiration, expiration, amount]
+    ).hex()[2:]
+
+
+def compute_rental_id(renter: str, token_id: int, start: int, expiration: int) -> str:
+    return Web3.solidity_keccak(
+        ['address', 'uint256', 'uint256', 'uint256'],
+        [renter, token_id, start, expiration]
+    ).hex()[2:]
+
+
 class EventWrapper:
     def __init__(self, event: boa.vyper.event.Event):
         self.event = event
@@ -102,10 +123,10 @@ class Rental:
 
 @dataclass
 class Listing:
-    token_id: int
-    price: int
-    min_duration: int
-    max_duration: int
+    token_id: int = 0
+    price: int = 0
+    min_duration: int = 0
+    max_duration: int = 0
 
     def to_tuple(self):
         return (self.token_id, self.price, self.min_duration, self.max_duration)
