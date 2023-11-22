@@ -36,7 +36,7 @@
             }
         },
         "vault_impl_mara_ape": {
-            "address": "0x44b81843A8EFfE869e4dcA4d3E19C5E4Efac974C",
+            "address": "0xf47b664945eAf41D65d7aB5B984D474673D2d815",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -73,7 +73,7 @@
             }
         },
         "mara": {
-            "address": "0xCd5D4742b220E1Db7C079cC9170Aa5131f798e6F",
+            "address": "0x7339A96Ee0F69AfE36B4a362fcF6B717b1d11759",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -85,7 +85,7 @@
                 "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
                 "nft_contract": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
-                "vault_impl": "0x44b81843A8EFfE869e4dcA4d3E19C5E4Efac974C"
+                "vault_impl": "0xf47b664945eAf41D65d7aB5B984D474673D2d815"
             }
         }
     }
