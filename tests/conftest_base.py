@@ -129,6 +129,11 @@ class RentalLog:
     expiration: int
     amount: int
 
+    def to_rental(self, renter: str = ZERO_ADDRESS):
+        return Rental(
+            self.id, self.owner, renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount
+        )
+
 
 @dataclass
 class RewardLog:
@@ -166,7 +171,8 @@ class VaultState:
 
 def compute_state_hash(rental: Rental, listing: Listing):
     return boa.eval(
-        dedent(f"""keccak256(
+        dedent(
+            f"""keccak256(
             concat(
                 {rental.id},
                 convert({rental.owner}, bytes32),
