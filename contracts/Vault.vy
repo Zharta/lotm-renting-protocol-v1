@@ -282,7 +282,9 @@ def delegate_to_owner(state: VaultState, sender: address):
 
 @internal
 def _consolidate_claims(state: VaultState) -> Rental:
-    if state.active_rental.expiration < block.timestamp:
+    if state.active_rental.amount == 0 or state.active_rental.expiration >= block.timestamp:
+        return state.active_rental
+    else:
         self.unclaimed_rewards += state.active_rental.amount
         new_rental: Rental = Rental({
             id: state.active_rental.id,
@@ -296,9 +298,6 @@ def _consolidate_claims(state: VaultState) -> Rental:
         })
         self.state = self._state_hash2(state.listing, new_rental)
         return new_rental
-
-    else:
-        return state.active_rental
 
 @internal
 def _is_within_duration_range(listing: Listing, start: uint256, expiration: uint256) -> bool:
