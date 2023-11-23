@@ -113,6 +113,7 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
     assert self.state == self._state_hash(state), "invalid state"
+    assert state.listing.token_id == token_id, "invalid token_id"
 
     self._set_listing(token_id, sender, price, min_duration, max_duration, state.active_rental)
 
@@ -129,8 +130,9 @@ def set_listing_and_delegate_to_owner(
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
-    assert state.active_rental.expiration < block.timestamp, "active rental ongoing"
     assert self.state == self._state_hash(state), "invalid state"
+    assert state.active_rental.expiration < block.timestamp, "active rental ongoing"
+    assert state.listing.token_id == token_id, "invalid token_id"
 
     self._set_listing(token_id, sender, price, min_duration, max_duration, state.active_rental)
     self._delegate_to_owner()
@@ -191,6 +193,7 @@ def close_rental(state: VaultState, sender: address) -> uint256:
     real_expiration_adjusted: uint256 = block.timestamp
     if block.timestamp < state.active_rental.min_expiration:
         real_expiration_adjusted = state.active_rental.min_expiration
+    
     pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
         state.active_rental.expiration - state.active_rental.start,
         real_expiration_adjusted - state.active_rental.start,
@@ -230,7 +233,7 @@ def claim(state: VaultState, sender: address) -> (Rental, uint256):
     self.unclaimed_rewards = 0
 
     # transfer reward to nft owner
-    assert IERC20(payment_token_addr).transfer(state.active_rental.owner, rewards_to_claim), "transfer failed"
+    assert IERC20(payment_token_addr).transfer(self.owner, rewards_to_claim), "transfer failed"
 
     return result_active_rental, rewards_to_claim
 
@@ -279,11 +282,13 @@ def delegate_to_owner(state: VaultState, sender: address):
 
 @internal
 def _consolidate_claims(state: VaultState) -> Rental:
-    if state.active_rental.expiration < block.timestamp:
+    if state.active_rental.amount == 0 or state.active_rental.expiration >= block.timestamp:
+        return state.active_rental
+    else:
         self.unclaimed_rewards += state.active_rental.amount
         new_rental: Rental = Rental({
             id: state.active_rental.id,
-            owner: self.owner,
+            owner: state.active_rental.owner,
             renter: state.active_rental.renter,
             token_id: state.active_rental.token_id,
             start: state.active_rental.start,
@@ -293,9 +298,6 @@ def _consolidate_claims(state: VaultState) -> Rental:
         })
         self.state = self._state_hash2(state.listing, new_rental)
         return new_rental
-
-    else:
-        return state.active_rental
 
 @internal
 def _is_within_duration_range(listing: Listing, start: uint256, expiration: uint256) -> bool:
@@ -377,6 +379,7 @@ def _state_hash2(listing: Listing, rental: Rental) -> bytes32:
             convert(listing.max_duration, bytes32),
         )
     )
+
 
 @view
 @internal

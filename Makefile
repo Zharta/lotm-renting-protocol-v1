@@ -44,7 +44,7 @@ coverage:
 	${VENV}/bin/coverage report | tee coverage.txt
 
 gas:
-	${VENV}/bin/pytest tests/integration/renting/test_gas.py --durations=0 --gas-profile
+	${VENV}/bin/pytest tests/integration --durations=0 --gas-profile
 
 compile:
 	ape compile -f
