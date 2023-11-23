@@ -112,8 +112,8 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
-    assert state.listing.token_id == token_id, "invalid token_id"
     assert self.state == self._state_hash(state), "invalid state"
+    assert state.listing.token_id == token_id, "invalid token_id"
 
     self._set_listing(token_id, sender, price, min_duration, max_duration, state.active_rental)
 
@@ -193,6 +193,7 @@ def close_rental(state: VaultState, sender: address) -> uint256:
     real_expiration_adjusted: uint256 = block.timestamp
     if block.timestamp < state.active_rental.min_expiration:
         real_expiration_adjusted = state.active_rental.min_expiration
+    
     pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
         state.active_rental.expiration - state.active_rental.start,
         real_expiration_adjusted - state.active_rental.start,

@@ -135,6 +135,7 @@ class RewardLog:
     vault: str
     token_id: int
     amount: int
+    active_rental_amount: int
 
 
 @dataclass
@@ -146,9 +147,9 @@ class WithdrawalLog:
 
 @dataclass
 class TokenContext:
-    token_id: int
-    active_rental: Rental
-    listing: Listing
+    token_id: int = 0
+    active_rental: Rental = field(default_factory=Rental)
+    listing: Listing = field(default_factory=Listing)
 
     def to_tuple(self):
         return (self.token_id, self.active_rental.to_tuple(), self.listing.to_tuple())
