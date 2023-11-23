@@ -10,7 +10,6 @@ from ...conftest_base import (
     RentalLog,
     RewardLog,
     VaultLog,
-    VaultState,
     TokenContext,
     WithdrawalLog,
     compute_state_hash,
@@ -576,7 +575,6 @@ def test_claim(renting_contract, nft_contract, ape_contract, nft_owner, renter, 
     min_duration = 0
     max_duration = 0
 
-    
     start_time = boa.eval("block.timestamp")
     min_expiration = boa.eval("block.timestamp")
     duration = 6
@@ -599,7 +597,16 @@ def test_claim(renting_contract, nft_contract, ape_contract, nft_owner, renter, 
     time_passed = duration * 3600 + 1
     boa.env.time_travel(seconds=time_passed)
 
-    active_rental = Rental(RentalLog(*rental_start_event.rentals[0]).id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount)
+    active_rental = Rental(
+        RentalLog(*rental_start_event.rentals[0]).id,
+        nft_owner,
+        renter,
+        token_id,
+        start_time,
+        min_expiration,
+        expiration,
+        rental_amount,
+    )
 
     assert vault_contract.claimable_rewards(active_rental.to_tuple()) == rental_amount
     assert vault_contract.unclaimed_rewards() == 0
@@ -649,7 +656,9 @@ def test_claim_multiple(renting_contract, nft_contract, ape_contract, nft_owner,
     renting_contract.create_vaults_and_deposit(token_ids, price, min_duration, max_duration, False, sender=nft_owner)
 
     listings = [Listing(token_id, price, min_duration, max_duration) for token_id in token_ids]
-    token_contexts_start = [TokenContext(token_id=token_id, listing=listing).to_tuple() for token_id, listing in zip(token_ids, listings)]
+    token_contexts_start = [
+        TokenContext(token_id=token_id, listing=listing).to_tuple() for token_id, listing in zip(token_ids, listings)
+    ]
 
     renting_contract.start_rentals(token_contexts_start, duration, sender=renter)
     rental_start_event = get_last_event(renting_contract, "RentalStarted")
@@ -657,8 +666,14 @@ def test_claim_multiple(renting_contract, nft_contract, ape_contract, nft_owner,
     time_passed = duration * 3600 + 1
     boa.env.time_travel(seconds=time_passed)
 
-    active_rentals = [Rental(RentalLog(*event_log).id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount) for token_id, event_log in zip(token_ids, rental_start_event.rentals)]
-    token_contexts_claim = [TokenContext(token_id, active_rental, listing).to_tuple() for token_id, active_rental, listing in zip(token_ids, active_rentals, listings)]
+    active_rentals = [
+        Rental(RentalLog(*event_log).id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount)
+        for token_id, event_log in zip(token_ids, rental_start_event.rentals)
+    ]
+    token_contexts_claim = [
+        TokenContext(token_id, active_rental, listing).to_tuple()
+        for token_id, active_rental, listing in zip(token_ids, active_rentals, listings)
+    ]
 
     renting_contract.claim(token_contexts_claim, sender=nft_owner)
     rewards_claimed_event = get_last_event(renting_contract, "RewardsClaimed")
@@ -707,7 +722,16 @@ def test_withdraw(renting_contract, nft_contract, ape_contract, nft_owner, rente
     time_passed = duration * 3600 + 1
     boa.env.time_travel(seconds=time_passed)
 
-    active_rental = Rental(RentalLog(*start_rental_event.rentals[0]).id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount)
+    active_rental = Rental(
+        RentalLog(*start_rental_event.rentals[0]).id,
+        nft_owner,
+        renter,
+        token_id,
+        start_time,
+        min_expiration,
+        expiration,
+        rental_amount,
+    )
 
     renting_contract.withdraw([TokenContext(token_id, active_rental, listing).to_tuple()], sender=nft_owner)
     event = get_last_event(renting_contract, "NftsWithdrawn")
@@ -717,7 +741,7 @@ def test_withdraw(renting_contract, nft_contract, ape_contract, nft_owner, rente
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
     assert event.total_rewards == rental_amount
-    
+
     withdrawal_log = WithdrawalLog(*event.withdrawals[-1])
     assert withdrawal_log.vault == vault_addr
     assert withdrawal_log.token_id == token_id
@@ -771,7 +795,16 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     time_passed = duration * 3600 + 1
     boa.env.time_travel(seconds=time_passed)
 
-    active_rental = Rental(RentalLog(*start_rental_event.rentals[0]).id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount)
+    active_rental = Rental(
+        RentalLog(*start_rental_event.rentals[0]).id,
+        nft_owner,
+        renter,
+        token_id,
+        start_time,
+        min_expiration,
+        expiration,
+        rental_amount,
+    )
 
     renting_contract.withdraw([TokenContext(token_id, active_rental, listing).to_tuple()], sender=nft_owner)
 
@@ -793,7 +826,7 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     assert event.min_duration == min_duration
     assert event.max_duration == max_duration
     assert event.price == price
-    
+
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
     assert vault_log.token_id == token_id
@@ -831,7 +864,9 @@ def test_delegate_to_owner(
     renting_contract.create_vaults_and_deposit(token_ids, price, min_duration, max_duration, False, sender=nft_owner)
 
     listings = [Listing(token_id, price, min_duration, max_duration) for token_id in token_ids]
-    token_contexts = [TokenContext(token_id=token_id, listing=listing).to_tuple() for token_id, listing in zip(token_ids, listings)]
+    token_contexts = [
+        TokenContext(token_id=token_id, listing=listing).to_tuple() for token_id, listing in zip(token_ids, listings)
+    ]
     renting_contract.delegate_to_owner(token_contexts, sender=nft_owner)
 
     for token_id in token_ids:
