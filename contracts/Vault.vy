@@ -233,7 +233,7 @@ def claim(state: VaultState, sender: address) -> (Rental, uint256):
     self.unclaimed_rewards = 0
 
     # transfer reward to nft owner
-    assert IERC20(payment_token_addr).transfer(state.active_rental.owner, rewards_to_claim), "transfer failed"
+    assert IERC20(payment_token_addr).transfer(self.owner, rewards_to_claim), "transfer failed"
 
     return result_active_rental, rewards_to_claim
 
@@ -286,7 +286,7 @@ def _consolidate_claims(state: VaultState) -> Rental:
         self.unclaimed_rewards += state.active_rental.amount
         new_rental: Rental = Rental({
             id: state.active_rental.id,
-            owner: self.owner,
+            owner: state.active_rental.owner,
             renter: state.active_rental.renter,
             token_id: state.active_rental.token_id,
             start: state.active_rental.start,
