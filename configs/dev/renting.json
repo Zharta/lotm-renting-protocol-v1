@@ -22,7 +22,7 @@
             "properties_addresses": {}
         },
         "vault_impl_koda_ape": {
-            "address": "0xB81b23378B815A10D8AABEc2A93Ba71D2487B77E",
+            "address": "0x100ddF2d00d51e2A2f0A15D53430E99B86209229",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -36,7 +36,7 @@
             }
         },
         "vault_impl_mara_ape": {
-            "address": "0xf47b664945eAf41D65d7aB5B984D474673D2d815",
+            "address": "0x124e820D8f0a066A52B8f1499360047eB509e595",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -57,7 +57,7 @@
     },
     "renting": {
         "koda": {
-            "address": "0xb40cCCCbBD6234D6C504EB8b697f03C5321d53AC",
+            "address": "0xC2e6e217e01725c683222dD5f003676BfD94F832",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -69,11 +69,11 @@
                 "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
                 "nft_contract": "0xADeD61D42dE86f9058386D1D0d739d20C7eAfC43",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
-                "vault_impl": "0xB81b23378B815A10D8AABEc2A93Ba71D2487B77E"
+                "vault_impl": "0x100ddF2d00d51e2A2f0A15D53430E99B86209229"
             }
         },
         "mara": {
-            "address": "0x7339A96Ee0F69AfE36B4a362fcF6B717b1d11759",
+            "address": "0xAa45A3200AEAd375b758C6Db9200B2EDD20B09dC",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -85,7 +85,7 @@
                 "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
                 "nft_contract": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
-                "vault_impl": "0xf47b664945eAf41D65d7aB5B984D474673D2d815"
+                "vault_impl": "0x124e820D8f0a066A52B8f1499360047eB509e595"
             }
         }
     }

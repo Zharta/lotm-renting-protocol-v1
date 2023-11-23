@@ -191,7 +191,7 @@ class StateMachine(RuleBasedStateMachine):
         self.renting.start_rentals([token_context.to_tuple()], hours, sender=renter)
 
         event = get_last_event(self.renting, "RentalStarted")
-        rental = RentalLog(*event.active_rental[0]).to_rental(renter)
+        rental = RentalLog(*event.rentals[0]).to_rental(renter)
 
         self.active_rental[token] = rental
         self.paid[renter] += rental.amount
