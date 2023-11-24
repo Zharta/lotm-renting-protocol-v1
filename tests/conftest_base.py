@@ -1,11 +1,13 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
+from textwrap import dedent
 
 import boa
 import vyper
 from web3 import Web3
 
 ZERO_ADDRESS = boa.eval("empty(address)")
+ZERO_BYTES32 = boa.eval("empty(bytes32)")
 
 
 def get_last_event(contract: boa.vyper.contract.VyperContract, name: str = None):
@@ -86,22 +88,28 @@ def get_vault_from_proxy(proxy_addr):
 
 @dataclass
 class Rental:
-    id: bytes
-    owner: str
-    renter: str
-    token_id: int
-    start: int
-    min_expiration: int
-    expiration: int
-    amount: int
+    id: bytes = ZERO_BYTES32
+    owner: str = ZERO_ADDRESS
+    renter: str = ZERO_ADDRESS
+    token_id: int = 0
+    start: int = 0
+    min_expiration: int = 0
+    expiration: int = 0
+    amount: int = 0
+
+    def to_tuple(self):
+        return (self.id, self.owner, self.renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount)
 
 
 @dataclass
 class Listing:
-    token_id: int
-    price: int
-    min_duration: int
-    max_duration: int
+    token_id: int = 0
+    price: int = 0
+    min_duration: int = 0
+    max_duration: int = 0
+
+    def to_tuple(self):
+        return (self.token_id, self.price, self.min_duration, self.max_duration)
 
 
 @dataclass
@@ -121,12 +129,18 @@ class RentalLog:
     expiration: int
     amount: int
 
+    def to_rental(self, renter: str = ZERO_ADDRESS):
+        return Rental(
+            self.id, self.owner, renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount
+        )
+
 
 @dataclass
 class RewardLog:
     vault: str
     token_id: int
     amount: int
+    active_rental_amount: int
 
 
 @dataclass
@@ -134,3 +148,44 @@ class WithdrawalLog:
     vault: str
     token_id: int
     rewards: int
+
+
+@dataclass
+class TokenContext:
+    token_id: int = 0
+    active_rental: Rental = field(default_factory=Rental)
+    listing: Listing = field(default_factory=Listing)
+
+    def to_tuple(self):
+        return (self.token_id, self.active_rental.to_tuple(), self.listing.to_tuple())
+
+
+@dataclass
+class VaultState:
+    active_rental: Rental = field(default_factory=Rental)
+    listing: Listing = field(default_factory=Listing)
+
+    def to_tuple(self):
+        return (self.active_rental.to_tuple(), self.listing.to_tuple())
+
+
+def compute_state_hash(rental: Rental, listing: Listing):
+    return boa.eval(
+        dedent(
+            f"""keccak256(
+            concat(
+                {rental.id},
+                convert({rental.owner}, bytes32),
+                convert({rental.renter}, bytes32),
+                convert({rental.token_id}, bytes32),
+                convert({rental.start}, bytes32),
+                convert({rental.min_expiration}, bytes32),
+                convert({rental.expiration}, bytes32),
+                convert({rental.amount}, bytes32),
+                convert({listing.token_id}, bytes32),
+                convert({listing.price}, bytes32),
+                convert({listing.min_duration}, bytes32),
+                convert({listing.max_duration}, bytes32)
+            ))"""
+        )
+    )

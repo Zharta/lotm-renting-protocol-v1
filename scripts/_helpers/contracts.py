@@ -8,12 +8,22 @@ from .basetypes import ContractConfig, DeploymentContext
 
 @dataclass
 class VaultImplContract(ContractConfig):
-    def __init__(self, *, key: str, address: str | None = None):
+    def __init__(
+        self,
+        *,
+        key: str,
+        payment_token_key: str,
+        nft_contract_key: str,
+        delegation_registry_key: str,
+        address: str | None = None,
+    ):
         super().__init__(
             key,
             None,
             project.Vault,
             container_name="Vault",
+            deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_args_contracts=[payment_token_key, nft_contract_key, delegation_registry_key],
         )
         if address:
             self.load_contract(address)

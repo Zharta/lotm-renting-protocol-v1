@@ -76,8 +76,8 @@ def delegation_registry_warm_contract(forked_env):
 
 
 @pytest.fixture(scope="session")
-def vault_contract(forked_env):
-    return boa.load("contracts/Vault.vy")
+def vault_contract(forked_env, nft_contract, ape_contract, delegation_registry_warm_contract):
+    return boa.load("contracts/Vault.vy", ape_contract, nft_contract, delegation_registry_warm_contract)
 
 
 @pytest.fixture(scope="session")
@@ -99,9 +99,6 @@ def contracts_config(
     with boa.env.anchor():
         vault_contract.initialise(
             nft_owner,
-            ape_contract,
-            nft_contract,
-            delegation_registry_warm_contract,
             sender=renting_contract.address,
         )
         for i in range(32):
