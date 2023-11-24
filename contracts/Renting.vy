@@ -83,6 +83,7 @@ event VaultsCreated:
     max_duration: uint256
     price: uint256
     vaults: DynArray[VaultLog, 32]
+    self_delegation: bool
 
 event NftsDeposited:
     owner: address
@@ -91,6 +92,7 @@ event NftsDeposited:
     max_duration: uint256
     price: uint256
     vaults: DynArray[VaultLog, 32]
+    self_delegation: bool
 
 event NftsWithdrawn:
     owner: address
@@ -105,11 +107,13 @@ event ListingsChanged:
     max_duration: uint256
     price: uint256
     vaults: DynArray[VaultLog, 32]
+    self_delegation: bool
 
 event ListingsCancelled:
     owner: address
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
+    self_delegation: bool
 
 event RentalStarted:
     renter: address
@@ -126,6 +130,10 @@ event RewardsClaimed:
     nft_contract: address
     rewards: DynArray[RewardLog, 32]
 
+event DelegatedToOwner:
+    owner: address
+    nft_contract: address
+    vaults: DynArray[VaultLog, 32]
 
 # Global Variables
 
@@ -174,7 +182,8 @@ def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, 
         min_duration,
         max_duration,
         price,
-        vault_logs
+        vault_logs,
+        delegate
     )
 
 
@@ -195,7 +204,8 @@ def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint
         min_duration,
         max_duration,
         price,
-        vault_logs
+        vault_logs,
+        delegate
     )
 
 
@@ -230,7 +240,8 @@ def set_listings(token_contexts: DynArray[TokenContext, 32], price: uint256, min
         min_duration,
         max_duration,
         price,
-        vault_logs
+        vault_logs,
+        False
     )
 
 
@@ -265,7 +276,8 @@ def set_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext, 32
         min_duration,
         max_duration,
         price,
-        vault_logs
+        vault_logs,
+        True
     )
 
 @external
@@ -296,7 +308,8 @@ def cancel_listings(token_contexts: DynArray[TokenContext, 32]):
     log ListingsCancelled(
         msg.sender,
         nft_contract_addr,
-        vaults
+        vaults,
+        False
     )
 
 
@@ -328,7 +341,8 @@ def cancel_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext,
     log ListingsCancelled(
         msg.sender,
         nft_contract_addr,
-        vaults
+        vaults,
+        True
     )
 
 
@@ -460,6 +474,8 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
+    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
@@ -472,6 +488,16 @@ def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
             msg.sender
         )
 
+        vaults.append(VaultLog({
+            vault: vault,
+            token_id: token_context.token_id
+        }))
+
+    log DelegatedToOwner(
+        msg.sender,
+        nft_contract_addr,
+        vaults,
+    )
 
 
 ##### INTERNAL METHODS #####

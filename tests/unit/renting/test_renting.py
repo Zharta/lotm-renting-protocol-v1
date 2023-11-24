@@ -9,13 +9,12 @@ from ...conftest_base import (
     Rental,
     RentalLog,
     RewardLog,
-    VaultLog,
     TokenContext,
+    VaultLog,
     WithdrawalLog,
     compute_state_hash,
     get_last_event,
 )
-
 
 FOREVER = 2**256 - 1
 
@@ -68,6 +67,7 @@ def test_create_vaults_and_deposit(renting_contract, nft_contract, nft_owner, de
     assert event.min_duration == min_duration
     assert event.max_duration == max_duration
     assert event.price == price
+    assert not event.self_delegation
 
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
@@ -110,6 +110,7 @@ def test_change_listings_prices(renting_contract, nft_contract, nft_owner, vault
     assert event.price == new_price
     assert event.min_duration == new_min_duration
     assert event.max_duration == new_max_duration
+    assert not event.self_delegation
 
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
@@ -160,6 +161,7 @@ def test_change_listings_prices_and_delegate_to_owner(
     assert event.price == new_price
     assert event.min_duration == new_min_duration
     assert event.max_duration == new_max_duration
+    assert event.self_delegation
 
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
@@ -189,6 +191,7 @@ def test_cancel_listings(renting_contract, nft_contract, nft_owner, vault_contra
 
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
+    assert not event.self_delegation
 
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
@@ -227,6 +230,7 @@ def test_cancel_listings_and_delegate_to_owner(
 
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address
+    assert event.self_delegation
 
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
@@ -826,6 +830,7 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     assert event.min_duration == min_duration
     assert event.max_duration == max_duration
     assert event.price == price
+    assert not event.self_delegation
 
     vault_log = VaultLog(*event.vaults[-1])
     assert vault_log.vault == vault_addr
@@ -868,7 +873,13 @@ def test_delegate_to_owner(
         TokenContext(token_id=token_id, listing=listing).to_tuple() for token_id, listing in zip(token_ids, listings)
     ]
     renting_contract.delegate_to_owner(token_contexts, sender=nft_owner)
+    event = get_last_event(renting_contract, "DelegatedToOwner")
 
-    for token_id in token_ids:
+    assert event.owner == nft_owner
+    assert event.nft_contract == nft_contract.address
+    assert len(token_ids) == len(event.vaults)
+
+    for token_id, vault_log in zip(token_ids, event.vaults):
         vault_addr = renting_contract.tokenid_to_vault(token_id)
         assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner
+        assert VaultLog(*vault_log).token_id == token_id
