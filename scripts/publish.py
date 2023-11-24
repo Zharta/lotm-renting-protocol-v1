@@ -28,6 +28,20 @@ def abi_key(abi: list) -> str:
     return hash.hexdigest()
 
 
+def get_abi_map(context, env: Environment) -> dict:
+    config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
+    with open(config_file, "r") as f:
+        config = json.load(f)
+
+    contracts = {f"{prefix}.{k}": v for prefix, contracts in config.items() for k, v in contracts.items()}
+    for k, config in contracts.items():
+        contract = context[k].contract
+        config["abi"] = contract.contract_type.dict()["abi"]
+        config["abi_key"] = abi_key(contract.contract_type.dict()["abi"])
+
+    return contracts
+
+
 def get_renting_configs(context, env: Environment) -> dict:
     config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
     with open(config_file, "r") as f:
@@ -36,7 +50,6 @@ def get_renting_configs(context, env: Environment) -> dict:
     renting_configs = config["renting"]
     for k, config in renting_configs.items():
         contract = context[f"renting.{k}"].contract
-        config["abi"] = contract.contract_type.dict()["abi"]
         config["abi_key"] = abi_key(contract.contract_type.dict()["abi"])
 
     return renting_configs
@@ -62,10 +75,22 @@ def cli():
 
     print(f"Updating renting configs in {ENV.name}")
 
+    abis = get_abi_map(dm.context, dm.env)
+    for contract_key, config in abis.items():
+        abi_key = config["abi_key"]
+        print(f"updating abi {contract_key=} {abi_key=}")
+        update_abi(abi_key, config["abi"])
+
     renting_configs = get_renting_configs(dm.context, dm.env)
 
     for k, v in renting_configs.items():
-        update_abi(v["abi_key"], v["abi"])
+        properties_abis = {}
+        for prop, prop_val in v.get("properties", {}).items():
+            if prop_val in abis:
+                properties_abis[prop] = abis[prop_val]["abi_key"]
+        v["properties_abis"] = properties_abis
+
+        print(f"updating renting config {k}")
         update_renting_config(k, v)
 
     print(f"Renting configs updated in {ENV.name}")
