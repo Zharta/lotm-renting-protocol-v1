@@ -4,8 +4,14 @@ from textwrap import dedent
 import boa
 import pytest
 
-from ...conftest_base import ZERO_ADDRESS, ZERO_BYTES32, Listing, Rental, VaultState, compute_state_hash
-
+from ...conftest_base import (
+    ZERO_ADDRESS,
+    ZERO_BYTES32,
+    Listing,
+    Rental,
+    VaultState,
+    compute_state_hash,
+)
 
 FOREVER = 2**256 - 1
 
@@ -58,7 +64,7 @@ def erc20_not_reverting():
 
 
 def test_initial_state(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract):
-    assert vault_contract.owner() == nft_owner
+    assert vault_contract.vault_owner() == nft_owner
     assert vault_contract.caller() == renting_contract.address
     assert vault_contract.is_initialised()
     assert vault_contract.nft_contract_addr() == nft_contract.address
@@ -71,6 +77,46 @@ def test_initialise_twice(vault_contract, renting_contract, nft_owner, nft_contr
             nft_owner,
             sender=renting_contract.address,
         )
+
+
+def test_change_owner(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract):
+    new_owner = boa.env.generate_address("new_owner")
+
+    vault_contract.change_owner(nft_owner, new_owner, sender=renting_contract.address)
+    assert vault_contract.vault_owner() == new_owner
+
+    vault_contract.change_owner(new_owner, nft_owner, sender=renting_contract.address)
+    assert vault_contract.vault_owner() == nft_owner
+
+
+def test_change_owner_wrong_sender(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract):
+    new_owner = boa.env.generate_address("new_owner")
+    some_guy = boa.env.generate_address("some_guy")
+
+    with boa.reverts("not caller"):
+        vault_contract.change_owner(nft_owner, new_owner, sender=some_guy)
+        assert vault_contract.vault_owner() == nft_owner
+
+    with boa.reverts("not owner of vault"):
+        vault_contract.change_owner(some_guy, new_owner, sender=renting_contract.address)
+        assert vault_contract.vault_owner() == nft_owner
+
+
+def test_change_owner_empty_address(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract):
+    with boa.reverts("address is zero"):
+        vault_contract.change_owner(nft_owner, ZERO_ADDRESS, sender=renting_contract.address)
+        assert vault_contract.vault_owner() == nft_owner
+
+
+def test_change_owner_not_initialised(
+    vault_contract_def, nft_owner, renting_contract, nft_contract, ape_contract, delegation_registry_warm_contract
+):
+    vault_contract = vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract)
+    new_owner = boa.env.generate_address("new_owner")
+
+    with boa.reverts("not initialised"):
+        vault_contract.change_owner(nft_owner, new_owner, sender=renting_contract.address)
+        assert vault_contract.vault_owner() == nft_owner
 
 
 def test_deposit_not_caller(vault_contract, nft_owner):
@@ -465,7 +511,6 @@ def test_start_rental_with_existing_delegation(
     vault_contract.deposit(token_id, price, min_duration, max_duration, False, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
-    min_expiration = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) * Decimal(price) / Decimal(3600))
 
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
@@ -517,7 +562,6 @@ def test_close_rental(
     vault_contract.deposit(token_id, price, min_duration, max_duration, False, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
-    min_expiration = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
     ape_contract.approve(vault_contract, rental_amount, sender=renter)
 
@@ -549,7 +593,7 @@ def test_claim_not_caller(vault_contract, nft_owner):
         vault_contract.claim(VaultState().to_tuple(), nft_owner, sender=nft_owner)
 
 
-def test_claim_not_caller(vault_contract, renting_contract, renter):
+def test_claim_not_owner(vault_contract, renting_contract, renter):
     with boa.reverts("not owner of vault"):
         vault_contract.claim(VaultState().to_tuple(), renter, sender=renting_contract.address)
 
@@ -725,7 +769,7 @@ def test_withdraw(vault_contract, renting_contract, nft_contract, nft_owner, ren
     assert vault_contract.state() == ZERO_BYTES32
 
     assert not vault_contract.is_initialised()
-    assert vault_contract.owner() == ZERO_ADDRESS
+    assert vault_contract.vault_owner() == ZERO_ADDRESS
 
     assert nft_contract.ownerOf(token_id) == nft_owner
     assert ape_contract.balanceOf(renting_contract.address) == 0
@@ -764,7 +808,7 @@ def test_initialise_after_withdraw(
     vault_contract.withdraw(VaultState(active_rental, listing).to_tuple(), nft_owner, sender=renting_contract.address)
 
     assert not vault_contract.is_initialised()
-    assert vault_contract.owner() == ZERO_ADDRESS
+    assert vault_contract.vault_owner() == ZERO_ADDRESS
     assert vault_contract.caller() == renting_contract.address
 
     other_user = boa.env.generate_address("other_user")

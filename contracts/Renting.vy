@@ -18,6 +18,7 @@ interface IVault:
     def claim(state: VaultState, sender: address) -> (Rental, uint256): nonpayable
     def withdraw(state: VaultState, sender: address) -> uint256: nonpayable
     def delegate_to_owner(state: VaultState, sender: address): nonpayable
+    def change_owner(sender: address, new_owner: address): nonpayable
     def owner() -> address: view
 
 
@@ -133,6 +134,11 @@ event RewardsClaimed:
 event DelegatedToOwner:
     owner: address
     nft_contract: address
+    vaults: DynArray[VaultLog, 32]
+
+event VaultOwnerChanged:
+    old_owner: address
+    new_owner: address
     vaults: DynArray[VaultLog, 32]
 
 # Global Variables
@@ -498,6 +504,23 @@ def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
         nft_contract_addr,
         vaults,
     )
+
+@external
+def change_vault_ownership(token_ids: DynArray[uint256, 32], new_owner: address):
+    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+
+    for token_id in token_ids:
+        vault: address = self.active_vaults[token_id]
+        assert vault != empty(address), "no vault exists for token_id"
+
+        IVault(vault).change_owner(msg.sender, new_owner)
+
+        vaults.append(VaultLog({
+            vault: vault,
+            token_id: token_id
+        }))
+
+    log VaultOwnerChanged(msg.sender, new_owner, vaults)
 
 
 ##### INTERNAL METHODS #####
