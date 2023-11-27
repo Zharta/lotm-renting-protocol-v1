@@ -883,3 +883,91 @@ def test_delegate_to_owner(
         vault_addr = renting_contract.tokenid_to_vault(token_id)
         assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner
         assert VaultLog(*vault_log).token_id == token_id
+
+
+def test_change_vault_ownership(renting_contract, nft_contract, ape_contract, nft_owner, renter):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+    duration = 6
+    rental_amount = duration * price
+    new_owner = boa.env.generate_address("new_owner")
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    ape_contract.approve(vault_addr, rental_amount, sender=renter)
+
+    renting_contract.create_vaults_and_deposit([token_id], price, min_duration, max_duration, False, sender=nft_owner)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+
+    renting_contract.start_rentals([TokenContext(token_id=token_id, listing=listing).to_tuple()], duration, sender=renter)
+
+    renting_contract.change_vault_ownership([token_id], new_owner, sender=nft_owner)
+
+    owner_changed_event = get_last_event(renting_contract, "VaultOwnerChanged")
+
+    assert owner_changed_event.old_owner == nft_owner
+    assert owner_changed_event.new_owner == new_owner
+    assert len(owner_changed_event.vaults) == 1
+
+    vault_log = VaultLog(*owner_changed_event.vaults[0])
+    assert vault_log.vault == vault_addr
+    assert vault_log.token_id == token_id
+
+
+def test_change_vault_ownership_and_withdraw(renting_contract, nft_contract, ape_contract, nft_owner, renter):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+    start_time = boa.eval("block.timestamp")
+    min_expiration = boa.eval("block.timestamp")
+    duration = 6
+    expiration = start_time + duration * 3600
+    rental_amount = duration * price
+    new_owner = boa.env.generate_address("new_owner")
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    ape_contract.approve(vault_addr, rental_amount, sender=renter)
+
+    renting_contract.create_vaults_and_deposit([token_id], price, min_duration, max_duration, False, sender=nft_owner)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+
+    renting_contract.start_rentals([TokenContext(token_id=token_id, listing=listing).to_tuple()], duration, sender=renter)
+    start_rental_event = get_last_event(renting_contract, "RentalStarted")
+
+    time_passed = duration * 3600 + 1
+    boa.env.time_travel(seconds=time_passed)
+
+    active_rental = Rental(
+        RentalLog(*start_rental_event.rentals[0]).id,
+        nft_owner,
+        renter,
+        token_id,
+        start_time,
+        min_expiration,
+        expiration,
+        rental_amount,
+    )
+
+    renting_contract.change_vault_ownership([token_id], new_owner, sender=nft_owner)
+
+    renting_contract.withdraw([TokenContext(token_id, active_rental, listing).to_tuple()], sender=new_owner)
+    event = get_last_event(renting_contract, "NftsWithdrawn")
+
+    assert renting_contract.active_vaults(token_id) == ZERO_ADDRESS
+
+    assert event.owner == new_owner
+    assert event.nft_contract == nft_contract.address
+    assert event.total_rewards == rental_amount
+
+    withdrawal_log = WithdrawalLog(*event.withdrawals[-1])
+    assert withdrawal_log.vault == vault_addr
+    assert withdrawal_log.token_id == token_id
+    assert withdrawal_log.rewards == rental_amount

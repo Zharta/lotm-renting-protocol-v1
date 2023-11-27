@@ -175,7 +175,6 @@ def compute_state_hash(rental: Rental, listing: Listing):
             f"""keccak256(
             concat(
                 {rental.id},
-                convert({rental.owner}, bytes32),
                 convert({rental.renter}, bytes32),
                 convert({rental.token_id}, bytes32),
                 convert({rental.start}, bytes32),

@@ -20,7 +20,7 @@ def test_initial_state(
     nft_contract,
     ape_contract,
 ):
-    assert vault_contract.vault_owner() == nft_owner
+    assert vault_contract.owner() == nft_owner
     assert vault_contract.caller() == renting_contract.address
     assert vault_contract.is_initialised()
     assert vault_contract.nft_contract_addr() == nft_contract.address
@@ -520,7 +520,7 @@ def test_withdraw(
     assert vault_contract.state() == ZERO_BYTES32
 
     assert not vault_contract.is_initialised()
-    assert vault_contract.vault_owner() == ZERO_ADDRESS
+    assert vault_contract.owner() == ZERO_ADDRESS
 
     assert nft_contract.ownerOf(token_id) == nft_owner
     assert ape_contract.balanceOf(renting_contract.address) == 0
