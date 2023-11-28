@@ -628,7 +628,13 @@ def test_close_rental(
 
     vault_state = VaultState(active_rental, listing)
 
+<<<<<<< HEAD
     tx_real_rental_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
+=======
+    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(
+        vault_state.to_tuple(), renter, sender=renting_contract.address
+    )
+>>>>>>> 2c7f75b (patch: formatting)
 
     assert tx_real_rental_amount == real_rental_amount
 
@@ -637,6 +643,7 @@ def test_close_rental(
     assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
     assert vault_contract.unclaimed_protocol_fee() == 0
 
+<<<<<<< HEAD
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
@@ -695,6 +702,8 @@ def test_close_rental_no_protocol_fee(
     assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
     assert vault_contract.unclaimed_protocol_fee() == 0
 
+=======
+>>>>>>> 2c7f75b (patch: formatting)
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
@@ -780,6 +789,7 @@ def test_claim(
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
 
+<<<<<<< HEAD
 def test_claim_no_protocol_fee(
     vault_contract,
     renting_contract,
@@ -789,6 +799,9 @@ def test_claim_no_protocol_fee(
     ape_contract,
     protocol_wallet,
 ):
+=======
+def test_claim2(vault_contract, renting_contract, nft_contract, nft_owner, renter, ape_contract, protocol_wallet):
+>>>>>>> 2c7f75b (patch: formatting)
     token_id = 1
     price = int(1e18)
     min_duration = 0
