@@ -180,7 +180,9 @@ def test_deposit_overrides_delegation(
 
     nft_contract.approve(vault_contract, token_id, sender=second_owner)
 
-    vault_contract.initialise(second_owner, PROTOCOL_FEE_ENABLED, PROTOCOL_FEE, protocol_wallet, sender=renting_contract.address)
+    vault_contract.initialise(
+        second_owner, PROTOCOL_FEE_ENABLED, PROTOCOL_FEE, protocol_wallet, sender=renting_contract.address
+    )
     vault_contract.deposit(token_id, price, min_duration, max_duration, True, sender=renting_contract.address)
 
     listing = Listing(token_id, price, min_duration, max_duration)
@@ -553,7 +555,9 @@ def test_close_rental(
 
     vault_state = VaultState(active_rental, listing)
 
-    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
+    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(
+        vault_state.to_tuple(), renter, sender=renting_contract.address
+    )
 
     assert tx_real_rental_amount == real_rental_amount
     assert tx_protocol_fee_amount == protocol_fee_amount
@@ -562,7 +566,7 @@ def test_close_rental(
     assert vault_contract.claimable_rewards(Rental().to_tuple()) == real_rental_amount - protocol_fee_amount
     assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
     assert vault_contract.unclaimed_protocol_fee() == 0
-    
+
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
@@ -624,7 +628,9 @@ def test_claim(
     assert vault_contract.unclaimed_rewards() == 0
     assert vault_contract.unclaimed_protocol_fee() == 0
 
-    _, tx_rewards, tx_protocol_fee_amount = vault_contract.claim(VaultState(active_rental, listing).to_tuple(), nft_owner, sender=renting_contract.address)
+    _, tx_rewards, tx_protocol_fee_amount = vault_contract.claim(
+        VaultState(active_rental, listing).to_tuple(), nft_owner, sender=renting_contract.address
+    )
 
     active_rental.amount = 0
 
@@ -640,15 +646,7 @@ def test_claim(
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
 
-def test_claim2(
-    vault_contract,
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    renter,
-    ape_contract,
-    protocol_wallet
-):
+def test_claim2(vault_contract, renting_contract, nft_contract, nft_owner, renter, ape_contract, protocol_wallet):
     token_id = 1
     price = int(1e18)
     min_duration = 0
