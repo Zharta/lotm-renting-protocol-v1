@@ -40,7 +40,7 @@ def test_initialise_twice(
 
 def test_deposit_not_caller(contracts_config, vault_contract, nft_owner):
     with boa.reverts("not caller"):
-        vault_contract.deposit(1, 1, 0, 0, False, sender=nft_owner)
+        vault_contract.deposit(1, 1, 0, 0, ZERO_ADDRESS, sender=nft_owner)
 
 
 def test_deposit_not_owner(
@@ -52,12 +52,12 @@ def test_deposit_not_owner(
 ):
     nft_contract.mint(renting_contract.address, 100, sender=owner)
     with boa.reverts():
-        vault_contract.deposit(100, 1, 0, 0, False, sender=renting_contract.address)
+        vault_contract.deposit(100, 1, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
 
 def test_deposit_not_approved(contracts_config, vault_contract, renting_contract):
     with boa.reverts():
-        vault_contract.deposit(1, 1, 0, 0, False, sender=renting_contract.address)
+        vault_contract.deposit(1, 1, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
 
 def test_deposit_without_delegation(
@@ -67,7 +67,7 @@ def test_deposit_without_delegation(
     price = 1
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     assert nft_contract.ownerOf(token_id) == vault_contract.address
 
@@ -82,7 +82,7 @@ def test_deposit_with_delegation(
     price = 1
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, True, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, nft_owner, sender=renting_contract.address)
 
     assert nft_contract.ownerOf(token_id) == vault_contract.address
 
@@ -94,7 +94,7 @@ def test_set_listing_not_caller(contracts_config, vault_contract, nft_owner):
     vault_state = VaultState(Rental(), Listing())
 
     with boa.reverts("not caller"):
-        vault_contract.set_listing(vault_state.to_tuple(), 0, nft_owner, 1, 0, 0, sender=nft_owner)
+        vault_contract.set_listing(vault_state.to_tuple(), 0, nft_owner, 1, 0, 0, ZERO_ADDRESS, sender=nft_owner)
 
 
 def test_change_listing(contracts_config, vault_contract, renting_contract, nft_contract, nft_owner):
@@ -105,19 +105,26 @@ def test_change_listing(contracts_config, vault_contract, renting_contract, nft_
     max_duration = 1
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     state_listing = Listing(token_id, price, 0, 0)
     vault_state = VaultState(Rental(), state_listing)
 
     vault_contract.set_listing(
-        vault_state.to_tuple(), token_id, nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address
+        vault_state.to_tuple(),
+        token_id,
+        nft_owner,
+        new_price,
+        min_duration,
+        max_duration,
+        ZERO_ADDRESS,
+        sender=renting_contract.address,
     )
 
     assert vault_contract.state() == compute_state_hash(Rental(), Listing(token_id, new_price, min_duration, max_duration))
 
 
-def test_set_listing_and_delegate_to_owner(
+def test_set_listing_and_delegate_to_wallet(
     contracts_config, vault_contract, renting_contract, nft_contract, nft_owner, delegation_registry_warm_contract
 ):
     token_id = 1
@@ -126,24 +133,35 @@ def test_set_listing_and_delegate_to_owner(
     min_duration = 0
     max_duration = 1
 
+    delegate = boa.env.generate_address("delegate")
+
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, True, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, nft_owner, sender=renting_contract.address)
 
     state_listing = Listing(token_id, price, 0, 0)
     vault_state = VaultState(Rental(), state_listing)
 
     delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_contract.address)
 
-    vault_contract.set_listing(vault_state.to_tuple(), token_id, nft_owner, new_price, 0, 0, sender=renting_contract.address)
+    vault_contract.set_listing(
+        vault_state.to_tuple(), token_id, nft_owner, new_price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address
+    )
     vault_state.listing.price = new_price
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
 
-    vault_contract.set_listing_and_delegate_to_owner(
-        vault_state.to_tuple(), token_id, nft_owner, new_price, min_duration, max_duration, sender=renting_contract.address
+    vault_contract.set_listing(
+        vault_state.to_tuple(),
+        token_id,
+        nft_owner,
+        new_price,
+        min_duration,
+        max_duration,
+        delegate,
+        sender=renting_contract.address,
     )
 
-    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == nft_owner
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == delegate
     assert vault_contract.state() == compute_state_hash(Rental(), Listing(token_id, new_price, min_duration, max_duration))
 
 
@@ -151,7 +169,7 @@ def test_cancel_listing_not_caller(contracts_config, vault_contract, nft_owner):
     vault_state = VaultState(Rental(), Listing())
 
     with boa.reverts("not caller"):
-        vault_contract.set_listing(vault_state.to_tuple(), 0, nft_owner, 0, 0, 0, sender=nft_owner)
+        vault_contract.set_listing(vault_state.to_tuple(), 0, nft_owner, 0, 0, 0, ZERO_ADDRESS, sender=nft_owner)
 
 
 def test_cancel_listing(contracts_config, vault_contract, renting_contract, nft_contract, nft_owner):
@@ -159,12 +177,14 @@ def test_cancel_listing(contracts_config, vault_contract, renting_contract, nft_
     price = 1
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     state_listing = Listing(token_id, price, 0, 0)
     vault_state = VaultState(Rental(), state_listing)
 
-    vault_contract.set_listing(vault_state.to_tuple(), token_id, nft_owner, 0, 0, 0, sender=renting_contract.address)
+    vault_contract.set_listing(
+        vault_state.to_tuple(), token_id, nft_owner, 0, 0, 0, ZERO_ADDRESS, sender=renting_contract.address
+    )
 
     assert vault_contract.state() == compute_state_hash(Rental(), Listing(token_id, 0, 0, 0))
 
@@ -194,7 +214,7 @@ def test_start_rental_invalid_state(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     state_listing = Listing(token_id, price * 2, 0, 0)
     vault_state = VaultState(Rental(), state_listing)
@@ -218,7 +238,7 @@ def test_start_rental_insufficient_allowance(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     state_listing = Listing(token_id, price, 0, 0)
     vault_state = VaultState(Rental(), state_listing)
@@ -244,7 +264,7 @@ def test_start_rental(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) * Decimal(price) / Decimal(3600))
@@ -277,7 +297,7 @@ def test_start_rental_ongoing(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) * Decimal(price) / Decimal(3600))
@@ -326,7 +346,7 @@ def test_close_rental(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
@@ -383,7 +403,7 @@ def test_claim(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
@@ -415,7 +435,7 @@ def test_claim2(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
@@ -543,7 +563,7 @@ def test_withdraw_rental_ongoing(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
@@ -575,7 +595,7 @@ def test_withdraw(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))

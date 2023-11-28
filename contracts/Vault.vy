@@ -81,7 +81,7 @@ def initialise(owner: address):
 
 
 @external
-def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool):
+def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert self.state == empty_state_hash, "invalid state"
@@ -105,12 +105,12 @@ def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_durati
     IERC721(nft_contract_addr).safeTransferFrom(self.owner, self, token_id, b"")
 
     # create delegation
-    if delegate:
-        self._delegate_to_owner()
+    if delegate != empty(address):
+        self._delegate_to_wallet(delegate)
 
 
 @external
-def set_listing(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256):
+def set_listing(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
@@ -119,25 +119,9 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
 
     self._set_listing(token_id, sender, price, min_duration, max_duration, state.active_rental)
 
-
-@external
-def set_listing_and_delegate_to_owner(
-    state: VaultState,
-    token_id: uint256,
-    sender: address,
-    price: uint256,
-    min_duration: uint256,
-    max_duration: uint256
-):
-    assert self._is_initialised(), "not initialised"
-    assert msg.sender == self.caller, "not caller"
-    assert sender == self.owner, "not owner of vault"
-    assert self.state == self._state_hash(state), "invalid state"
-    assert state.active_rental.expiration < block.timestamp, "active rental ongoing"
-    assert state.listing.token_id == token_id, "invalid token_id"
-
-    self._set_listing(token_id, sender, price, min_duration, max_duration, state.active_rental)
-    self._delegate_to_owner()
+    # create delegation
+    if delegate != empty(address):
+        self._delegate_to_wallet(delegate)
 
 
 @external
@@ -197,7 +181,7 @@ def close_rental(state: VaultState, sender: address) -> uint256:
     real_expiration_adjusted: uint256 = block.timestamp
     if block.timestamp < state.active_rental.min_expiration:
         real_expiration_adjusted = state.active_rental.min_expiration
-    
+
     pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
         state.active_rental.expiration - state.active_rental.start,
         real_expiration_adjusted - state.active_rental.start,
@@ -294,14 +278,14 @@ def withdraw(state: VaultState, sender: address) -> (uint256, uint256):
 
 
 @external
-def delegate_to_owner(state: VaultState, sender: address):
+def delegate_to_wallet(state: VaultState, sender: address, delegate: address):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
     assert state.active_rental.expiration < block.timestamp, "active rental ongoing"
     assert self.state == self._state_hash(state), "invalid state"
 
-    self._delegate_to_owner()
+    self._delegate_to_wallet(delegate)
 
 
 ##### INTERNAL METHODS #####
@@ -364,11 +348,10 @@ def _claimable_rewards(active_rental: Rental) -> uint256:
         return self.unclaimed_rewards * (10000 - active_rental.protocol_fee) / 10000
 
 @internal
-def _delegate_to_owner():
+def _delegate_to_wallet(wallet: address):
     delegation_registry: IDelegationRegistry = IDelegationRegistry(delegation_registry_addr)
-    owner: address = self.owner
-    if delegation_registry.getHotWallet(self) != owner:
-        delegation_registry.setHotWallet(owner, max_value(uint256), False)
+    if delegation_registry.getHotWallet(self) != wallet:
+        delegation_registry.setHotWallet(wallet, max_value(uint256), False)
 
 
 @internal
