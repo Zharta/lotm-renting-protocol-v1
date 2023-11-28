@@ -213,44 +213,13 @@ def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint
 
 
 @external
-def set_listings(token_contexts: DynArray[TokenContext, 32], price: uint256, min_duration: uint256, max_duration: uint256):
-    vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
-
-    for token_context in token_contexts:
-        vault: address = self.active_vaults[token_context.token_id]
-        assert vault != empty(address), "no vault exists for token_id"
-
-        IVault(vault).set_listing(
-            VaultState({
-                active_rental: token_context.active_rental,
-                listing: token_context.listing
-            }),
-            token_context.token_id,
-            msg.sender,
-            price,
-            min_duration,
-            max_duration,
-            empty(address)
-        )
-
-        vault_logs.append(VaultLog({
-            vault: vault,
-            token_id: token_context.token_id
-        }))
-
-    log ListingsChanged(
-        msg.sender,
-        nft_contract_addr,
-        min_duration,
-        max_duration,
-        price,
-        vault_logs,
-        empty(address),
-    )
-
-
-@external
-def set_listings_and_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
+def set_listings(
+    token_contexts: DynArray[TokenContext, 32],
+    price: uint256,
+    min_duration: uint256,
+    max_duration: uint256,
+    delegate: address
+):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
@@ -286,41 +255,7 @@ def set_listings_and_delegate_to_wallet(token_contexts: DynArray[TokenContext, 3
     )
 
 @external
-def cancel_listings(token_contexts: DynArray[TokenContext, 32]):
-    vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
-
-    for token_context in token_contexts:
-        vault: address = self.active_vaults[token_context.token_id]
-        assert vault != empty(address), "no vault exists for token_id"
-
-        IVault(vault).set_listing(
-            VaultState({
-                active_rental: token_context.active_rental,
-                listing: token_context.listing
-            }),
-            token_context.token_id,
-            msg.sender,
-            0,
-            0,
-            0,
-            empty(address)
-        )
-
-        vaults.append(VaultLog({
-            vault: vault,
-            token_id: token_context.token_id
-        }))
-
-    log ListingsCancelled(
-        msg.sender,
-        nft_contract_addr,
-        vaults,
-        empty(address)
-    )
-
-
-@external
-def cancel_listings_and_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
+def cancel_listings(token_contexts: DynArray[TokenContext, 32], delegate: address):
     vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:

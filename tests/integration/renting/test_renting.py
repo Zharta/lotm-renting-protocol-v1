@@ -111,7 +111,9 @@ def test_change_listings_price(contracts_config, renting_contract, nft_contract,
     token_context = TokenContext(token_id, Rental(), Listing(token_id, price, 0, 0))
     assert vault.state() == compute_state_hash(token_context.active_rental, token_context.listing)
 
-    renting_contract.set_listings([token_context.to_tuple()], new_price, min_duration, max_duration, sender=nft_owner)
+    renting_contract.set_listings(
+        [token_context.to_tuple()], new_price, min_duration, max_duration, ZERO_ADDRESS, sender=nft_owner
+    )
     event = get_last_event(renting_contract, "ListingsChanged")
 
     vault = get_vault_from_proxy(vault_addr)
@@ -150,7 +152,7 @@ def test_change_listings_price_limits(contracts_config, renting_contract, nft_co
     token_contexts = [TokenContext(token_id, Rental(), Listing(token_id, price, 0, 0)) for token_id in token_ids]
 
     renting_contract.set_listings(
-        [c.to_tuple() for c in token_contexts], new_price, min_duration, max_duration, sender=nft_owner
+        [c.to_tuple() for c in token_contexts], new_price, min_duration, max_duration, ZERO_ADDRESS, sender=nft_owner
     )
     event = get_last_event(renting_contract, "ListingsChanged")
 
@@ -177,7 +179,7 @@ def test_cancel_listings(contracts_config, renting_contract, nft_contract, nft_o
     renting_contract.create_vaults_and_deposit([token_id], price, 0, 0, ZERO_ADDRESS, sender=nft_owner)
 
     token_context = TokenContext(token_id, Rental(), Listing(token_id, price, 0, 0))
-    renting_contract.cancel_listings([token_context.to_tuple()], sender=nft_owner)
+    renting_contract.cancel_listings([token_context.to_tuple()], ZERO_ADDRESS, sender=nft_owner)
 
     event = get_last_event(renting_contract, "ListingsCancelled")
 
@@ -207,7 +209,7 @@ def test_cancel_listings_limits(contracts_config, renting_contract, nft_contract
 
     token_contexts = [TokenContext(token_id, Rental(), Listing(token_id, price, 0, 0)) for token_id in token_ids]
 
-    renting_contract.cancel_listings([c.to_tuple() for c in token_contexts], sender=nft_owner)
+    renting_contract.cancel_listings([c.to_tuple() for c in token_contexts], ZERO_ADDRESS, sender=nft_owner)
     event = get_last_event(renting_contract, "ListingsCancelled")
 
     for token_id, vault_addr in vaults.items():
@@ -674,23 +676,23 @@ def test_delegation(contracts_config, renting_contract, nft_contract, nft_owner,
 
     # cancel_listings does not creates self delegation
     token_context = TokenContext(token_id, Rental(), Listing(token_id, price, 0, 0))
-    renting_contract.cancel_listings([token_context.to_tuple()], sender=nft_owner)
+    renting_contract.cancel_listings([token_context.to_tuple()], ZERO_ADDRESS, sender=nft_owner)
     assert delegation_registry_warm_contract.getHotWallet(vault_addr) == ZERO_ADDRESS
 
     # set_listings does not creates self delegation
     token_context.listing = Listing(token_id, 0, 0, 0)
-    renting_contract.set_listings([token_context.to_tuple()], price, 0, 0, sender=nft_owner)
+    renting_contract.set_listings([token_context.to_tuple()], price, 0, 0, ZERO_ADDRESS, sender=nft_owner)
     assert delegation_registry_warm_contract.getHotWallet(vault_addr) == ZERO_ADDRESS
 
     # cancel_listings_and_delegate_to_owner creates self delegation
     token_context.listing = Listing(token_id, price, 0, 0)
-    renting_contract.cancel_listings_and_delegate_to_wallet([token_context.to_tuple()], delegate, sender=nft_owner)
+    renting_contract.cancel_listings([token_context.to_tuple()], delegate, sender=nft_owner)
     assert delegation_registry_warm_contract.getHotWallet(vault_addr) == delegate
     delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_addr)
 
     # set_listings_and_delegate_to_owner creates self delegation
     token_context.listing = Listing(token_id, 0, 0, 0)
-    renting_contract.set_listings_and_delegate_to_wallet([token_context.to_tuple()], price, 0, 0, delegate, sender=nft_owner)
+    renting_contract.set_listings([token_context.to_tuple()], price, 0, 0, delegate, sender=nft_owner)
     assert delegation_registry_warm_contract.getHotWallet(vault_addr) == delegate
     delegation_registry_warm_contract.setHotWallet(ZERO_ADDRESS, 0, False, sender=vault_addr)
 

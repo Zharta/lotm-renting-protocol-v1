@@ -91,14 +91,16 @@ class StateMachine(RuleBasedStateMachine):
     def change_listings_prices(self, token, new_price, min_duration, max_duration):
         owner = self.owner_of[token]
         token_context = TokenContext(token, self.active_rental[token], self.listing[token])
-        self.renting.set_listings([token_context.to_tuple()], new_price, min_duration, max_duration, sender=owner)
+        self.renting.set_listings(
+            [token_context.to_tuple()], new_price, min_duration, max_duration, ZERO_ADDRESS, sender=owner
+        )
         self.listing[token] = Listing(token, new_price, min_duration, max_duration)
 
     @rule(token=tokens_in_vaults)
     def cancel_listings(self, token):
         owner = self.owner_of[token]
         token_context = TokenContext(token, self.active_rental[token], self.listing[token])
-        self.renting.cancel_listings([token_context.to_tuple()], sender=owner)
+        self.renting.cancel_listings([token_context.to_tuple()], ZERO_ADDRESS, sender=owner)
         self.listing[token] = Listing(token_id=token)
 
     @rule(
