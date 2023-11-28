@@ -17,6 +17,7 @@ struct Rental:
     id: bytes32 # keccak256 of the renter, token_id, start and expiration
     owner: address
     renter: address
+    delegate: address
     token_id: uint256
     start: uint256
     min_expiration: uint256
@@ -123,12 +124,13 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
 
 
 @external
-def start_rental(state: VaultState, renter: address, expiration: uint256) -> Rental:
+def start_rental(state: VaultState, renter: address, expiration: uint256, delegate: address) -> Rental:
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert state.listing.price > 0, "listing does not exist"
     assert state.active_rental.expiration < block.timestamp, "active rental ongoing"
     assert self._is_within_duration_range(state.listing, block.timestamp, expiration), "duration not respected"
+    assert delegate != empty(address), "delegate is zero address"
     assert self.state == self._state_hash(state), "invalid state"
 
     rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, state.listing.price)
@@ -138,10 +140,10 @@ def start_rental(state: VaultState, renter: address, expiration: uint256) -> Ren
     assert IERC20(payment_token_addr).transferFrom(renter, self, rental_amount), "transferFrom failed"
 
     # create delegation
-    if IDelegationRegistry(delegation_registry_addr).getHotWallet(self) == renter:
+    if IDelegationRegistry(delegation_registry_addr).getHotWallet(self) == delegate:
         IDelegationRegistry(delegation_registry_addr).setExpirationTimestamp(expiration)
     else:
-        IDelegationRegistry(delegation_registry_addr).setHotWallet(renter, expiration, False)
+        IDelegationRegistry(delegation_registry_addr).setHotWallet(delegate, expiration, False)
 
     # store unclaimed rewards
     self._consolidate_claims(state)
@@ -152,6 +154,7 @@ def start_rental(state: VaultState, renter: address, expiration: uint256) -> Ren
         id: rental_id,
         owner: self.owner,
         renter: renter,
+        delegate: delegate,
         token_id: state.listing.token_id,
         start: block.timestamp,
         min_expiration: block.timestamp + state.listing.min_duration * 3600,
@@ -274,6 +277,7 @@ def _consolidate_claims(state: VaultState) -> Rental:
             id: state.active_rental.id,
             owner: state.active_rental.owner,
             renter: state.active_rental.renter,
+            delegate: state.active_rental.delegate,
             token_id: state.active_rental.token_id,
             start: state.active_rental.start,
             min_expiration: state.active_rental.min_expiration,

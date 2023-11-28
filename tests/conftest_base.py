@@ -91,6 +91,7 @@ class Rental:
     id: bytes = ZERO_BYTES32
     owner: str = ZERO_ADDRESS
     renter: str = ZERO_ADDRESS
+    delegate: str = ZERO_ADDRESS
     token_id: int = 0
     start: int = 0
     min_expiration: int = 0
@@ -98,7 +99,17 @@ class Rental:
     amount: int = 0
 
     def to_tuple(self):
-        return (self.id, self.owner, self.renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount)
+        return (
+            self.id,
+            self.owner,
+            self.renter,
+            self.delegate,
+            self.token_id,
+            self.start,
+            self.min_expiration,
+            self.expiration,
+            self.amount,
+        )
 
 
 @dataclass
@@ -131,7 +142,15 @@ class RentalLog:
 
     def to_rental(self, renter: str = ZERO_ADDRESS):
         return Rental(
-            self.id, self.owner, renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount
+            self.id,
+            self.owner,
+            renter,
+            ZERO_ADDRESS,
+            self.token_id,
+            self.start,
+            self.min_expiration,
+            self.expiration,
+            self.amount,
         )
 
 
