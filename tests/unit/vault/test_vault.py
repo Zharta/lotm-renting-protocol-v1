@@ -69,7 +69,7 @@ def erc20_not_reverting():
     )
 
 
-def test_initial_state(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract, protocol_wallet):
+def test_initial_state(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract):
     assert vault_contract.owner() == nft_owner
     assert vault_contract.caller() == renting_contract.address
     assert vault_contract.is_initialised()
@@ -358,7 +358,7 @@ def test_start_rental_no_listing(vault_contract, renting_contract, renter, proto
         )
 
 
-def test_start_rental_empty_delegate(vault_contract, renting_contract, renter, nft_contract, nft_owner):
+def test_start_rental_empty_delegate(vault_contract, renting_contract, renter, nft_contract, nft_owner, protocol_wallet):
     token_id = 1
     price = 1
     expiration = boa.eval("block.timestamp") + 3600
@@ -371,7 +371,13 @@ def test_start_rental_empty_delegate(vault_contract, renting_contract, renter, n
     listing = Listing(token_id, price, min_duration, max_duration)
     with boa.reverts("delegate is zero address"):
         vault_contract.start_rental(
-            VaultState(listing=listing).to_tuple(), renter, expiration, ZERO_ADDRESS, sender=renting_contract.address
+            VaultState(listing=listing).to_tuple(),
+            renter,
+            expiration,
+            ZERO_ADDRESS,
+            PROTOCOL_FEE,
+            protocol_wallet,
+            sender=renting_contract.address,
         )
 
 
@@ -628,13 +634,7 @@ def test_close_rental(
 
     vault_state = VaultState(active_rental, listing)
 
-<<<<<<< HEAD
     tx_real_rental_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
-=======
-    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(
-        vault_state.to_tuple(), renter, sender=renting_contract.address
-    )
->>>>>>> 2c7f75b (patch: formatting)
 
     assert tx_real_rental_amount == real_rental_amount
 
@@ -643,7 +643,6 @@ def test_close_rental(
     assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
     assert vault_contract.unclaimed_protocol_fee() == 0
 
-<<<<<<< HEAD
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
@@ -702,8 +701,182 @@ def test_close_rental_no_protocol_fee(
     assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
     assert vault_contract.unclaimed_protocol_fee() == 0
 
-=======
->>>>>>> 2c7f75b (patch: formatting)
+    assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
+
+
+def test_close_rental_no_protocol_fee(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    delegation_registry_warm_contract,
+    protocol_wallet,
+):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+    expiration = boa.eval("block.timestamp") + 86400
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, False, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+
+    active_rental_raw = vault_contract.start_rental(
+        VaultState(listing=listing).to_tuple(),
+        renter,
+        expiration,
+        0,
+        protocol_wallet,
+        sender=renting_contract.address,
+    )
+    active_rental = Rental(*active_rental_raw)
+
+    time_passed = 43200
+    boa.env.time_travel(seconds=time_passed)
+    real_rental_amount = int(Decimal(rental_amount) / Decimal(2))
+    protocol_fee_amount = 0
+
+    assert vault_contract.claimable_rewards(active_rental.to_tuple()) == 0
+
+    vault_state = VaultState(active_rental, listing)
+
+    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(
+        vault_state.to_tuple(), renter, sender=renting_contract.address
+    )
+
+    assert tx_real_rental_amount == real_rental_amount
+
+    assert vault_contract.state() == compute_state_hash(Rental(), listing)
+    assert vault_contract.claimable_rewards(Rental().to_tuple()) == real_rental_amount - protocol_fee_amount
+    assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
+    assert vault_contract.unclaimed_protocol_fee() == 0
+
+    assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
+
+
+def test_close_rental_no_protocol_fee(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    delegation_registry_warm_contract,
+    protocol_wallet,
+):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+    expiration = boa.eval("block.timestamp") + 86400
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, False, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+
+    active_rental_raw = vault_contract.start_rental(
+        VaultState(listing=listing).to_tuple(),
+        renter,
+        expiration,
+        0,
+        protocol_wallet,
+        sender=renting_contract.address,
+    )
+    active_rental = Rental(*active_rental_raw)
+
+    time_passed = 43200
+    boa.env.time_travel(seconds=time_passed)
+    real_rental_amount = int(Decimal(rental_amount) / Decimal(2))
+    protocol_fee_amount = 0
+
+    assert vault_contract.claimable_rewards(active_rental.to_tuple()) == 0
+
+    vault_state = VaultState(active_rental, listing)
+
+    tx_real_rental_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
+
+    assert tx_real_rental_amount == real_rental_amount
+
+    assert vault_contract.state() == compute_state_hash(Rental(), listing)
+    assert vault_contract.claimable_rewards(Rental().to_tuple()) == real_rental_amount - protocol_fee_amount
+    assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
+    assert vault_contract.unclaimed_protocol_fee() == 0
+
+    assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
+
+    assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
+
+
+def test_close_rental_no_protocol_fee(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    delegation_registry_warm_contract,
+    protocol_wallet,
+):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+    expiration = boa.eval("block.timestamp") + 86400
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, False, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+
+    active_rental_raw = vault_contract.start_rental(
+        VaultState(listing=listing).to_tuple(),
+        renter,
+        expiration,
+        0,
+        protocol_wallet,
+        sender=renting_contract.address,
+    )
+    active_rental = Rental(*active_rental_raw)
+
+    time_passed = 43200
+    boa.env.time_travel(seconds=time_passed)
+    real_rental_amount = int(Decimal(rental_amount) / Decimal(2))
+    protocol_fee_amount = 0
+
+    assert vault_contract.claimable_rewards(active_rental.to_tuple()) == 0
+
+    vault_state = VaultState(active_rental, listing)
+
+    tx_real_rental_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
+
+    assert tx_real_rental_amount == real_rental_amount
+
+    assert vault_contract.state() == compute_state_hash(Rental(), listing)
+    assert vault_contract.claimable_rewards(Rental().to_tuple()) == real_rental_amount - protocol_fee_amount
+    assert vault_contract.unclaimed_rewards() == real_rental_amount - protocol_fee_amount
+    assert vault_contract.unclaimed_protocol_fee() == 0
+
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
@@ -789,7 +962,6 @@ def test_claim(
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
 
-<<<<<<< HEAD
 def test_claim_no_protocol_fee(
     vault_contract,
     renting_contract,
@@ -799,9 +971,66 @@ def test_claim_no_protocol_fee(
     ape_contract,
     protocol_wallet,
 ):
-=======
-def test_claim2(vault_contract, renting_contract, nft_contract, nft_owner, renter, ape_contract, protocol_wallet):
->>>>>>> 2c7f75b (patch: formatting)
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+    expiration = boa.eval("block.timestamp") + 86400
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, False, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
+    protocol_fee_amount = 0
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+
+    active_rental_raw = vault_contract.start_rental(
+        VaultState(listing=listing).to_tuple(),
+        renter,
+        expiration,
+        renter,
+        0,
+        protocol_wallet,
+        sender=renting_contract.address,
+    )
+    active_rental = Rental(*active_rental_raw)
+
+    boa.env.time_travel(seconds=86401)
+
+    assert vault_contract.claimable_rewards(active_rental.to_tuple()) == rental_amount - protocol_fee_amount
+    assert vault_contract.unclaimed_rewards() == 0
+    assert vault_contract.unclaimed_protocol_fee() == 0
+
+    _, tx_rewards, tx_protocol_fee_amount = vault_contract.claim(
+        VaultState(active_rental, listing).to_tuple(), nft_owner, sender=renting_contract.address
+    )
+
+    active_rental.amount = 0
+
+    assert tx_rewards == rental_amount - protocol_fee_amount
+    assert tx_protocol_fee_amount == protocol_fee_amount
+
+    assert vault_contract.unclaimed_rewards() == 0
+    assert vault_contract.claimable_rewards(active_rental.to_tuple()) == 0
+    assert vault_contract.unclaimed_protocol_fee() == 0
+
+    assert vault_contract.state() == compute_state_hash(active_rental, listing)
+
+    assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
+
+
+def test_claim_no_protocol_fee(
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    nft_owner,
+    renter,
+    ape_contract,
+    protocol_wallet,
+):
     token_id = 1
     price = int(1e18)
     min_duration = 0
@@ -874,6 +1103,7 @@ def test_claim2(vault_contract, renting_contract, nft_contract, nft_owner, rente
         VaultState(listing=listing).to_tuple(),
         renter,
         expiration,
+        renter,
         PROTOCOL_FEE,
         protocol_wallet,
         sender=renting_contract.address,
@@ -1026,6 +1256,7 @@ def test_withdraw_no_protocol_fee(
         VaultState(listing=listing).to_tuple(),
         renter,
         expiration,
+        renter,
         0,
         protocol_wallet,
         sender=renting_contract.address,
@@ -1106,9 +1337,6 @@ def test_initialise_after_withdraw(
 
     vault_contract.initialise(
         other_user,
-        False,
-        0,
-        protocol_wallet,
         sender=renting_contract.address,
     )
 
