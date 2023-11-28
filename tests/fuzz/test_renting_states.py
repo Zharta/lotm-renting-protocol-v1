@@ -117,9 +117,9 @@ class StateMachine(RuleBasedStateMachine):
         vault = self.renting.tokenid_to_vault(token)
         self.nft.approve(vault, token, sender=owner)
         if token in self.vaults:
-            self.renting.deposit([token], price, min_duration, max_duration, False, sender=owner)
+            self.renting.deposit([token], price, min_duration, max_duration, ZERO_ADDRESS, sender=owner)
         else:
-            self.renting.create_vaults_and_deposit([token], price, min_duration, max_duration, False, sender=owner)
+            self.renting.create_vaults_and_deposit([token], price, min_duration, max_duration, ZERO_ADDRESS, sender=owner)
 
         self.vaults[token] = self.vault.at(vault)
         self.listing[token] = Listing(token, price, min_duration, max_duration)
@@ -162,7 +162,7 @@ class StateMachine(RuleBasedStateMachine):
 
         self.ape.approve(self.vaults[token], max(0, self.listing[token].price * hours), sender=renter)
         token_context = TokenContext(token, self.active_rental[token], self.listing[token])
-        self.renting.start_rentals([token_context.to_tuple()], hours, sender=renter)
+        self.renting.start_rentals([token_context.to_tuple()], hours, renter, sender=renter)
 
         event = get_last_event(self.renting, "RentalStarted")
         rental = RentalLog(*event.rentals[0]).to_rental(renter)
