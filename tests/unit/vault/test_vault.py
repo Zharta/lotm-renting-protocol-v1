@@ -69,7 +69,7 @@ def erc20_not_reverting():
     )
 
 
-def test_initial_state(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract):
+def test_initial_state(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract, protocol_wallet):
     assert vault_contract.owner() == nft_owner
     assert vault_contract.caller() == renting_contract.address
     assert vault_contract.is_initialised()
@@ -1093,6 +1093,9 @@ def test_initialise_after_withdraw(
 
     vault_contract.initialise(
         other_user,
+        False,
+        0,
+        protocol_wallet,
         sender=renting_contract.address,
     )
 
