@@ -376,7 +376,6 @@ def _state_hash2(listing: Listing, rental: Rental) -> bytes32:
     return keccak256(
         concat(
             rental.id,
-            # owner is not part of state, as self.owner already exists
             convert(rental.renter, bytes32),
             convert(rental.token_id, bytes32),
             convert(rental.start, bytes32),
