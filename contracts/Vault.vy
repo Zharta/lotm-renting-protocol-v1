@@ -43,10 +43,15 @@ owner: public(address)
 caller: public(address)
 state: public(bytes32)
 unclaimed_rewards: public(uint256)
+unclaimed_protocol_fee: public(uint256)
 
 payment_token_addr: public(immutable(address))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
+
+protocol_fee_enabled: public(bool)
+protocol_wallet: public(address)
+protocol_fee: public(uint256)
 
 
 ##### EXTERNAL METHODS - WRITE #####
@@ -65,17 +70,24 @@ def __init__(
 
 
 @external
-def initialise(owner: address):
+def initialise(owner: address, protocol_fee_enabled: bool, protocol_fee: uint256, protocol_wallet: address):
     assert not self._is_initialised(), "already initialised"
 
     if self.caller != empty(address):
         assert msg.sender == self.caller, "not caller"
     else:
         self.caller = msg.sender
+    
+    if protocol_fee_enabled:
+        assert protocol_fee <= 10000, "protocol fee > 100%"
+        assert protocol_wallet != empty(address), "protocol wallet not set"
 
     self.owner = owner
     self.state = empty_state_hash
 
+    self.protocol_fee_enabled = protocol_fee_enabled
+    self.protocol_fee = protocol_fee
+    self.protocol_wallet = protocol_wallet
 
 
 @external
@@ -181,7 +193,7 @@ def start_rental(state: VaultState, renter: address, expiration: uint256) -> Ren
 
 
 @external
-def close_rental(state: VaultState, sender: address) -> uint256:
+def close_rental(state: VaultState, sender: address) -> (uint256, uint256):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert self.state == self._state_hash(state), "invalid state"
@@ -201,23 +213,31 @@ def close_rental(state: VaultState, sender: address) -> uint256:
     )
     payback_amount: uint256 = state.active_rental.amount - pro_rata_rental_amount
 
+    protocol_fee_amount: uint256 = 0
+    if self.protocol_fee_enabled:
+        protocol_fee_amount = pro_rata_rental_amount * self.protocol_fee / 10000
+
     # clear active rental
     self.state = self._state_hash2(state.listing, empty(Rental))
 
     # set unclaimed rewards
-    self.unclaimed_rewards += pro_rata_rental_amount
+    self.unclaimed_rewards += pro_rata_rental_amount - protocol_fee_amount
 
     # revoke delegation
     IDelegationRegistry(delegation_registry_addr).setHotWallet(empty(address), 0, False)
 
     # transfer unused payment to renter
     assert IERC20(payment_token_addr).transfer(state.active_rental.renter, payback_amount), "transfer failed"
+    
+    # transfer protocol fee to protocol wallet
+    if protocol_fee_amount > 0:
+        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fee_amount), "transfer failed"
 
-    return pro_rata_rental_amount
+    return (pro_rata_rental_amount, protocol_fee_amount)
 
 
 @external
-def claim(state: VaultState, sender: address) -> (Rental, uint256):
+def claim(state: VaultState, sender: address) -> (Rental, uint256, uint256):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
@@ -225,21 +245,29 @@ def claim(state: VaultState, sender: address) -> (Rental, uint256):
     assert self._claimable_rewards(state.active_rental) > 0, "no rewards to claim"
 
     # consolidate last renting rewards if existing
-    result_active_rental: Rental = self._consolidate_claims(state)
+    result_active_rental: Rental = empty(Rental)
+    protocol_fee_amount: uint256 = 0
+    result_active_rental, protocol_fee_amount = self._consolidate_claims(state)
 
     rewards_to_claim: uint256 = self.unclaimed_rewards
+    protocol_fee_to_claim: uint256 = self.unclaimed_protocol_fee
 
-    # clear uncclaimed rewards
+    # clear unclaimed rewards and protocol fee
     self.unclaimed_rewards = 0
+    self.unclaimed_protocol_fee = 0
 
     # transfer reward to nft owner
     assert IERC20(payment_token_addr).transfer(self.owner, rewards_to_claim), "transfer failed"
 
-    return result_active_rental, rewards_to_claim
+    # transfer protocol fee to protocol wallet
+    if protocol_fee_amount > 0:
+        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
+
+    return result_active_rental, rewards_to_claim, protocol_fee_amount
 
 
 @external
-def withdraw(state: VaultState, sender: address) -> uint256:
+def withdraw(state: VaultState, sender: address) -> (uint256, uint256):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert sender == self.owner, "not owner of vault"
@@ -247,13 +275,17 @@ def withdraw(state: VaultState, sender: address) -> uint256:
     assert self.state == self._state_hash(state), "invalid state"
 
     # consolidate last renting rewards if existing
-    self._consolidate_claims(state)
+    rental: Rental = empty(Rental)
+    protocol_fee_amount: uint256 = 0
+    rental, protocol_fee_amount = self._consolidate_claims(state)
 
     rewards_to_claim: uint256 = self.unclaimed_rewards
+    protocol_fee_to_claim: uint256 = self.unclaimed_protocol_fee
     owner: address = self.owner
 
     # clear vault and set state to zero to uninitialize
     self.unclaimed_rewards = 0
+    self.unclaimed_protocol_fee = 0
     self.state = empty(bytes32)
     self.owner = empty(address)
 
@@ -263,8 +295,12 @@ def withdraw(state: VaultState, sender: address) -> uint256:
     # transfer unclaimed rewards to owner
     if rewards_to_claim > 0:
         assert IERC20(payment_token_addr).transfer(owner, rewards_to_claim), "transfer failed"
+    
+    # transfer protocol fee to protocol wallet
+    if protocol_fee_amount > 0:
+        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
 
-    return rewards_to_claim
+    return rewards_to_claim, protocol_fee_amount
 
 
 @external
@@ -281,11 +317,17 @@ def delegate_to_owner(state: VaultState, sender: address):
 ##### INTERNAL METHODS #####
 
 @internal
-def _consolidate_claims(state: VaultState) -> Rental:
+def _consolidate_claims(state: VaultState) -> (Rental, uint256):
     if state.active_rental.amount == 0 or state.active_rental.expiration >= block.timestamp:
-        return state.active_rental
+        return state.active_rental, 0
     else:
-        self.unclaimed_rewards += state.active_rental.amount
+        protocol_fee_amount: uint256 = 0
+        if self.protocol_fee_enabled:
+            protocol_fee_amount = state.active_rental.amount * self.protocol_fee / 10000
+
+        self.unclaimed_rewards += state.active_rental.amount - protocol_fee_amount
+        self.unclaimed_protocol_fee += protocol_fee_amount
+
         new_rental: Rental = Rental({
             id: state.active_rental.id,
             owner: state.active_rental.owner,
@@ -297,7 +339,8 @@ def _consolidate_claims(state: VaultState) -> Rental:
             amount: 0
         })
         self.state = self._state_hash2(state.listing, new_rental)
-        return new_rental
+
+        return new_rental, protocol_fee_amount
 
 @internal
 def _is_within_duration_range(listing: Listing, start: uint256, expiration: uint256) -> bool:
@@ -325,10 +368,19 @@ def _compute_real_rental_amount(duration: uint256, real_duration: uint256, renta
 @view
 @internal
 def _claimable_rewards(active_rental: Rental) -> uint256:
+    protocol_fee_enabled: bool = self.protocol_fee_enabled
+    protocol_fee: uint256 = self.protocol_fee
+    
     if active_rental.expiration < block.timestamp:
-        return self.unclaimed_rewards + active_rental.amount
+        if protocol_fee_enabled:
+            return self.unclaimed_rewards + active_rental.amount * (10000 - protocol_fee) / 10000
+        else:
+            return self.unclaimed_rewards + active_rental.amount
     else:
-        return self.unclaimed_rewards
+        if protocol_fee_enabled:
+            return self.unclaimed_rewards * (10000 - protocol_fee) / 10000
+        else:
+            return self.unclaimed_rewards
 
 @internal
 def _delegate_to_owner():
