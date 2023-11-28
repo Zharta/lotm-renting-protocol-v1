@@ -134,6 +134,7 @@ def test_change_listings_prices(renting_contract, nft_contract, nft_owner, vault
         new_price,
         new_min_duration,
         new_max_duration,
+        ZERO_ADDRESS,
         sender=nft_owner,
     )
     event = get_last_event(renting_contract, "ListingsChanged")
@@ -179,7 +180,7 @@ def test_change_listings_prices_and_delegate_to_wallet(
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
 
-    renting_contract.set_listings_and_delegate_to_wallet(
+    renting_contract.set_listings(
         [TokenContext(token_id=token_id, listing=listing).to_tuple()],
         new_price,
         new_min_duration,
@@ -223,7 +224,9 @@ def test_cancel_listings(renting_contract, nft_contract, nft_owner, vault_contra
     listing = Listing(token_id, price, min_duration, max_duration)
     assert vault_contract.state() == compute_state_hash(Rental(), listing)
 
-    renting_contract.cancel_listings([TokenContext(token_id=token_id, listing=listing).to_tuple()], sender=nft_owner)
+    renting_contract.cancel_listings(
+        [TokenContext(token_id=token_id, listing=listing).to_tuple()], ZERO_ADDRESS, sender=nft_owner
+    )
     event = get_last_event(renting_contract, "ListingsCancelled")
 
     assert vault_contract.state() == compute_state_hash(Rental(), Listing(token_id=token_id))
@@ -258,9 +261,7 @@ def test_cancel_listings_and_delegate_to_wallet(
 
     assert delegation_registry_warm_contract.getHotWallet(vault_contract) == ZERO_ADDRESS
 
-    renting_contract.cancel_listings_and_delegate_to_wallet(
-        [TokenContext(token_id=token_id, listing=listing).to_tuple()], delegate, sender=nft_owner
-    )
+    renting_contract.cancel_listings([TokenContext(token_id=token_id, listing=listing).to_tuple()], delegate, sender=nft_owner)
     event = get_last_event(renting_contract, "ListingsCancelled")
 
     assert vault_contract.state() == compute_state_hash(Rental(), Listing(token_id=token_id))
@@ -748,7 +749,7 @@ def test_close_rental_with_changed_list_price(
     )
 
     token_context = TokenContext(token_id, active_rental, listing).to_tuple()
-    renting_contract.set_listings([token_context], changed_price, min_duration, max_duration, sender=nft_owner)
+    renting_contract.set_listings([token_context], changed_price, min_duration, max_duration, ZERO_ADDRESS, sender=nft_owner)
 
     time_passed = 3600
     boa.env.time_travel(seconds=time_passed)
