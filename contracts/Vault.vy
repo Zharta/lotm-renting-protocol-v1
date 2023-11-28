@@ -52,6 +52,10 @@ payment_token_addr: public(immutable(address))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
 
+protocol_fee_enabled: public(bool)
+protocol_wallet: public(address)
+protocol_fee: public(uint256)
+
 
 ##### EXTERNAL METHODS - WRITE #####
 
@@ -69,13 +73,17 @@ def __init__(
 
 
 @external
-def initialise(owner: address):
+def initialise(owner: address, protocol_fee_enabled: bool, protocol_fee: uint256, protocol_wallet: address):
     assert not self._is_initialised(), "already initialised"
 
     if self.caller != empty(address):
         assert msg.sender == self.caller, "not caller"
     else:
         self.caller = msg.sender
+    
+    if protocol_fee_enabled:
+        assert protocol_fee <= 10000, "protocol fee > 100%"
+        assert protocol_wallet != empty(address), "protocol wallet not set"
 
     self.owner = owner
     self.state = empty_state_hash
@@ -346,6 +354,9 @@ def _compute_real_rental_amount(duration: uint256, real_duration: uint256, renta
 @view
 @internal
 def _claimable_rewards(active_rental: Rental) -> uint256:
+    protocol_fee_enabled: bool = self.protocol_fee_enabled
+    protocol_fee: uint256 = self.protocol_fee
+    
     if active_rental.expiration < block.timestamp:
         return self.unclaimed_rewards + active_rental.amount * (10000 - active_rental.protocol_fee) / 10000
     else:
