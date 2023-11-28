@@ -10,14 +10,14 @@ interface ISelf:
 interface IVault:
     def is_initialised() -> bool: view
     def initialise(owner: address): nonpayable
-    def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool): nonpayable
-    def set_listing(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
+    def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
+    def set_listing(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
     def set_listing_and_delegate_to_owner(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
     def start_rental(state: VaultState, renter: address, expiration: uint256) -> Rental: nonpayable
     def close_rental(state: VaultState, sender: address) -> uint256: nonpayable
     def claim(state: VaultState, sender: address) -> (Rental, uint256): nonpayable
     def withdraw(state: VaultState, sender: address) -> uint256: nonpayable
-    def delegate_to_owner(state: VaultState, sender: address): nonpayable
+    def delegate_to_wallet(state: VaultState, sender: address, delegate: address): nonpayable
     def owner() -> address: view
 
 
@@ -83,7 +83,7 @@ event VaultsCreated:
     max_duration: uint256
     price: uint256
     vaults: DynArray[VaultLog, 32]
-    self_delegation: bool
+    delegate: address
 
 event NftsDeposited:
     owner: address
@@ -92,7 +92,7 @@ event NftsDeposited:
     max_duration: uint256
     price: uint256
     vaults: DynArray[VaultLog, 32]
-    self_delegation: bool
+    delegate: address
 
 event NftsWithdrawn:
     owner: address
@@ -107,13 +107,13 @@ event ListingsChanged:
     max_duration: uint256
     price: uint256
     vaults: DynArray[VaultLog, 32]
-    self_delegation: bool
+    delegate: address
 
 event ListingsCancelled:
     owner: address
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
-    self_delegation: bool
+    delegate: address
 
 event RentalStarted:
     renter: address
@@ -130,8 +130,9 @@ event RewardsClaimed:
     nft_contract: address
     rewards: DynArray[RewardLog, 32]
 
-event DelegatedToOwner:
+event DelegatedToWallet:
     owner: address
+    delegate: address
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
 
@@ -166,7 +167,7 @@ def __init__(
 
 
 @external
-def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool):
+def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
@@ -188,7 +189,7 @@ def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, 
 
 
 @external
-def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool):
+def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
@@ -226,7 +227,8 @@ def set_listings(token_contexts: DynArray[TokenContext, 32], price: uint256, min
             msg.sender,
             price,
             min_duration,
-            max_duration
+            max_duration,
+            empty(address)
         )
 
         vault_logs.append(VaultLog({
@@ -241,19 +243,19 @@ def set_listings(token_contexts: DynArray[TokenContext, 32], price: uint256, min
         max_duration,
         price,
         vault_logs,
-        False
+        empty(address),
     )
 
 
 @external
-def set_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext, 32], price: uint256, min_duration: uint256, max_duration: uint256):
+def set_listings_and_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing_and_delegate_to_owner(
+        IVault(vault).set_listing(
             VaultState({
                 active_rental: token_context.active_rental,
                 listing: token_context.listing
@@ -262,7 +264,8 @@ def set_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext, 32
             msg.sender,
             price,
             min_duration,
-            max_duration
+            max_duration,
+            delegate
         )
 
         vault_logs.append(VaultLog({
@@ -277,7 +280,7 @@ def set_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext, 32
         max_duration,
         price,
         vault_logs,
-        True
+        delegate,
     )
 
 @external
@@ -297,7 +300,8 @@ def cancel_listings(token_contexts: DynArray[TokenContext, 32]):
             msg.sender,
             0,
             0,
-            0
+            0,
+            empty(address)
         )
 
         vaults.append(VaultLog({
@@ -309,19 +313,19 @@ def cancel_listings(token_contexts: DynArray[TokenContext, 32]):
         msg.sender,
         nft_contract_addr,
         vaults,
-        False
+        empty(address)
     )
 
 
 @external
-def cancel_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
+def cancel_listings_and_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
     vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).set_listing_and_delegate_to_owner(
+        IVault(vault).set_listing(
             VaultState({
                 active_rental: token_context.active_rental,
                 listing: token_context.listing
@@ -330,7 +334,8 @@ def cancel_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext,
             msg.sender,
             0,
             0,
-            0
+            0,
+            delegate
         )
 
         vaults.append(VaultLog({
@@ -342,7 +347,7 @@ def cancel_listings_and_delegate_to_owner(token_contexts: DynArray[TokenContext,
         msg.sender,
         nft_contract_addr,
         vaults,
-        True
+        delegate
     )
 
 
@@ -473,19 +478,20 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     )
 
 @external
-def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
+def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
     vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        IVault(vault).delegate_to_owner(
+        IVault(vault).delegate_to_wallet(
             VaultState({
                 active_rental: token_context.active_rental,
                 listing: token_context.listing
             }),
-            msg.sender
+            msg.sender,
+            delegate
         )
 
         vaults.append(VaultLog({
@@ -493,8 +499,9 @@ def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
             token_id: token_context.token_id
         }))
 
-    log DelegatedToOwner(
+    log DelegatedToWallet(
         msg.sender,
+        delegate,
         nft_contract_addr,
         vaults,
     )
@@ -533,7 +540,7 @@ def _convert_keccak256_2_address(digest: bytes32) -> address:
 
 
 @internal
-def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool) -> address:
+def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address) -> address:
     assert self.active_vaults[token_id] == empty(address), "vault exists for token_id"
 
     vault: address = create_minimal_proxy_to(vault_impl_addr, salt=convert(token_id, bytes32))
@@ -547,7 +554,7 @@ def _create_vault_and_deposit(token_id: uint256, price: uint256, min_duration: u
 
 
 @internal
-def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: bool) -> address:
+def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address) -> address:
     assert ISelf(self).is_vault_available(token_id), "vault is not available"
 
     vault: address = ISelf(self).tokenid_to_vault(token_id)
