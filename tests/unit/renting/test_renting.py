@@ -971,3 +971,6 @@ def test_change_vault_ownership_and_withdraw(renting_contract, nft_contract, ape
     assert withdrawal_log.vault == vault_addr
     assert withdrawal_log.token_id == token_id
     assert withdrawal_log.rewards == rental_amount
+    
+    assert ape_contract.balanceOf(nft_owner) == 0
+    assert ape_contract.balanceOf(new_owner) == rental_amount
