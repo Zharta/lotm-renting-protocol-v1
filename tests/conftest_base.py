@@ -96,9 +96,11 @@ class Rental:
     min_expiration: int = 0
     expiration: int = 0
     amount: int = 0
+    protocol_fee: int = 0
+    protocol_wallet: str = ZERO_ADDRESS
 
     def to_tuple(self):
-        return (self.id, self.owner, self.renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount)
+        return (self.id, self.owner, self.renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount, self.protocol_fee, self.protocol_wallet)
 
 
 @dataclass
@@ -128,6 +130,7 @@ class RentalLog:
     min_expiration: int
     expiration: int
     amount: int
+    protocol_fee_amount: int
 
     def to_rental(self, renter: str = ZERO_ADDRESS):
         return Rental(
@@ -182,6 +185,8 @@ def compute_state_hash(rental: Rental, listing: Listing):
                 convert({rental.min_expiration}, bytes32),
                 convert({rental.expiration}, bytes32),
                 convert({rental.amount}, bytes32),
+                convert({rental.protocol_fee}, bytes32),
+                convert({rental.protocol_wallet}, bytes32),
                 convert({listing.token_id}, bytes32),
                 convert({listing.price}, bytes32),
                 convert({listing.min_duration}, bytes32),
