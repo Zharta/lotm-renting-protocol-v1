@@ -91,6 +91,7 @@ class Rental:
     id: bytes = ZERO_BYTES32
     owner: str = ZERO_ADDRESS
     renter: str = ZERO_ADDRESS
+    delegate: str = ZERO_ADDRESS
     token_id: int = 0
     start: int = 0
     min_expiration: int = 0
@@ -104,6 +105,7 @@ class Rental:
             self.id,
             self.owner,
             self.renter,
+            self.delegate,
             self.token_id,
             self.start,
             self.min_expiration,
@@ -149,6 +151,7 @@ class RentalLog:
             self.id,
             self.owner,
             renter,
+            ZERO_ADDRESS,
             self.token_id,
             self.start,
             self.min_expiration,

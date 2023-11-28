@@ -13,7 +13,7 @@ interface IVault:
     def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
     def set_listing(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
     def set_listing_and_delegate_to_owner(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
-    def start_rental(state: VaultState, renter: address, expiration: uint256, protocol_fee: uint256, protocol_wallet: address) -> Rental: nonpayable
+    def start_rental(state: VaultState, renter: address, expiration: uint256, delegate: address, protocol_fee: uint256, protocol_wallet: address) -> Rental: nonpayable
     def close_rental(state: VaultState, sender: address) -> uint256: nonpayable
     def claim(state: VaultState, sender: address) -> (Rental, uint256, uint256): nonpayable
     def withdraw(state: VaultState, sender: address) -> (uint256, uint256): nonpayable
@@ -36,6 +36,7 @@ struct Rental:
     id: bytes32 # keccak256 of the renter, token_id, start and expiration
     owner: address
     renter: address
+    delegate: address
     token_id: uint256
     start: uint256
     min_expiration: uint256
@@ -123,6 +124,7 @@ event ListingsCancelled:
 
 event RentalStarted:
     renter: address
+    delegate: address
     nft_contract: address
     rentals: DynArray[RentalLog, 32]
 
@@ -396,7 +398,7 @@ def cancel_listings_and_delegate_to_wallet(token_contexts: DynArray[TokenContext
 
 
 @external
-def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256):
+def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256, delegate: address):
     rental_logs: DynArray[RentalLog, 32] = []
 
     expiration: uint256 = block.timestamp + duration * 3600
@@ -412,6 +414,7 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256)
             }),
             msg.sender,
             expiration,
+            delegate,
             self.protocol_fee,
             self.protocol_wallet
         )
@@ -429,7 +432,7 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256)
             protocol_wallet: rental.protocol_wallet
         }))
 
-    log RentalStarted(msg.sender, nft_contract_addr, rental_logs)
+    log RentalStarted(msg.sender, delegate, nft_contract_addr, rental_logs)
 
 
 @external
