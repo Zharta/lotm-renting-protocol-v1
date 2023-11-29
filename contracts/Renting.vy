@@ -423,10 +423,6 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256)
                 empty(address)
             )
 
-        # protocol_fee_amount: uint256 = 0
-        # if self.protocol_fee_enabled:
-        #     protocol_fee_amount = rental.amount * self.protocol_fee / 10000
-
         rental_logs.append(RentalLog({
             id: rental.id,
             vault: vault,

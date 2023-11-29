@@ -235,9 +235,7 @@ def claim(state: VaultState, sender: address) -> (Rental, uint256, uint256):
     assert self._claimable_rewards(state.active_rental) > 0, "no rewards to claim"
 
     # consolidate last renting rewards if existing
-    result_active_rental: Rental = empty(Rental)
-    protocol_fee_amount: uint256 = 0
-    result_active_rental, protocol_fee_amount = self._consolidate_claims(state)
+    result_active_rental: Rental = self._consolidate_claims(state)
 
     rewards_to_claim: uint256 = self.unclaimed_rewards
     protocol_fee_to_claim: uint256 = self.unclaimed_protocol_fee
@@ -250,10 +248,10 @@ def claim(state: VaultState, sender: address) -> (Rental, uint256, uint256):
     assert IERC20(payment_token_addr).transfer(self.owner, rewards_to_claim), "transfer failed"
 
     # transfer protocol fee to protocol wallet
-    if protocol_fee_amount > 0:
+    if protocol_fee_to_claim > 0:
         assert IERC20(payment_token_addr).transfer(state.active_rental.protocol_wallet, protocol_fee_to_claim), "transfer failed"
 
-    return result_active_rental, rewards_to_claim, protocol_fee_amount
+    return result_active_rental, rewards_to_claim, protocol_fee_to_claim
 
 
 @external
@@ -265,9 +263,7 @@ def withdraw(state: VaultState, sender: address) -> (uint256, uint256):
     assert self.state == self._state_hash(state), "invalid state"
 
     # consolidate last renting rewards if existing
-    rental: Rental = empty(Rental)
-    protocol_fee_amount: uint256 = 0
-    rental, protocol_fee_amount = self._consolidate_claims(state)
+    rental: Rental = self._consolidate_claims(state)
 
     rewards_to_claim: uint256 = self.unclaimed_rewards
     protocol_fee_to_claim: uint256 = self.unclaimed_protocol_fee
@@ -287,10 +283,10 @@ def withdraw(state: VaultState, sender: address) -> (uint256, uint256):
         assert IERC20(payment_token_addr).transfer(owner, rewards_to_claim), "transfer failed"
     
     # transfer protocol fee to protocol wallet
-    if protocol_fee_amount > 0:
+    if protocol_fee_to_claim > 0:
         assert IERC20(payment_token_addr).transfer(state.active_rental.protocol_wallet, protocol_fee_to_claim), "transfer failed"
 
-    return rewards_to_claim, protocol_fee_amount
+    return rewards_to_claim, protocol_fee_to_claim
 
 
 @external
@@ -307,9 +303,9 @@ def delegate_to_owner(state: VaultState, sender: address):
 ##### INTERNAL METHODS #####
 
 @internal
-def _consolidate_claims(state: VaultState) -> (Rental, uint256):
+def _consolidate_claims(state: VaultState) -> Rental:
     if state.active_rental.amount == 0 or state.active_rental.expiration >= block.timestamp:
-        return state.active_rental, 0
+        return state.active_rental
     else:
         protocol_fee_amount: uint256 = state.active_rental.amount * state.active_rental.protocol_fee / 10000
 
@@ -330,7 +326,7 @@ def _consolidate_claims(state: VaultState) -> (Rental, uint256):
         })
         self.state = self._state_hash2(state.listing, new_rental)
 
-        return new_rental, protocol_fee_amount
+        return new_rental
 
 @internal
 def _is_within_duration_range(listing: Listing, start: uint256, expiration: uint256) -> bool:

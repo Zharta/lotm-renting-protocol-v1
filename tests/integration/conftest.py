@@ -6,6 +6,8 @@ from boa.environment import Env
 from eth_account import Account
 
 DELEGATION_REGISTRY_ADDRESS = "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c"
+PROTOCOL_FEE_ENABLED = True
+PROTOCOL_FEE = 500
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -59,6 +61,13 @@ def renter():
     return acc.address
 
 
+@pytest.fixture(scope="session", autouse=True)
+def protocol_wallet():
+    acc = Account.create()
+    boa.env.set_balance(acc.address, 10**21)
+    return acc.address
+
+
 @pytest.fixture(scope="session")
 def nft_contract(owner, forked_env):
     return boa.load("contracts/auxiliary/ERC721.vy")
@@ -81,8 +90,33 @@ def vault_contract(forked_env, nft_contract, ape_contract, delegation_registry_w
 
 
 @pytest.fixture(scope="session")
-def renting_contract(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract):
-    return boa.load("contracts/Renting.vy", vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract)
+def renting_contract(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet):
+    return boa.load(
+        "contracts/Renting.vy",
+        vault_contract,
+        ape_contract,
+        nft_contract,
+        delegation_registry_warm_contract,
+        PROTOCOL_FEE_ENABLED,
+        PROTOCOL_FEE,
+        protocol_wallet,
+        protocol_wallet,
+    )
+
+
+@pytest.fixture(scope="session")
+def renting_contract_no_fee(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet):
+    return boa.load(
+        "contracts/Renting.vy",
+        vault_contract,
+        ape_contract,
+        nft_contract,
+        delegation_registry_warm_contract,
+        False,
+        0,
+        protocol_wallet,
+        protocol_wallet,
+    )
 
 
 @pytest.fixture(scope="module")
