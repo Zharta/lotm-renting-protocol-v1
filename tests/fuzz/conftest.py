@@ -35,6 +35,13 @@ def renter():
 
 
 @pytest.fixture(scope="session")
+def protocol_wallet():
+    acc = boa.env.generate_address("renter")
+    boa.env.set_balance(acc, 10**21)
+    return acc
+
+
+@pytest.fixture(scope="session")
 def nft_contract(owner):
     with boa.env.prank(owner):
         return boa.load("contracts/auxiliary/ERC721.vy")
@@ -78,5 +85,5 @@ def vault_contract(vault_contract_def, nft_contract, ape_contract, delegation_re
 
 
 @pytest.fixture(scope="module")
-def renting_contract(renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract):
-    return renting_contract_def.deploy(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract)
+def renting_contract(renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet):
+    return renting_contract_def.deploy(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, 0, 0, protocol_wallet, protocol_wallet)

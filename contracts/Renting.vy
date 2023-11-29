@@ -12,12 +12,11 @@ interface IVault:
     def initialise(owner: address): nonpayable
     def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
     def set_listing(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
-    def start_rental(state: VaultState, renter: address, expiration: uint256, delegate: address) -> Rental: nonpayable
+    def start_rental(state: VaultState, renter: address, expiration: uint256, delegate: address, protocol_fee: uint256, protocol_wallet: address) -> Rental: nonpayable
     def close_rental(state: VaultState, sender: address) -> uint256: nonpayable
-    def claim(state: VaultState, sender: address) -> (Rental, uint256): nonpayable
-    def withdraw(state: VaultState, sender: address) -> uint256: nonpayable
+    def claim(state: VaultState, sender: address) -> (Rental, uint256, uint256): nonpayable
+    def withdraw(state: VaultState, sender: address) -> (uint256, uint256): nonpayable
     def delegate_to_wallet(state: VaultState, sender: address, delegate: address): nonpayable
-    def owner() -> address: view
 
 
 # Structs
@@ -41,6 +40,8 @@ struct Rental:
     min_expiration: uint256
     expiration: uint256
     amount: uint256
+    protocol_fee: uint256
+    protocol_wallet: address
 
 struct Listing:
     token_id: uint256
@@ -61,17 +62,21 @@ struct RentalLog:
     min_expiration: uint256
     expiration: uint256
     amount: uint256
+    protocol_fee: uint256
+    protocol_wallet: address
 
 struct RewardLog:
     vault: address
     token_id: uint256
     amount: uint256
+    protocol_fee_amount: uint256
     active_rental_amount: uint256
 
 struct WithdrawalLog:
     vault: address
     token_id: uint256
     rewards: uint256
+    protocol_fee_amount: uint256
 
 
 # Events
@@ -137,6 +142,24 @@ event DelegatedToWallet:
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
 
+event ProtocolFeeSet:
+    old_fee: uint256
+    new_fee: uint256
+    fee_wallet: address
+
+event ProtocolWalletChanged:
+    old_wallet: address
+    new_wallet: address
+
+event AdminProposed:
+    admin: address
+    proposed_admin: address
+
+event OwnershipTransferred:
+    old_admin: address
+    new_admin: address
+
+
 # Global Variables
 
 _COLLISION_OFFSET: constant(bytes1) = 0xFF
@@ -148,6 +171,12 @@ vault_impl_addr: public(immutable(address))
 payment_token_addr: public(immutable(address))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
+max_protocol_fee: public(immutable(uint256))
+
+protocol_wallet: public(address)
+protocol_fee: public(uint256)
+protocol_admin: public(address)
+proposed_admin: public(address)
 
 active_vaults: public(HashMap[uint256, address]) # token_id -> vault
 
@@ -159,12 +188,26 @@ def __init__(
     _vault_impl_addr: address,
     _payment_token_addr: address,
     _nft_contract_addr: address,
-    _delegation_registry_addr: address
+    _delegation_registry_addr: address,
+    _max_protocol_fee: uint256,
+    _protocol_fee: uint256,
+    _protocol_wallet: address,
+    _protocol_admin: address
 ):
+    assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
+    assert _protocol_fee <= 10000, "protocol fee > 100%"
+    assert _protocol_wallet != empty(address), "protocol wallet not set"
+    assert _protocol_admin != empty(address), "admin wallet not set"
+    
     vault_impl_addr = _vault_impl_addr
     payment_token_addr = _payment_token_addr
     nft_contract_addr = _nft_contract_addr
     delegation_registry_addr = _delegation_registry_addr
+    max_protocol_fee = _max_protocol_fee
+
+    self.protocol_wallet = _protocol_wallet
+    self.protocol_fee = _protocol_fee
+    self.protocol_admin = _protocol_admin
 
 
 @external
@@ -304,7 +347,9 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256,
             }),
             msg.sender,
             expiration,
-            delegate
+            delegate,
+            self.protocol_fee,
+            self.protocol_wallet
         )
 
         rental_logs.append(RentalLog({
@@ -315,7 +360,9 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256,
             start: rental.start,
             min_expiration: rental.min_expiration,
             expiration: expiration,
-            amount: rental.amount
+            amount: rental.amount,
+            protocol_fee: rental.protocol_fee,
+            protocol_wallet: rental.protocol_wallet
         }))
 
     log RentalStarted(msg.sender, delegate, nft_contract_addr, rental_logs)
@@ -323,15 +370,13 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256,
 
 @external
 def close_rentals(token_contexts: DynArray[TokenContext, 32]):
-
-    amount: uint256 = 0
     rental_logs: DynArray[RentalLog, 32] = []
 
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        amount = IVault(vault).close_rental(
+        amount: uint256 = IVault(vault).close_rental(
             VaultState({
                 active_rental: token_context.active_rental,
                 listing: token_context.listing
@@ -347,7 +392,9 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
             start: token_context.active_rental.start,
             min_expiration: token_context.active_rental.min_expiration,
             expiration: block.timestamp,
-            amount: amount
+            amount: amount,
+            protocol_fee: token_context.active_rental.protocol_fee,
+            protocol_wallet: token_context.active_rental.protocol_wallet
         }))
 
     log RentalClosed(msg.sender, nft_contract_addr, rental_logs)
@@ -358,12 +405,13 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
     reward_logs: DynArray[RewardLog, 32] = []
     active_rental: Rental = empty(Rental)
     rewards: uint256 = 0
+    protocol_fee_amount: uint256 = 0
 
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        active_rental, rewards = IVault(vault).claim(
+        active_rental, rewards, protocol_fee_amount = IVault(vault).claim(
             VaultState({
                 active_rental: token_context.active_rental,
                 listing: token_context.listing
@@ -375,6 +423,7 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
             vault: vault,
             token_id: token_context.token_id,
             amount: rewards,
+            protocol_fee_amount: protocol_fee_amount,
             active_rental_amount: active_rental.amount
         }))
 
@@ -385,6 +434,8 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 def withdraw(token_contexts: DynArray[TokenContext, 32]):
     withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
     total_rewards: uint256 = 0
+    rewards: uint256 = 0
+    protocol_fee_amount: uint256 = 0
 
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
@@ -392,7 +443,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
         self.active_vaults[token_context.token_id] = empty(address)
 
-        rewards: uint256 = IVault(vault).withdraw(
+        rewards, protocol_fee_amount = IVault(vault).withdraw(
             VaultState({
                 active_rental: token_context.active_rental,
                 listing: token_context.listing
@@ -403,7 +454,8 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
         withdrawal_log.append(WithdrawalLog({
             vault: vault,
             token_id: token_context.token_id,
-            rewards: rewards
+            rewards: rewards,
+            protocol_fee_amount: protocol_fee_amount
         }))
         total_rewards += rewards
 
@@ -442,6 +494,61 @@ def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: add
         nft_contract_addr,
         vaults,
     )
+
+@external
+def set_protocol_fee(protocol_fee: uint256):
+    assert msg.sender == self.protocol_admin, "not protocol admin"
+    assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
+    assert protocol_fee != self.protocol_fee, "protocol fee is the same"
+
+    log ProtocolFeeSet(
+        self.protocol_fee,
+        protocol_fee,
+        self.protocol_wallet
+    )
+
+    self.protocol_fee = protocol_fee
+
+
+@external
+def change_protocol_wallet(new_protocol_wallet: address):
+    assert msg.sender == self.protocol_admin, "not protocol admin"
+    assert new_protocol_wallet != empty(address), "wallet is the zero address"
+    
+    log ProtocolWalletChanged(
+        self.protocol_wallet,
+        new_protocol_wallet
+    )
+    
+    self.protocol_wallet = new_protocol_wallet
+
+
+@external
+def propose_admin(_address: address):
+    assert msg.sender == self.protocol_admin, "not the admin"
+    assert _address != empty(address), "_address it the zero address"
+    assert self.protocol_admin != _address, "proposed admin addr is the admin"
+    assert self.proposed_admin != _address, "proposed admin addr is the same"
+
+    self.proposed_admin = _address
+
+    log AdminProposed(
+        self.protocol_admin,
+        _address
+    )
+
+
+@external
+def claim_ownership():
+    assert msg.sender == self.proposed_admin, "not the proposed"
+
+    log OwnershipTransferred(
+        self.protocol_admin,
+        self.proposed_admin
+    )
+
+    self.protocol_admin = self.proposed_admin
+    self.proposed_admin = empty(address)
 
 
 ##### INTERNAL METHODS #####
