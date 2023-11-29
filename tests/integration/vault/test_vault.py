@@ -484,7 +484,7 @@ def test_claim2_with_fee(
     expiration = int(boa.eval("block.timestamp")) + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, 0, 0, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, 0, 0, nft_owner, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
@@ -495,7 +495,7 @@ def test_claim2_with_fee(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, PROTOCOL_FEE, protocol_wallet, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, PROTOCOL_FEE, protocol_wallet, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
@@ -508,6 +508,7 @@ def test_claim2_with_fee(
         vault_state.to_tuple(),
         renter,
         int(boa.eval("block.timestamp")) + 86400,
+        renter,
         PROTOCOL_FEE,
         protocol_wallet,
         sender=renting_contract.address,
