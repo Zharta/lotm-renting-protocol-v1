@@ -49,7 +49,6 @@ def test_deposit_not_owner(
     renting_contract,
     nft_contract,
     owner,
-    nft_owner,
 ):
     nft_contract.mint(renting_contract.address, 100, sender=owner)
     with boa.reverts():

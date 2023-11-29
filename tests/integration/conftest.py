@@ -6,7 +6,6 @@ from boa.environment import Env
 from eth_account import Account
 
 DELEGATION_REGISTRY_ADDRESS = "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c"
-PROTOCOL_FEE_ENABLED = True
 PROTOCOL_FEE = 500
 
 
@@ -97,7 +96,7 @@ def renting_contract(vault_contract, ape_contract, nft_contract, delegation_regi
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
-        PROTOCOL_FEE_ENABLED,
+        PROTOCOL_FEE,
         PROTOCOL_FEE,
         protocol_wallet,
         protocol_wallet,
@@ -112,7 +111,7 @@ def renting_contract_no_fee(vault_contract, ape_contract, nft_contract, delegati
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
-        False,
+        0,
         0,
         protocol_wallet,
         protocol_wallet,
@@ -128,7 +127,6 @@ def contracts_config(
     vault_contract,
     nft_contract,
     ape_contract,
-    delegation_registry_warm_contract,
 ):
     with boa.env.anchor():
         vault_contract.initialise(

@@ -3,7 +3,7 @@ from decimal import Decimal
 import boa
 import pytest
 
-from ..conftest import PROTOCOL_FEE_ENABLED, PROTOCOL_FEE
+from ..conftest import PROTOCOL_FEE
 from ...conftest_base import (
     ZERO_ADDRESS,
     ZERO_BYTES32,
@@ -32,7 +32,7 @@ def test_initial_state(
     assert renting_contract.get_payment_token() == ape_contract.address
     assert renting_contract.get_nft_contract() == nft_contract.address
     assert renting_contract.get_delegation_registry() == delegation_registry_warm_contract.address
-    assert renting_contract.protocol_fee_enabled() == PROTOCOL_FEE_ENABLED
+    assert renting_contract.max_protocol_fee() == PROTOCOL_FEE
     assert renting_contract.protocol_fee() == PROTOCOL_FEE
     assert renting_contract.protocol_wallet() == protocol_wallet
     assert renting_contract.protocol_admin() == protocol_wallet
