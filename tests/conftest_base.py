@@ -100,7 +100,18 @@ class Rental:
     protocol_wallet: str = ZERO_ADDRESS
 
     def to_tuple(self):
-        return (self.id, self.owner, self.renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount, self.protocol_fee, self.protocol_wallet)
+        return (
+            self.id,
+            self.owner,
+            self.renter,
+            self.token_id,
+            self.start,
+            self.min_expiration,
+            self.expiration,
+            self.amount,
+            self.protocol_fee,
+            self.protocol_wallet,
+        )
 
 
 @dataclass
@@ -130,11 +141,21 @@ class RentalLog:
     min_expiration: int
     expiration: int
     amount: int
-    protocol_fee_amount: int
+    protocol_fee: int = 0
+    protocol_wallet: str = ZERO_ADDRESS
 
     def to_rental(self, renter: str = ZERO_ADDRESS):
         return Rental(
-            self.id, self.owner, renter, self.token_id, self.start, self.min_expiration, self.expiration, self.amount
+            self.id,
+            self.owner,
+            renter,
+            self.token_id,
+            self.start,
+            self.min_expiration,
+            self.expiration,
+            self.amount,
+            self.protocol_fee,
+            self.protocol_wallet,
         )
 
 
@@ -143,6 +164,7 @@ class RewardLog:
     vault: str
     token_id: int
     amount: int
+    protocol_fee_amount: int
     active_rental_amount: int
 
 
@@ -151,6 +173,7 @@ class WithdrawalLog:
     vault: str
     token_id: int
     rewards: int
+    protocol_fee_amount: int
 
 
 @dataclass

@@ -185,7 +185,7 @@ def start_rental(state: VaultState, renter: address, expiration: uint256, protoc
 
 
 @external
-def close_rental(state: VaultState, sender: address) -> (uint256, uint256):
+def close_rental(state: VaultState, sender: address) -> uint256:
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     assert self.state == self._state_hash(state), "invalid state"
@@ -205,9 +205,6 @@ def close_rental(state: VaultState, sender: address) -> (uint256, uint256):
     )
     payback_amount: uint256 = state.active_rental.amount - pro_rata_rental_amount
 
-    # protocol_fee_amount: uint256 = 0
-    # if self.protocol_fee_enabled:
-    #     protocol_fee_amount = pro_rata_rental_amount * self.protocol_fee / 10000
     protocol_fee_amount: uint256 = pro_rata_rental_amount * state.active_rental.protocol_fee / 10000
 
     # clear active rental
@@ -226,7 +223,7 @@ def close_rental(state: VaultState, sender: address) -> (uint256, uint256):
     if protocol_fee_amount > 0:
         assert IERC20(payment_token_addr).transfer(state.active_rental.protocol_wallet, protocol_fee_amount), "transfer failed"
 
-    return (pro_rata_rental_amount, protocol_fee_amount)
+    return pro_rata_rental_amount
 
 
 @external
@@ -314,9 +311,6 @@ def _consolidate_claims(state: VaultState) -> (Rental, uint256):
     if state.active_rental.amount == 0 or state.active_rental.expiration >= block.timestamp:
         return state.active_rental, 0
     else:
-        # protocol_fee_amount: uint256 = 0
-        # if self.protocol_fee_enabled:
-        #     protocol_fee_amount = state.active_rental.amount * self.protocol_fee / 10000
         protocol_fee_amount: uint256 = state.active_rental.amount * state.active_rental.protocol_fee / 10000
 
         self.unclaimed_rewards += state.active_rental.amount - protocol_fee_amount
@@ -364,20 +358,9 @@ def _compute_real_rental_amount(duration: uint256, real_duration: uint256, renta
 @view
 @internal
 def _claimable_rewards(active_rental: Rental) -> uint256:
-    # protocol_fee_enabled: bool = self.protocol_fee_enabled
-    #  protocol_fee: uint256 = self.protocol_fee
-    
     if active_rental.expiration < block.timestamp:
-        # if protocol_fee_enabled:
-        #     return self.unclaimed_rewards + active_rental.amount * (10000 - protocol_fee) / 10000
-        # else:
-        #     return self.unclaimed_rewards + active_rental.amount
         return self.unclaimed_rewards + active_rental.amount * (10000 - active_rental.protocol_fee) / 10000
     else:
-        # if protocol_fee_enabled:
-        #     return self.unclaimed_rewards * (10000 - protocol_fee) / 10000
-        # else:
-        #     return self.unclaimed_rewards
         return self.unclaimed_rewards * (10000 - active_rental.protocol_fee) / 10000
 
 @internal

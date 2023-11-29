@@ -591,12 +591,9 @@ def test_close_rental(
 
     vault_state = VaultState(active_rental, listing)
 
-    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(
-        vault_state.to_tuple(), renter, sender=renting_contract.address
-    )
+    tx_real_rental_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
 
     assert tx_real_rental_amount == real_rental_amount
-    assert tx_protocol_fee_amount == protocol_fee_amount
 
     assert vault_contract.state() == compute_state_hash(Rental(), listing)
     assert vault_contract.claimable_rewards(Rental().to_tuple()) == real_rental_amount - protocol_fee_amount
@@ -652,12 +649,9 @@ def test_close_rental_no_protocol_fee(
 
     vault_state = VaultState(active_rental, listing)
 
-    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(
-        vault_state.to_tuple(), renter, sender=renting_contract.address
-    )
+    tx_real_rental_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
 
     assert tx_real_rental_amount == real_rental_amount
-    assert tx_protocol_fee_amount == protocol_fee_amount
 
     assert vault_contract.state() == compute_state_hash(Rental(), listing)
     assert vault_contract.claimable_rewards(Rental().to_tuple()) == real_rental_amount - protocol_fee_amount
@@ -955,7 +949,9 @@ def test_withdraw(vault_contract, renting_contract, nft_contract, nft_owner, ren
     assert ape_contract.balanceOf(protocol_wallet) == protocol_fee_amount
 
 
-def test_withdraw_no_protocol_fee(vault_contract, renting_contract, nft_contract, nft_owner, renter, ape_contract, protocol_wallet):
+def test_withdraw_no_protocol_fee(
+    vault_contract, renting_contract, nft_contract, nft_owner, renter, ape_contract, protocol_wallet
+):
     token_id = 1
     price = int(1e18)
     min_duration = 0
