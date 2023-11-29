@@ -86,4 +86,4 @@ def vault_contract(vault_contract_def, nft_contract, ape_contract, delegation_re
 
 @pytest.fixture(scope="module")
 def renting_contract(renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet):
-    return renting_contract_def.deploy(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, 500, 500, protocol_wallet, protocol_wallet)
+    return renting_contract_def.deploy(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, 0, 0, protocol_wallet, protocol_wallet)
