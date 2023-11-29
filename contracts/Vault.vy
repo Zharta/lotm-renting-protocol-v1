@@ -346,9 +346,6 @@ def _compute_real_rental_amount(duration: uint256, real_duration: uint256, renta
 @view
 @internal
 def _claimable_rewards(active_rental: Rental) -> uint256:
-    # protocol_fee_enabled: bool = self.protocol_fee_enabled
-    #  protocol_fee: uint256 = self.protocol_fee
-    
     if active_rental.expiration < block.timestamp:
         return self.unclaimed_rewards + active_rental.amount * (10000 - active_rental.protocol_fee) / 10000
     else:

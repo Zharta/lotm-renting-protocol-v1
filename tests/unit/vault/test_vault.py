@@ -750,9 +750,7 @@ def test_close_rental_no_protocol_fee(
 
     vault_state = VaultState(active_rental, listing)
 
-    tx_real_rental_amount, tx_protocol_fee_amount = vault_contract.close_rental(
-        vault_state.to_tuple(), renter, sender=renting_contract.address
-    )
+    tx_real_rental_amount = vault_contract.close_rental(vault_state.to_tuple(), renter, sender=renting_contract.address)
 
     assert tx_real_rental_amount == real_rental_amount
 

@@ -18,7 +18,6 @@ interface IVault:
     def claim(state: VaultState, sender: address) -> (Rental, uint256, uint256): nonpayable
     def withdraw(state: VaultState, sender: address) -> (uint256, uint256): nonpayable
     def delegate_to_wallet(state: VaultState, sender: address, delegate: address): nonpayable
-    def owner() -> address: view
 
 
 # Structs
