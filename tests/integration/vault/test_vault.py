@@ -192,13 +192,13 @@ def test_cancel_listing(contracts_config, vault_contract, renting_contract, nft_
 def test_start_rental_not_caller(contracts_config, vault_contract, nft_owner, renter):
     vault_state = VaultState(Rental(), Listing())
     with boa.reverts("not caller"):
-        vault_contract.start_rental(vault_state.to_tuple(), renter, 1, 0, ZERO_ADDRESS, sender=nft_owner)
+        vault_contract.start_rental(vault_state.to_tuple(), renter, 1, renter, sender=nft_owner)
 
 
 def test_start_rental_no_listing(contracts_config, vault_contract, renting_contract, renter):
     vault_state = VaultState(Rental(), Listing())
     with boa.reverts("listing does not exist"):
-        vault_contract.start_rental(vault_state.to_tuple(), renter, 1, 0, ZERO_ADDRESS, sender=renting_contract.address)
+        vault_contract.start_rental(vault_state.to_tuple(), renter, 1, renter, sender=renting_contract.address)
 
 
 def test_start_rental_invalid_state(
@@ -220,9 +220,7 @@ def test_start_rental_invalid_state(
     vault_state = VaultState(Rental(), state_listing)
 
     with boa.reverts("invalid state"):
-        vault_contract.start_rental(
-            vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
-        )
+        vault_contract.start_rental(vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address)
 
 
 def test_start_rental_insufficient_allowance(
@@ -244,9 +242,7 @@ def test_start_rental_insufficient_allowance(
     vault_state = VaultState(Rental(), state_listing)
 
     with boa.reverts("insufficient allowance"):
-        vault_contract.start_rental(
-            vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
-        )
+        vault_contract.start_rental(vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address)
 
 
 def test_start_rental(
@@ -275,7 +271,7 @@ def test_start_rental(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
@@ -308,14 +304,12 @@ def test_start_rental_ongoing(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
     with boa.reverts("active rental ongoing"):
-        vault_contract.start_rental(
-            vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
-        )
+        vault_contract.start_rental(vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address)
 
 
 def test_close_rental_not_caller(contracts_config, vault_contract, nft_owner, renter):
@@ -356,7 +350,7 @@ def test_close_rental(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
@@ -413,7 +407,7 @@ def test_claim(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
@@ -445,7 +439,7 @@ def test_claim2(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
@@ -458,8 +452,7 @@ def test_claim2(
         vault_state.to_tuple(),
         renter,
         int(boa.eval("block.timestamp")) + 86400,
-        0,
-        ZERO_ADDRESS,
+        renter,
         sender=renting_contract.address,
     )
     vault_state.active_rental = Rental(*active_rental)
@@ -573,7 +566,7 @@ def test_withdraw_rental_ongoing(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
@@ -605,7 +598,7 @@ def test_withdraw(
     vault_state = VaultState(Rental(), state_listing)
 
     active_rental = vault_contract.start_rental(
-        vault_state.to_tuple(), renter, expiration, 0, ZERO_ADDRESS, sender=renting_contract.address
+        vault_state.to_tuple(), renter, expiration, renter, sender=renting_contract.address
     )
     vault_state.active_rental = Rental(*active_rental)
 
