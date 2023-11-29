@@ -190,7 +190,7 @@ class StateMachine(RuleBasedStateMachine):
 
         self.ape.approve(self.vaults[token], max(0, self.listing[token].price * hours), sender=renter)
         token_context = TokenContext(token, self.active_rental[token], self.listing[token])
-        self.renting.start_rentals([token_context.to_tuple()], hours, sender=renter)
+        self.renting.start_rentals([token_context.to_tuple()], hours, renter, sender=renter)
 
         event = get_last_event(self.renting, "RentalStarted")
         rental = RentalLog(*event.rentals[0]).to_rental(renter)
@@ -204,13 +204,11 @@ class StateMachine(RuleBasedStateMachine):
         now = boa.eval("block.timestamp")
         rental = self.active_rental[token]
 
-        if rental.expiration > now:
-            rental_duration = max(now, rental.min_expiration) - rental.start
-            rental_amount = rental_duration * rental.amount // (rental.expiration - rental.start)
-            amount_to_return = rental.amount - rental_amount
-        else:
-            rental_amount = rental.amount
-            amount_to_return = 0
+        assume(rental.expiration > now)
+
+        rental_duration = max(now, rental.min_expiration) - rental.start
+        rental_amount = rental_duration * rental.amount // (rental.expiration - rental.start)
+        amount_to_return = rental.amount - rental_amount
 
         balance_before = self.ape.balanceOf(rental.renter)
         token_context = TokenContext(token, self.active_rental[token], self.listing[token])
