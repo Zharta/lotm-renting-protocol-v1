@@ -141,22 +141,22 @@ event DelegatedToOwner:
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
 
-event ProtocolFeeEnabled:
+event ProtocolFeeStatusChanged:
     enabled: bool
     fee: uint256
     fee_wallet: address
 
-event OwnershipTransferred:
-    admin: address
-    proposed_admin: address
+event ProtocolWalletChanged:
+    old_wallet: address
+    new_wallet: address
 
 event AdminProposed:
     admin: address
     proposed_admin: address
 
-event ProtocolWalletChanged:
-    old_wallet: address
-    new_wallet: address
+event OwnershipTransferred:
+    old_admin: address
+    new_admin: address
 
 
 # Global Variables
@@ -568,11 +568,12 @@ def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
     )
 
 @external
-def set_protocol_fee_enabled(enabled: bool):
+def set_protocol_fee_status(enabled: bool):
     assert msg.sender == self.protocol_admin, "not protocol admin"
+    
     self.protocol_fee_enabled = enabled
 
-    log ProtocolFeeEnabled(
+    log ProtocolFeeStatusChanged(
         enabled,
         self.protocol_fee,
         self.protocol_wallet
@@ -594,7 +595,7 @@ def change_protocol_wallet(new_protocol_wallet: address):
 
 @external
 def propose_admin(_address: address):
-    assert msg.sender == self.protocol_admin, "msg.sender is not the admin"
+    assert msg.sender == self.protocol_admin, "not the admin"
     assert _address != empty(address), "_address it the zero address"
     assert self.protocol_admin != _address, "proposed admin addr is the admin"
     assert self.proposed_admin != _address, "proposed admin addr is the same"
@@ -602,14 +603,14 @@ def propose_admin(_address: address):
     self.proposed_admin = _address
 
     log AdminProposed(
-        self.proposed_admin,
+        self.protocol_admin,
         _address
     )
 
 
 @external
-def claimOwnership():
-    assert msg.sender == self.proposed_admin, "msg.sender is not the proposed"
+def claim_ownership():
+    assert msg.sender == self.proposed_admin, "not the proposed"
 
     log OwnershipTransferred(
         self.protocol_admin,

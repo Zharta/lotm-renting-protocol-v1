@@ -1411,3 +1411,141 @@ def test_delegate_to_owner(
         vault_addr = renting_contract.tokenid_to_vault(token_id)
         assert delegation_registry_warm_contract.getHotWallet(vault_addr) == nft_owner
         assert VaultLog(*vault_log).token_id == token_id
+
+
+def test_change_protocol_fee_status_wrong_caller(
+    renting_contract,
+    renter,
+):
+    with boa.reverts("not protocol admin"):
+        renting_contract.set_protocol_fee_status(False, sender=renter)
+
+
+def test_change_protocol_fee_status(
+    renting_contract,
+    protocol_wallet,
+):
+    renting_contract.set_protocol_fee_status(False, sender=protocol_wallet)
+    event = get_last_event(renting_contract, "ProtocolFeeStatusChanged")
+
+    assert not renting_contract.protocol_fee_enabled()
+
+    assert not event.enabled
+    assert event.fee == PROTOCOL_FEE
+    assert event.fee_wallet == protocol_wallet
+
+
+def test_change_protocol_wallet_wrong_caller(
+    renting_contract,
+    renter,
+):
+    with boa.reverts("not protocol admin"):
+        renting_contract.change_protocol_wallet(renter, sender=renter)
+
+
+def test_change_protocol_wallet_zero_address(
+    renting_contract,
+    protocol_wallet,
+):
+    with boa.reverts("wallet is the zero address"):
+        renting_contract.change_protocol_wallet(ZERO_ADDRESS, sender=protocol_wallet)
+
+
+def test_change_protocol_wallet(
+    renting_contract,
+    protocol_wallet,
+    nft_owner,
+):    
+    renting_contract.change_protocol_wallet(nft_owner, sender=protocol_wallet)
+    event = get_last_event(renting_contract, "ProtocolWalletChanged")
+
+    assert renting_contract.protocol_wallet() == nft_owner
+
+    assert event.old_wallet == protocol_wallet
+    assert event.new_wallet == nft_owner
+
+
+def test_propose_admin_wrong_caller(
+    renting_contract,
+    renter,
+):
+    with boa.reverts("not the admin"):
+        renting_contract.propose_admin(ZERO_ADDRESS, sender=renter)
+
+
+def test_propose_admin_zero_address(
+    renting_contract,
+    protocol_wallet,
+):
+    with boa.reverts("_address it the zero address"):
+        renting_contract.propose_admin(ZERO_ADDRESS, sender=protocol_wallet)
+
+
+def test_propose_admin_zero_address(
+    renting_contract,
+    protocol_wallet,
+):
+    with boa.reverts("_address it the zero address"):
+        renting_contract.propose_admin(ZERO_ADDRESS, sender=protocol_wallet)
+
+
+def test_propose_admin_same_address_as_admin(
+    renting_contract,
+    protocol_wallet,
+):
+    with boa.reverts("proposed admin addr is the admin"):
+        renting_contract.propose_admin(protocol_wallet, sender=protocol_wallet)
+
+
+def test_propose_admin(
+    renting_contract,
+    protocol_wallet,
+    nft_owner,
+):
+    renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
+    event = get_last_event(renting_contract, "AdminProposed")
+
+    assert renting_contract.proposed_admin() == nft_owner
+
+    assert event.admin == protocol_wallet
+    assert event.proposed_admin == nft_owner
+
+
+def test_propose_admin_same_address_as_proposed(
+    renting_contract,
+    protocol_wallet,
+    nft_owner,
+):
+    renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
+    
+    with boa.reverts("proposed admin addr is the same"):
+        renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
+
+
+def test_claim_ownership_wrong_caller(
+    renting_contract,
+    protocol_wallet,
+    nft_owner,
+):
+    renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
+    
+    with boa.reverts("not the proposed"):
+        renting_contract.claim_ownership(sender=protocol_wallet)
+
+
+def test_claim_ownership(
+    renting_contract,
+    protocol_wallet,
+    nft_owner,
+):
+    renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
+    
+    renting_contract.claim_ownership(sender=nft_owner)
+    event = get_last_event(renting_contract, "OwnershipTransferred")
+
+    assert renting_contract.proposed_admin() == ZERO_ADDRESS
+    assert renting_contract.protocol_admin() == nft_owner
+
+    assert event.old_admin == protocol_wallet
+    assert event.new_admin == nft_owner
+
