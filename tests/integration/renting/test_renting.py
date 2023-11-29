@@ -390,11 +390,11 @@ def test_bulk_rentals_limits_no_fee(contracts_config, renting_contract_no_fee, n
         nft_contract.approve(vault_addr, token_id, sender=nft_owner)
         ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract_no_fee.create_vaults_and_deposit(token_ids, price, 0, 0, False, sender=nft_owner)
+    renting_contract_no_fee.create_vaults_and_deposit(token_ids, price, 0, 0, nft_owner, sender=nft_owner)
 
     token_contexts = [TokenContext(token_id, Rental(), Listing(token_id, price, 0, 0)) for token_id in token_ids]
 
-    renting_contract_no_fee.start_rentals([c.to_tuple() for c in token_contexts], duration, sender=renter)
+    renting_contract_no_fee.start_rentals([c.to_tuple() for c in token_contexts], duration, renter, sender=renter)
     event = get_last_event(renting_contract_no_fee, "RentalStarted")
 
     rental_logs = [RentalLog(*rental) for rental in event.rentals]
@@ -581,11 +581,11 @@ def test_withdraw_limits_no_fee(contracts_config, renting_contract_no_fee, nft_c
         nft_contract.approve(vault_addr, token_id, sender=nft_owner)
         ape_contract.approve(vault_addr, rental_amount, sender=renter)
 
-    renting_contract_no_fee.create_vaults_and_deposit(token_ids, price, 0, 0, False, sender=nft_owner)
+    renting_contract_no_fee.create_vaults_and_deposit(token_ids, price, 0, 0, nft_owner, sender=nft_owner)
 
     token_contexts = [TokenContext(token_id, Rental(), Listing(token_id, price, 0, 0)) for token_id in token_ids]
 
-    renting_contract_no_fee.start_rentals([c.to_tuple() for c in token_contexts], duration, sender=renter)
+    renting_contract_no_fee.start_rentals([c.to_tuple() for c in token_contexts], duration, renter,  sender=renter)
     event = get_last_event(renting_contract_no_fee, "RentalStarted")
 
     rental_logs = [RentalLog(*rental) for rental in event.rentals]
