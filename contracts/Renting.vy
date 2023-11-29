@@ -12,7 +12,6 @@ interface IVault:
     def initialise(owner: address): nonpayable
     def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
     def set_listing(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address): nonpayable
-    def set_listing_and_delegate_to_owner(state: VaultState, token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256): nonpayable
     def start_rental(state: VaultState, renter: address, expiration: uint256, delegate: address, protocol_fee: uint256, protocol_wallet: address) -> Rental: nonpayable
     def close_rental(state: VaultState, sender: address) -> uint256: nonpayable
     def claim(state: VaultState, sender: address) -> (Rental, uint256, uint256): nonpayable

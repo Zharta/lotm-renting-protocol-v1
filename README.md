@@ -24,12 +24,12 @@ There are two major domains in the protocol:
 The renting of an NFT in the context of this protocol means that:
 1. an asset owner deposits the NFT in a vault, setting the terms of the rental: price and minimum/maximum rental duration
 2. a user (renter) selects the NFT put for rental and starts the rental by paying for the rental upfront
-3. the vault where the NFT asset is escrowed delegates it to the renter's wallet for a specific duration
+3. the vault where the NFT asset is escrowed delegates it to a renter's specified wallet for a specific duration
 4. once the duration of the rental is reached, the rental finishes
 
 ## General considerations
 
-The current status of the protocol follows certain assumptions that must be validated as more information about LOTM is released.
+The current status of the protocol follows certain assumptions.
 
 The assumptions are the following:
 1. delegation is supported using [warm.xyz](https://warm.xyz)
@@ -76,9 +76,33 @@ Whenever a rental starts, the renter pays the full amount of the rental upfront.
 
 ### Roles
 
-The protocol does not support any admin role. The only roles are the following:
+The protocol does supports an admin role, with exclusive purpose of setting the protocol fees parameter. The only roles are the following:
+* `Renting.vy`:
+    * `admin`: the protocol admin with permissions limited to set the value of protocol fees (up to a fixed limit) and the protocol wallet that receives those fees. The `admin` value can be changed via the `propose_admin` and `claim_ownership` functions.
 * `Vault.vy`:
     * `owner`: the owner of the NFT that is escrowed in vault, which means that only this address can perform certain actions against the vault, but those action still need to be performed through the `Renting.vy` contract
+
+### Delegation
+
+The protocol uses [warm.xyz](https://warm.xyz) to perform wallet level delegation of the vaults. At any moment, at most one delegation is active, meaning that setting a new hot wallet cancels any ongoing delegation. The usage of delegation happens as following:
+* Renter:
+    * `start_rentals`: when initiating a rental, the renter specifies a `delegate` which will be used as the vault hot wallet for the specified rental duration.
+    * `close_rentals`: if the renter cancels the rental, the delegation is also removed.
+* NFT Owner:
+    * `deposit`, `set_listings`, `cancel_listings`: as part of these operations, an optional `delegate` can be set. If not empty, it is set as the vault hot wallet without expiration period.
+    * `delegate_to_wallet`: at any time that a rental is not ongoing, the vault owner can use this function to set a new delegate as the vault hot wallet without expiration period.
+
+
+### Protocol fees
+
+The protocol supports the definition of a fee to be applied over the rental's amount. It works as following:
+
+* The `Renting.vy` contract stores the `protocol_fee` and `protocol_wallet` values, which are used as parameters when a new rental is created (`Vault.start_rental`).
+* For each rental, the `protocol_fee` and `protocol_wallet` initially defined are not changed, meaning the conditions defined during rental creation are valid for the full life of the rental.
+* The `admin` role can change both the `protocol_fee` and `protocol_wallet`, which become valid for every new rental thereafter.
+* At deployment time a `max_protocol_fee` is set, which limits the max possible `protocol_fee` value that the `admin` can set. This value can't be changed.
+* Protocol fees follow a simliar process to rental rewards, meaning that they can be acumulated and transfered on specific actions: `withdraw`, `claim` and `close_rental`
+* In case of early rental cancelation (`close_rental`) the fees are applied over the pro-rata rental amount, similary to the rewards.
 
 
 ## Development
