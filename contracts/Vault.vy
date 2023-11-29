@@ -201,8 +201,9 @@ def close_rental(state: VaultState, sender: address) -> uint256:
     self.unclaimed_rewards += pro_rata_rental_amount - protocol_fee_amount
 
     # clear unclaimed protocol fee
-    protocol_fee_amount += self.unclaimed_protocol_fee
-    self.unclaimed_protocol_fee = 0
+    if self.unclaimed_protocol_fee > 0:
+        protocol_fee_amount += self.unclaimed_protocol_fee
+        self.unclaimed_protocol_fee = 0
 
     # revoke delegation
     IDelegationRegistry(delegation_registry_addr).setHotWallet(empty(address), 0, False)
