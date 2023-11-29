@@ -8,7 +8,6 @@ from ...conftest_base import ZERO_ADDRESS, ZERO_BYTES32, Listing, Rental, VaultS
 
 
 FOREVER = 2**256 - 1
-PROTOCOL_FEE_ENABLED = True
 PROTOCOL_FEE = 500
 
 
@@ -25,7 +24,6 @@ def vault_contract(
     nft_contract,
     ape_contract,
     delegation_registry_warm_contract,
-    protocol_wallet,
 ):
     contract = vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract)
     contract.initialise(

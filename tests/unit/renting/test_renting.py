@@ -17,7 +17,6 @@ from ...conftest_base import (
 )
 
 FOREVER = 2**256 - 1
-PROTOCOL_FEE_ENABLED = True
 PROTOCOL_FEE = 500
 
 
@@ -35,7 +34,7 @@ def renting_contract(
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
-        PROTOCOL_FEE_ENABLED,
+        PROTOCOL_FEE,
         PROTOCOL_FEE,
         protocol_wallet,
         protocol_wallet,
@@ -51,8 +50,8 @@ def renting_contract_no_fee(
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
-        False,
-        PROTOCOL_FEE,
+        0,
+        0,
         protocol_wallet,
         protocol_wallet,
     )
@@ -75,7 +74,7 @@ def test_initial_state(
     assert renting_contract.get_delegation_registry() == delegation_registry_warm_contract.address
     assert renting_contract.protocol_admin() == protocol_wallet
     assert renting_contract.protocol_wallet() == protocol_wallet
-    assert renting_contract.protocol_fee_enabled() == PROTOCOL_FEE_ENABLED
+    assert renting_contract.max_protocol_fee() == PROTOCOL_FEE
     assert renting_contract.protocol_fee() == PROTOCOL_FEE
 
 
@@ -407,7 +406,9 @@ def test_start_rentals(
         assert vault_contract.state() == compute_state_hash(rental, listing)
 
 
-def test_start_rental_fee_disabled(renting_contract_no_fee, nft_contract, ape_contract, nft_owner, renter, vault_contract_def):
+def test_start_rental_fee_disabled(
+    renting_contract_no_fee, nft_contract, ape_contract, nft_owner, renter, vault_contract_def, protocol_wallet
+):
     token_id = 1
     price = int(1e18)
     min_duration = 0
@@ -444,16 +445,16 @@ def test_start_rental_fee_disabled(renting_contract_no_fee, nft_contract, ape_co
     assert event_rental.expiration == expiration
     assert event_rental.amount == rental_amount
     assert event_rental.protocol_fee == 0
-    assert event_rental.protocol_wallet == ZERO_ADDRESS
+    assert event_rental.protocol_wallet == protocol_wallet
 
     rental = Rental(
-        event_rental.id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount, 0, ZERO_ADDRESS
+        event_rental.id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount, 0, protocol_wallet
     )
     assert vault_contract.state() == compute_state_hash(rental, listing)
 
 
 def test_start_rentals_fee_disabled(
-    renting_contract_no_fee, nft_contract, ape_contract, nft_owner, renter, vault_contract_def, owner
+    renting_contract_no_fee, nft_contract, ape_contract, nft_owner, renter, vault_contract_def, owner, protocol_wallet
 ):
     token_id_base = 10
     token_id_qty = 32
@@ -500,10 +501,10 @@ def test_start_rentals_fee_disabled(
         assert event_log.expiration == expiration
         assert event_log.amount == rental_amount
         assert event_log.protocol_fee == 0
-        assert event_log.protocol_wallet == ZERO_ADDRESS
+        assert event_log.protocol_wallet == protocol_wallet
 
         rental = Rental(
-            event_log.id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount, 0, ZERO_ADDRESS
+            event_log.id, nft_owner, renter, token_id, start_time, min_expiration, expiration, rental_amount, 0, protocol_wallet
         )
         assert vault_contract.state() == compute_state_hash(rental, listing)
 
@@ -612,7 +613,7 @@ def test_close_rental_no_fee(renting_contract_no_fee, nft_contract, ape_contract
         expiration,
         rental_amount,
         0,
-        ZERO_ADDRESS,
+        protocol_wallet,
     )
 
     renting_contract_no_fee.close_rentals([TokenContext(token_id, active_rental, listing).to_tuple()], sender=renter)
@@ -630,7 +631,7 @@ def test_close_rental_no_fee(renting_contract_no_fee, nft_contract, ape_contract
     assert event_rental.expiration == real_expiration
     assert event_rental.amount == real_rental_amount
     assert event_rental.protocol_fee == 0
-    assert event_rental.protocol_wallet == ZERO_ADDRESS
+    assert event_rental.protocol_wallet == protocol_wallet
 
     assert ape_contract.balanceOf(nft_owner) == 0
     assert ape_contract.balanceOf(protocol_wallet) == 0
@@ -1044,7 +1045,7 @@ def test_claim_no_fee(
         expiration,
         rental_amount,
         0,
-        ZERO_ADDRESS,
+        protocol_wallet,
     )
 
     assert vault_contract.claimable_rewards(active_rental.to_tuple()) == rental_amount
@@ -1072,7 +1073,7 @@ def test_claim_no_fee(
     assert ape_contract.balanceOf(protocol_wallet) == 0
 
 
-def test_claim_multiple(
+def test_claim_multiple_no_fee(
     renting_contract_no_fee, nft_contract, ape_contract, nft_owner, renter, vault_contract_def, owner, protocol_wallet
 ):
     token_id_base = 10
@@ -1123,7 +1124,7 @@ def test_claim_multiple(
             expiration,
             rental_amount,
             0,
-            ZERO_ADDRESS,
+            protocol_wallet,
         )
         for token_id, event_log in zip(token_ids, rental_start_event.rentals)
     ]
@@ -1255,7 +1256,7 @@ def test_withdraw_no_fee(renting_contract_no_fee, nft_contract, ape_contract, nf
         expiration,
         rental_amount,
         0,
-        ZERO_ADDRESS,
+        protocol_wallet,
     )
 
     renting_contract_no_fee.withdraw([TokenContext(token_id, active_rental, listing).to_tuple()], sender=nft_owner)
@@ -1413,25 +1414,41 @@ def test_delegate_to_owner(
         assert VaultLog(*vault_log).token_id == token_id
 
 
-def test_change_protocol_fee_status_wrong_caller(
+def test_change_protocol_fee_wrong_caller(
     renting_contract,
     renter,
 ):
     with boa.reverts("not protocol admin"):
-        renting_contract.set_protocol_fee_status(False, sender=renter)
+        renting_contract.set_protocol_fee(0, sender=renter)
 
 
-def test_change_protocol_fee_status(
+def test_change_protocol_fee_higher_than_max(
     renting_contract,
     protocol_wallet,
 ):
-    renting_contract.set_protocol_fee_status(False, sender=protocol_wallet)
-    event = get_last_event(renting_contract, "ProtocolFeeStatusChanged")
+    with boa.reverts("protocol fee > max fee"):
+        renting_contract.set_protocol_fee(PROTOCOL_FEE * 2, sender=protocol_wallet)
 
-    assert not renting_contract.protocol_fee_enabled()
 
-    assert not event.enabled
-    assert event.fee == PROTOCOL_FEE
+def test_change_protocol_fee_same_value(
+    renting_contract,
+    protocol_wallet,
+):
+    with boa.reverts("protocol fee is the same"):
+        renting_contract.set_protocol_fee(PROTOCOL_FEE, sender=protocol_wallet)
+
+
+def test_change_protocol_fee(
+    renting_contract,
+    protocol_wallet,
+):
+    renting_contract.set_protocol_fee(0, sender=protocol_wallet)
+    event = get_last_event(renting_contract, "ProtocolFeeSet")
+
+    assert renting_contract.protocol_fee() == 0
+
+    assert event.old_fee == PROTOCOL_FEE
+    assert event.new_fee == 0
     assert event.fee_wallet == protocol_wallet
 
 
@@ -1455,7 +1472,7 @@ def test_change_protocol_wallet(
     renting_contract,
     protocol_wallet,
     nft_owner,
-):    
+):
     renting_contract.change_protocol_wallet(nft_owner, sender=protocol_wallet)
     event = get_last_event(renting_contract, "ProtocolWalletChanged")
 
@@ -1517,7 +1534,7 @@ def test_propose_admin_same_address_as_proposed(
     nft_owner,
 ):
     renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
-    
+
     with boa.reverts("proposed admin addr is the same"):
         renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
 
@@ -1528,7 +1545,7 @@ def test_claim_ownership_wrong_caller(
     nft_owner,
 ):
     renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
-    
+
     with boa.reverts("not the proposed"):
         renting_contract.claim_ownership(sender=protocol_wallet)
 
@@ -1539,7 +1556,7 @@ def test_claim_ownership(
     nft_owner,
 ):
     renting_contract.propose_admin(nft_owner, sender=protocol_wallet)
-    
+
     renting_contract.claim_ownership(sender=nft_owner)
     event = get_last_event(renting_contract, "OwnershipTransferred")
 
@@ -1548,4 +1565,3 @@ def test_claim_ownership(
 
     assert event.old_admin == protocol_wallet
     assert event.new_admin == nft_owner
-

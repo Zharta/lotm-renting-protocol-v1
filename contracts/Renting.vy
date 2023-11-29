@@ -141,9 +141,9 @@ event DelegatedToOwner:
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
 
-event ProtocolFeeStatusChanged:
-    enabled: bool
-    fee: uint256
+event ProtocolFeeSet:
+    old_fee: uint256
+    new_fee: uint256
     fee_wallet: address
 
 event ProtocolWalletChanged:
@@ -170,8 +170,8 @@ vault_impl_addr: public(immutable(address))
 payment_token_addr: public(immutable(address))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
+max_protocol_fee: public(immutable(uint256))
 
-protocol_fee_enabled: public(bool)
 protocol_wallet: public(address)
 protocol_fee: public(uint256)
 protocol_admin: public(address)
@@ -188,11 +188,12 @@ def __init__(
     _payment_token_addr: address,
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
-    _protocol_fee_enabled: bool,
+    _max_protocol_fee: uint256,
     _protocol_fee: uint256,
     _protocol_wallet: address,
     _protocol_admin: address
 ):
+    assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
     assert _protocol_fee <= 10000, "protocol fee > 100%"
     assert _protocol_wallet != empty(address), "protocol wallet not set"
     assert _protocol_admin != empty(address), "admin wallet not set"
@@ -201,8 +202,8 @@ def __init__(
     payment_token_addr = _payment_token_addr
     nft_contract_addr = _nft_contract_addr
     delegation_registry_addr = _delegation_registry_addr
+    max_protocol_fee = _max_protocol_fee
 
-    self.protocol_fee_enabled = _protocol_fee_enabled
     self.protocol_wallet = _protocol_wallet
     self.protocol_fee = _protocol_fee
     self.protocol_admin = _protocol_admin
@@ -399,29 +400,16 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256)
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        rental: Rental = empty(Rental)
-        if self.protocol_fee_enabled:    
-            rental = IVault(vault).start_rental(
-                VaultState({
-                    active_rental: token_context.active_rental,
-                    listing: token_context.listing,
-                }),
-                msg.sender,
-                expiration,
-                self.protocol_fee,
-                self.protocol_wallet
-            )
-        else:
-            rental = IVault(vault).start_rental(
-                VaultState({
-                    active_rental: token_context.active_rental,
-                    listing: token_context.listing,
-                }),
-                msg.sender,
-                expiration,
-                0,
-                empty(address)
-            )
+        rental: Rental = IVault(vault).start_rental(
+            VaultState({
+                active_rental: token_context.active_rental,
+                listing: token_context.listing,
+            }),
+            msg.sender,
+            expiration,
+            self.protocol_fee,
+            self.protocol_wallet
+        )
 
         rental_logs.append(RentalLog({
             id: rental.id,
@@ -443,13 +431,10 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256)
 def close_rentals(token_contexts: DynArray[TokenContext, 32]):
     rental_logs: DynArray[RentalLog, 32] = []
 
-    protocol_fee_enabled: bool = self.protocol_fee_enabled
-
     for token_context in token_contexts:
         vault: address = self.active_vaults[token_context.token_id]
         assert vault != empty(address), "no vault exists for token_id"
 
-        # (amount, protocol_fee_amount) = IVault(vault).close_rental(
         amount: uint256 = IVault(vault).close_rental(
             VaultState({
                 active_rental: token_context.active_rental,
@@ -568,16 +553,18 @@ def delegate_to_owner(token_contexts: DynArray[TokenContext, 32]):
     )
 
 @external
-def set_protocol_fee_status(enabled: bool):
+def set_protocol_fee(protocol_fee: uint256):
     assert msg.sender == self.protocol_admin, "not protocol admin"
-    
-    self.protocol_fee_enabled = enabled
+    assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
+    assert protocol_fee != self.protocol_fee, "protocol fee is the same"
 
-    log ProtocolFeeStatusChanged(
-        enabled,
+    log ProtocolFeeSet(
         self.protocol_fee,
+        protocol_fee,
         self.protocol_wallet
     )
+
+    self.protocol_fee = protocol_fee
 
 
 @external
