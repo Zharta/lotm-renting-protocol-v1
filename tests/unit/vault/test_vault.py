@@ -355,6 +355,7 @@ def test_start_rental_no_listing(vault_contract, renting_contract, renter, proto
     with boa.reverts("listing does not exist"):
         vault_contract.start_rental(
             VaultState().to_tuple(), renter, 1, renter, PROTOCOL_FEE, protocol_wallet, sender=renting_contract.address
+        )
 
 
 def test_start_rental_empty_delegate(vault_contract, renting_contract, renter, nft_contract, nft_owner):
