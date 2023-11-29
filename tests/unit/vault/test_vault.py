@@ -355,6 +355,22 @@ def test_start_rental_no_listing(vault_contract, renting_contract, renter, proto
     with boa.reverts("listing does not exist"):
         vault_contract.start_rental(
             VaultState().to_tuple(), renter, 1, renter, PROTOCOL_FEE, protocol_wallet, sender=renting_contract.address
+
+
+def test_start_rental_empty_delegate(vault_contract, renting_contract, renter, nft_contract, nft_owner):
+    token_id = 1
+    price = 1
+    expiration = boa.eval("block.timestamp") + 3600
+    min_duration = 0
+    max_duration = 1
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, ZERO_ADDRESS, sender=renting_contract.address)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+    with boa.reverts("delegate is zero address"):
+        vault_contract.start_rental(
+            VaultState(listing=listing).to_tuple(), renter, expiration, ZERO_ADDRESS, sender=renting_contract.address
         )
 
 
@@ -782,7 +798,7 @@ def test_close_rental_no_protocol_fee(
     expiration = boa.eval("block.timestamp") + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, min_duration, max_duration, False, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
@@ -978,7 +994,7 @@ def test_claim_no_protocol_fee(
     expiration = boa.eval("block.timestamp") + 86400
 
     nft_contract.approve(vault_contract, token_id, sender=nft_owner)
-    vault_contract.deposit(token_id, price, min_duration, max_duration, nft_owner, sender=renting_contract.address)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, ZERO_ADDRESS, sender=renting_contract.address)
 
     start_time = boa.eval("block.timestamp")
     rental_amount = int(Decimal(expiration - start_time) / Decimal(3600) * Decimal(price))
