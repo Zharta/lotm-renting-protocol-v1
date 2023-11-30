@@ -22,6 +22,9 @@ class DeploymentContext:
         else:
             return self.config[key]
 
+    def __contains__(self, key):
+        return key in self.contracts or key in self.config
+
     def keys(self):
         return self.contracts.keys() | self.config.keys()
 
@@ -37,7 +40,7 @@ class ContractConfig:
     container_name: str | None = None
     deployment_deps: set[str] = field(default_factory=set)
     config_deps: dict[str, Callable] = field(default_factory=dict)
-    deployment_args_contracts: list[Any] = field(default_factory=list)
+    deployment_args: list[Any] = field(default_factory=list)
 
     def deployable(self, context: DeploymentContext) -> bool:
         return True
@@ -45,8 +48,12 @@ class ContractConfig:
     def deployment_dependencies(self, context: DeploymentContext) -> set[str]:
         return self.deployment_deps
 
-    def deployment_args(self, context: DeploymentContext) -> list[Any]:
-        return [context[c].contract for c in self.deployment_args_contracts]
+    def deployment_args_values(self, context: DeploymentContext) -> list[Any]:
+        values = [context[c] if c in context else c for c in self.deployment_args]
+        return [v.contract if isinstance(v, ContractConfig) else v for v in values]
+
+    def deployment_args_repr(self, context: DeploymentContext) -> list[Any]:
+        return [f"[{c}]" if c in context else c for c in self.deployment_args]
 
     def deployment_options(self, context: DeploymentContext) -> dict[str, Any]:
         return {"sender": context.owner} | context.gas_options()
@@ -74,9 +81,9 @@ class ContractConfig:
             print(f"WARNING: Deployment will override contract *{self.key}* at {self.contract}")
         if not self.deployable(context):
             raise Exception(f"Cant deploy contract {self} in current context")
-        print_args = self.deployment_args_contracts
+        print_args = self.deployment_args_repr(context)
         kwargs = self.deployment_options(context)
         kwargs_str = ",".join(f"{k}={v}" for k, v in kwargs.items())
         print(f"## {self.key} <- {self.container_name}.deploy({','.join(str(a) for a in print_args)}, {kwargs_str})")
         if not dryrun:
-            self.contract = self.container.deploy(*self.deployment_args(context), **kwargs)
+            self.contract = self.container.deploy(*self.deployment_args_values(context), **kwargs)

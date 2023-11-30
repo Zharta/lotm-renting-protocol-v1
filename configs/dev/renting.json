@@ -35,8 +35,36 @@
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31"
             }
         },
+        "vault_impl_koda_ape_v2": {
+            "address": "0x1A06e35414a024Dfbf8c58068922D36f92c7CA8A",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.koda",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "nft_contract": "0xADeD61D42dE86f9058386D1D0d739d20C7eAfC43",
+                "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31"
+            }
+        },
         "vault_impl_mara_ape": {
             "address": "0x124e820D8f0a066A52B8f1499360047eB509e595",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.mara",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "nft_contract": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
+                "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31"
+            }
+        },
+        "vault_impl_mara_ape_v2": {
+            "address": "0xcA68ADCA7aA3302596202baB383F4A6A82fdA6a9",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -72,6 +100,26 @@
                 "vault_impl": "0x100ddF2d00d51e2A2f0A15D53430E99B86209229"
             }
         },
+        "koda_v2": {
+            "address": "0x7749dFE5C622FADc990C3a70119e1EB8eD3Ae451",
+            "contract": "RentingContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.koda",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "vault_impl_key": "common.vault_impl_koda_ape"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "nft_contract": "0xADeD61D42dE86f9058386D1D0d739d20C7eAfC43",
+                "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
+                "vault_impl": "0x100ddF2d00d51e2A2f0A15D53430E99B86209229"
+            }
+        },
         "mara": {
             "address": "0xAa45A3200AEAd375b758C6Db9200B2EDD20B09dC",
             "contract": "RentingContract",
@@ -79,6 +127,26 @@
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.mara",
                 "payment_token_key": "common.ape_token",
+                "vault_impl_key": "common.vault_impl_mara_ape"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "nft_contract": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
+                "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
+                "vault_impl": "0x124e820D8f0a066A52B8f1499360047eB509e595"
+            }
+        },
+        "mara_v2": {
+            "address": "0x845D67Ed0814E098E2D961A8006B73eF5A6c2Fe1",
+            "contract": "RentingContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.mara",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x66aB6D9362d4F35596279692F0251Db635165871",
                 "vault_impl_key": "common.vault_impl_mara_ape"
             },
             "properties_addresses": {

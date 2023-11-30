@@ -23,7 +23,7 @@ class VaultImplContract(ContractConfig):
             project.Vault,
             container_name="Vault",
             deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key],
-            deployment_args_contracts=[payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_args=[payment_token_key, nft_contract_key, delegation_registry_key],
         )
         if address:
             self.load_contract(address)
@@ -75,6 +75,10 @@ class RentingContract(ContractConfig):
         payment_token_key: str,
         nft_contract_key: str,
         delegation_registry_key: str,
+        max_protocol_fee: int | None = None,
+        protocol_fee: int | None = None,
+        protocol_wallet: str | None = None,
+        protocol_admin: str | None = None,
         address: str | None = None,
     ):
         super().__init__(
@@ -83,7 +87,16 @@ class RentingContract(ContractConfig):
             project.Renting,
             container_name="Renting",
             deployment_deps=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
-            deployment_args_contracts=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_args=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+                max_protocol_fee,
+                protocol_fee,
+                protocol_wallet,
+                protocol_admin,
+            ],
         )
         if address:
             self.load_contract(address)
