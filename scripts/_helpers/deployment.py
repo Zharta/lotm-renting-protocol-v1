@@ -51,6 +51,8 @@ def store_contracts(env: Environment, contracts: list[ContractConfig]):
                 c["address"] = contracts_dict[key].address()
                 if contracts_dict[key].abi_key:
                     c["abi_key"] = contracts_dict[key].abi_key
+                if contracts_dict[key].version:
+                    c["version"] = contracts_dict[key].version
             properties = c.get("properties", {})
             addresses = c.get("properties_addresses", {})
             for prop_key, prop_val in properties.items():

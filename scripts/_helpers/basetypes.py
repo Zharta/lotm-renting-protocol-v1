@@ -50,6 +50,7 @@ class ContractConfig:
     config_deps: dict[str, Callable] = field(default_factory=dict)
     deployment_args: list[Any] = field(default_factory=list)
     abi_key: str | None = None
+    version: str | None = None
 
     def deployable(self, context: DeploymentContext) -> bool:
         return True

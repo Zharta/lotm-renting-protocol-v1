@@ -12,6 +12,7 @@ class VaultImplContract(ContractConfig):
         self,
         *,
         key: str,
+        version: str | None = None,
         abi_key: str,
         payment_token_key: str,
         nft_contract_key: str,
@@ -22,6 +23,7 @@ class VaultImplContract(ContractConfig):
             key,
             None,
             project.Vault,
+            version=version,
             abi_key=abi_key,
             container_name="Vault",
             deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key],
@@ -34,12 +36,22 @@ class VaultImplContract(ContractConfig):
 @dataclass
 class ERC20Contract(ContractConfig):
     def __init__(
-        self, *, key: str, abi_key: str, name: str, symbol: str, decimals: int, supply: int, address: str | None = None
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        name: str,
+        symbol: str,
+        decimals: int,
+        supply: int,
+        address: str | None = None,
     ):
         super().__init__(
             key,
             None,
             project.ERC20,
+            version=version,
             abi_key=abi_key,
             container_name="ERC20",
         )
@@ -56,16 +68,16 @@ class ERC20Contract(ContractConfig):
 
 @dataclass
 class ERC721Contract(ContractConfig):
-    def __init__(self, *, key: str, abi_key: str, address: str | None = None):
-        super().__init__(key, None, project.ERC721, abi_key=abi_key, container_name="ERC721")
+    def __init__(self, *, key: str, version: str | None = None, abi_key: str, address: str | None = None):
+        super().__init__(key, None, project.ERC721, version=version, abi_key=abi_key, container_name="ERC721")
         if address:
             self.load_contract(address)
 
 
 @dataclass
 class WarmDelegationContract(ContractConfig):
-    def __init__(self, *, key: str, abi_key: str, address: str | None = None):
-        super().__init__(key, None, project.HotWalletMock, abi_key=abi_key, container_name="HotWalletMock")
+    def __init__(self, *, key: str, version: str | None = None, abi_key: str, address: str | None = None):
+        super().__init__(key, None, project.HotWalletMock, version=version, abi_key=abi_key, container_name="HotWalletMock")
         if address:
             self.load_contract(address)
 
@@ -76,6 +88,7 @@ class RentingContract(ContractConfig):
         self,
         *,
         key: str,
+        version: str | None = None,
         abi_key: str,
         vault_impl_key: str,
         payment_token_key: str,
@@ -91,6 +104,7 @@ class RentingContract(ContractConfig):
             key,
             None,
             project.Renting,
+            version=version,
             abi_key=abi_key,
             container_name="Renting",
             deployment_deps=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
