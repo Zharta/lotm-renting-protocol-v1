@@ -91,7 +91,7 @@ def cli():
                 properties_abis[prop] = abis[prop_val]["abi_key"]
         v["properties_abis"] = properties_abis
 
-        abi_key = config["abi_key"]
+        abi_key = v["abi_key"]
         print(f"updating renting config {k} {abi_key=}")
         update_renting_config(k, v)
 

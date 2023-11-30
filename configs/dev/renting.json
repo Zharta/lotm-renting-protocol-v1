@@ -23,7 +23,7 @@
         },
         "vault_impl_koda_ape": {
             "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
-            "address": "0x100ddF2d00d51e2A2f0A15D53430E99B86209229",
+            "address": "0xcB1180c78538A18A22C1b1dd70754918B07fB320",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -55,7 +55,7 @@
         },
         "vault_impl_mara_ape": {
             "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
-            "address": "0x124e820D8f0a066A52B8f1499360047eB509e595",
+            "address": "0xcB1180c78538A18A22C1b1dd70754918B07fB320",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -94,7 +94,7 @@
     "renting": {
         "koda": {
             "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
-            "address": "0xC2e6e217e01725c683222dD5f003676BfD94F832",
+            "address": "0x6b81cAE58B81bbb660d75EC61179E2f63a069500",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -134,7 +134,7 @@
         },
         "mara": {
             "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
-            "address": "0xAa45A3200AEAd375b758C6Db9200B2EDD20B09dC",
+            "address": "0xE5a729d0FD1Dd1c199C19dC47a82c665Fd6C18D8",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
