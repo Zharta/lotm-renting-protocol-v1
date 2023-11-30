@@ -1,3 +1,5 @@
+import hashlib
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Optional
@@ -6,6 +8,12 @@ from ape.contracts.base import ContractContainer, ContractInstance
 from ape_accounts.accounts import KeyfileAccount
 
 Environment = Enum("Environment", ["local", "dev", "int", "prod"])
+
+
+def abi_key(abi: list) -> str:
+    json_dump = json.dumps(abi, sort_keys=True)
+    hash = hashlib.sha1(json_dump.encode("utf8"))
+    return hash.hexdigest()
 
 
 @dataclass
@@ -41,6 +49,7 @@ class ContractConfig:
     deployment_deps: set[str] = field(default_factory=set)
     config_deps: dict[str, Callable] = field(default_factory=dict)
     deployment_args: list[Any] = field(default_factory=list)
+    abi_key: str | None = None
 
     def deployable(self, context: DeploymentContext) -> bool:
         return True
@@ -87,3 +96,4 @@ class ContractConfig:
         print(f"## {self.key} <- {self.container_name}.deploy({','.join(str(a) for a in print_args)}, {kwargs_str})")
         if not dryrun:
             self.contract = self.container.deploy(*self.deployment_args_values(context), **kwargs)
+            self.abi_key = abi_key(self.contract.contract_type.dict()["abi"])
