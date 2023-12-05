@@ -1,5 +1,12 @@
 # @version 0.3.9
 
+"""
+@title LOTM Renting Protocol Contract
+@author [Zharta](https://zharta.io/)
+@notice This contract manages the renting process for NFTs in the LOTM Renting Protocol.
+@dev This contract is the single user-facing contract for each Renting Market. It does not hold any assets, it manages the creation of vaults (as minimal proxies to the vault implementation) and delegates the calls to the vaults, with the exception of the admin functions.
+"""
+
 # Interfaces
 
 interface ISelf:
@@ -194,11 +201,25 @@ def __init__(
     _protocol_wallet: address,
     _protocol_admin: address
 ):
+
+    """
+    @notice Initialize the renting contract with necessary parameters and addresses.
+    @dev Sets up the contract by initializing various addresses and fees.
+    @param _vault_impl_addr The address of the vault implementation.
+    @param _payment_token_addr The address of the payment token.
+    @param _nft_contract_addr The address of the NFT contract.
+    @param _delegation_registry_addr The address of the delegation registry.
+    @param _max_protocol_fee The maximum protocol fee that can be set.
+    @param _protocol_fee The initial protocol fee.
+    @param _protocol_wallet The wallet to receive protocol fees.
+    @param _protocol_admin The administrator of the protocol.
+    """
+
     assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
     assert _protocol_fee <= 10000, "protocol fee > 100%"
     assert _protocol_wallet != empty(address), "protocol wallet not set"
     assert _protocol_admin != empty(address), "admin wallet not set"
-    
+
     vault_impl_addr = _vault_impl_addr
     payment_token_addr = _payment_token_addr
     nft_contract_addr = _nft_contract_addr
@@ -212,6 +233,17 @@ def __init__(
 
 @external
 def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
+
+    """
+    @notice Create new vaults and deposit NFTs with specified listing terms.
+    @dev Iterates over a list of token ids, creating vaults and depositing NFTs with the given listing terms.
+    @param token_ids An array of NFT token ids to create vaults for and deposit.
+    @param price Rental price per hour for each NFT, 0 meaning unlisted.
+    @param min_duration Minimum rental duration in hours.
+    @param max_duration Maximum rental duration in hours, 0 for unlimited.
+    @param delegate Address to delegate the NFT to while listed.
+    """
+
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
@@ -234,6 +266,17 @@ def create_vaults_and_deposit(token_ids: DynArray[uint256, 32], price: uint256, 
 
 @external
 def deposit(token_ids: DynArray[uint256, 32], price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
+
+    """
+    @notice Deposit NFTs into existing vaults with specified listing terms.
+    @dev Iterates over a list of token ids, depositing NFTs into their respective vaults with the given listing terms.
+    @param token_ids An array of NFT token ids to deposit.
+    @param price Rental price per hour for each NFT, 0 meaning unlisted.
+    @param min_duration Minimum rental duration in hours.
+    @param max_duration Maximum rental duration in hours, 0 for unlimited.
+    @param delegate Address to delegate the NFT to while listed.
+    """
+
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
@@ -262,6 +305,17 @@ def set_listings(
     max_duration: uint256,
     delegate: address
 ):
+
+    """
+    @notice Set listings for multiple NFTs in their respective vaults.
+    @dev Iterates over a list of token contexts, updating the listings with the given terms.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    @param price Rental price per hour for each NFT, 0 meaning unlisted.
+    @param min_duration Minimum rental duration in hours.
+    @param max_duration Maximum rental duration in hours, 0 for unlimited.
+    @param delegate Address to delegate the NFT to while listed.
+    """
+
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
@@ -298,6 +352,14 @@ def set_listings(
 
 @external
 def cancel_listings(token_contexts: DynArray[TokenContext, 32], delegate: address):
+
+    """
+    @notice Cancel listings for multiple NFTs in their respective vaults.
+    @dev Iterates over a list of token contexts, canceling the listings in their respective vaults.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    @param delegate Address to delegate the NFT to while unlisted.
+    """
+
     vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
@@ -332,6 +394,15 @@ def cancel_listings(token_contexts: DynArray[TokenContext, 32], delegate: addres
 
 @external
 def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256, delegate: address):
+
+    """
+    @notice Start rentals for multiple NFTs based on their token contexts.
+    @dev Iterates over token contexts to begin rentals for each NFT in their respective vaults.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    @param duration The duration of the rentals in hours.
+    @param delegate The address to delegate the NFT to during the rental period.
+    """
+
     rental_logs: DynArray[RentalLog, 32] = []
 
     expiration: uint256 = block.timestamp + duration * 3600
@@ -370,6 +441,13 @@ def start_rentals(token_contexts: DynArray[TokenContext, 32], duration: uint256,
 
 @external
 def close_rentals(token_contexts: DynArray[TokenContext, 32]):
+
+    """
+    @notice Close rentals for multiple NFTs, allowing for early rental cancelation by the renter.
+    @dev Iterates over token contexts to end rentals for each NFT in their respective vaults.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    """
+
     rental_logs: DynArray[RentalLog, 32] = []
 
     for token_context in token_contexts:
@@ -402,6 +480,13 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def claim(token_contexts: DynArray[TokenContext, 32]):
+
+    """
+    @notice Claim rewards and protocol fees for multiple NFTs.
+    @dev Iterates over token contexts to claim any unclaimed rewards and fees from the vaults.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    """
+
     reward_logs: DynArray[RewardLog, 32] = []
     active_rental: Rental = empty(Rental)
     rewards: uint256 = 0
@@ -432,6 +517,13 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def withdraw(token_contexts: DynArray[TokenContext, 32]):
+
+    """
+    @notice Withdraw multiple NFTs and claim rewards and protocol fees.
+    @dev Iterates over token contexts to withdraw NFTs from their vaults and claim any unclaimed rewards and fees.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    """
+
     withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
     total_rewards: uint256 = 0
     rewards: uint256 = 0
@@ -468,6 +560,14 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
+
+    """
+    @notice Delegate NFTs to a specified wallet.
+    @dev Iterates over token contexts to set the delegation of NFTs in their vaults.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    @param delegate The address to delegate the NFTs to.
+    """
+
     vaults: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
@@ -497,6 +597,13 @@ def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: add
 
 @external
 def set_protocol_fee(protocol_fee: uint256):
+
+    """
+    @notice Set the protocol fee for the renting process.
+    @dev Updates the protocol fee, ensuring it doesn't exceed the maximum allowed.
+    @param protocol_fee The new protocol fee to be set, in bps (e.g., 500 for 5%).
+    """
+
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
     assert protocol_fee != self.protocol_fee, "protocol fee is the same"
@@ -512,19 +619,33 @@ def set_protocol_fee(protocol_fee: uint256):
 
 @external
 def change_protocol_wallet(new_protocol_wallet: address):
+
+    """
+    @notice Change the wallet address that receives the protocol fees.
+    @dev Updates the protocol wallet address.
+    @param new_protocol_wallet The new address for the protocol wallet.
+    """
+
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert new_protocol_wallet != empty(address), "wallet is the zero address"
-    
+
     log ProtocolWalletChanged(
         self.protocol_wallet,
         new_protocol_wallet
     )
-    
+
     self.protocol_wallet = new_protocol_wallet
 
 
 @external
 def propose_admin(_address: address):
+
+    """
+    @notice Propose a new administrator for the protocol.
+    @dev Sets a new proposed admin, which needs to claim ownership to become effective.
+    @param _address The address of the proposed new admin.
+    """
+
     assert msg.sender == self.protocol_admin, "not the admin"
     assert _address != empty(address), "_address it the zero address"
     assert self.protocol_admin != _address, "proposed admin addr is the admin"
@@ -540,6 +661,12 @@ def propose_admin(_address: address):
 
 @external
 def claim_ownership():
+
+    """
+    @notice Claim the role of protocol administrator.
+    @dev Finalizes the admin transfer process by setting the caller as the new admin.
+    """
+
     assert msg.sender == self.proposed_admin, "not the proposed"
 
     log OwnershipTransferred(
@@ -616,6 +743,14 @@ def _deposit_nft(token_id: uint256, price: uint256, min_duration: uint256, max_d
 @view
 @external
 def is_vault_available(token_id: uint256) -> bool:
+
+    """
+    @notice Check if a vault is available for a given NFT token id.
+    @dev Determines if a vault exists and is available, ie not in use.
+    @param token_id The NFT token id to check.
+    @return True if the vault is available, False otherwise.
+    """
+
     vault: address = ISelf(self).tokenid_to_vault(token_id)
     return self.active_vaults[token_id] == empty(address) and vault.is_contract and not IVault(vault).is_initialised()
 
@@ -623,6 +758,14 @@ def is_vault_available(token_id: uint256) -> bool:
 @view
 @external
 def tokenid_to_vault(token_id: uint256) -> address:
+
+    """
+    @notice Get the vault address for a given NFT token id.
+    @dev Computes the address of the vault (existent or yet to be created) associated with the specified token id.
+    @param token_id The NFT token id.
+    @return The address of the vault associated with the given token id.
+    """
+
     return self._compute_address(
         convert(token_id, bytes32),
         keccak256(concat(
