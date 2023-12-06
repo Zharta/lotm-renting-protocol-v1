@@ -1,9 +1,11 @@
+import contextlib
 from dataclasses import dataclass, field
 from functools import cached_property
 from textwrap import dedent
 
 import boa
 import vyper
+from eth.exceptions import Revert
 from web3 import Web3
 
 ZERO_ADDRESS = boa.eval("empty(address)")
@@ -84,6 +86,15 @@ def checksummed(obj, vyper_type=None):
 def get_vault_from_proxy(proxy_addr):
     deployer = boa.load_partial("contracts/Vault.vy")
     return deployer.at(proxy_addr)
+
+
+@contextlib.contextmanager
+def deploy_reverts():
+    try:
+        yield
+        raise ValueError("Did not revert")
+    except Revert:
+        ...
 
 
 @dataclass

@@ -194,11 +194,15 @@ def __init__(
     _protocol_wallet: address,
     _protocol_admin: address
 ):
+    assert _vault_impl_addr != empty(address), "vault impl is the zero addr"
+    assert _payment_token_addr != empty(address), "payment token is the zero addr"
+    assert _nft_contract_addr != empty(address), "nft contract is the zero addr"
+    assert _delegation_registry_addr != empty(address), "deleg registry is the zero addr"
     assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
-    assert _protocol_fee <= 10000, "protocol fee > 100%"
+    assert _protocol_fee <= _max_protocol_fee, "protocol fee > max fee"
     assert _protocol_wallet != empty(address), "protocol wallet not set"
     assert _protocol_admin != empty(address), "admin wallet not set"
-    
+
     vault_impl_addr = _vault_impl_addr
     payment_token_addr = _payment_token_addr
     nft_contract_addr = _nft_contract_addr
@@ -514,19 +518,19 @@ def set_protocol_fee(protocol_fee: uint256):
 def change_protocol_wallet(new_protocol_wallet: address):
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert new_protocol_wallet != empty(address), "wallet is the zero address"
-    
+
     log ProtocolWalletChanged(
         self.protocol_wallet,
         new_protocol_wallet
     )
-    
+
     self.protocol_wallet = new_protocol_wallet
 
 
 @external
 def propose_admin(_address: address):
     assert msg.sender == self.protocol_admin, "not the admin"
-    assert _address != empty(address), "_address it the zero address"
+    assert _address != empty(address), "_address is the zero address"
     assert self.protocol_admin != _address, "proposed admin addr is the admin"
     assert self.proposed_admin != _address, "proposed admin addr is the same"
 
