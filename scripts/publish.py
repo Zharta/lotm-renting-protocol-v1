@@ -50,7 +50,8 @@ def get_renting_configs(context, env: Environment) -> dict:
     renting_configs = config["renting"]
     for k, config in renting_configs.items():
         contract = context[f"renting.{k}"].contract
-        config["abi_key"] = abi_key(contract.contract_type.dict()["abi"])
+        if "abi_key" not in config:
+            config["abi_key"] = abi_key(contract.contract_type.dict()["abi"])
 
     return renting_configs
 
@@ -78,7 +79,7 @@ def cli():
     abis = get_abi_map(dm.context, dm.env)
     for contract_key, config in abis.items():
         abi_key = config["abi_key"]
-        print(f"updating abi {contract_key=} {abi_key=}")
+        print(f"adding abi {contract_key=} {abi_key=}")
         update_abi(abi_key, config["abi"])
 
     renting_configs = get_renting_configs(dm.context, dm.env)
@@ -90,7 +91,8 @@ def cli():
                 properties_abis[prop] = abis[prop_val]["abi_key"]
         v["properties_abis"] = properties_abis
 
-        print(f"updating renting config {k}")
+        abi_key = v["abi_key"]
+        print(f"updating renting config {k} {abi_key=}")
         update_renting_config(k, v)
 
     print(f"Renting configs updated in {ENV.name}")
