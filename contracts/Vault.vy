@@ -165,7 +165,7 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
     assert self.state == self._state_hash(state), "invalid state"
     assert state.listing.token_id == token_id, "invalid token_id"
 
-    self._set_listing(token_id, sender, price, min_duration, max_duration, state.active_rental)
+    self._set_listing(token_id, price, min_duration, max_duration, state.active_rental)
 
     # create delegation
     if delegate != empty(address):
@@ -456,7 +456,7 @@ def _delegate_to_wallet(wallet: address):
 
 
 @internal
-def _set_listing(token_id: uint256, sender: address, price: uint256, min_duration: uint256, max_duration: uint256, active_rental: Rental):
+def _set_listing(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, active_rental: Rental):
     if max_duration != 0 and min_duration > max_duration:
         raise "min duration > max duration"
 
