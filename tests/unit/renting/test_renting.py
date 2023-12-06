@@ -13,6 +13,7 @@ from ...conftest_base import (
     VaultLog,
     WithdrawalLog,
     compute_state_hash,
+    deploy_reverts,
     get_last_event,
 )
 
@@ -63,6 +64,60 @@ def mint(nft_owner, owner, renter, nft_contract, ape_contract):
         nft_contract.mint(nft_owner, 1, sender=owner)
         ape_contract.mint(renter, int(1000 * 1e18), sender=owner)
         yield
+
+
+def test_deploy_validation(
+    renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet
+):
+    with deploy_reverts():
+        renting_contract_def.deploy(
+            vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, 0, 0, ZERO_ADDRESS, protocol_wallet
+        )
+
+    with deploy_reverts():
+        renting_contract_def.deploy(
+            vault_contract,
+            ape_contract,
+            nft_contract,
+            delegation_registry_warm_contract,
+            0,
+            0,
+            protocol_wallet,
+            ZERO_ADDRESS,
+        )
+    with deploy_reverts():
+        renting_contract_def.deploy(
+            vault_contract,
+            ape_contract,
+            nft_contract,
+            delegation_registry_warm_contract,
+            10001,
+            0,
+            protocol_wallet,
+            protocol_wallet,
+        )
+    with deploy_reverts():
+        renting_contract_def.deploy(
+            vault_contract,
+            ape_contract,
+            nft_contract,
+            delegation_registry_warm_contract,
+            0,
+            1,
+            protocol_wallet,
+            protocol_wallet,
+        )
+    with deploy_reverts():
+        renting_contract_def.deploy(
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            0,
+            1,
+            protocol_wallet,
+            protocol_wallet,
+        )
 
 
 def test_initial_state(
@@ -1357,7 +1412,6 @@ def test_deposit(renting_contract, nft_contract, ape_contract, nft_owner, renter
     duration = 6
     expiration = start_time + duration * 3600
     rental_amount = duration * price
-    protocol_fee_amount = rental_amount * PROTOCOL_FEE // 10000
 
     vault_addr = renting_contract.tokenid_to_vault(token_id)
 
@@ -1545,19 +1599,8 @@ def test_propose_admin_wrong_caller(
         renting_contract.propose_admin(ZERO_ADDRESS, sender=renter)
 
 
-def test_propose_admin_zero_address(
-    renting_contract,
-    protocol_wallet,
-):
-    with boa.reverts("_address it the zero address"):
-        renting_contract.propose_admin(ZERO_ADDRESS, sender=protocol_wallet)
-
-
-def test_propose_admin_zero_address(
-    renting_contract,
-    protocol_wallet,
-):
-    with boa.reverts("_address it the zero address"):
+def test_propose_admin_zero_address(renting_contract, protocol_wallet):
+    with boa.reverts("_address is the zero address"):
         renting_contract.propose_admin(ZERO_ADDRESS, sender=protocol_wallet)
 
 
