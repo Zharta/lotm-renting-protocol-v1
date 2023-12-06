@@ -194,6 +194,10 @@ def __init__(
     _protocol_wallet: address,
     _protocol_admin: address
 ):
+    assert _vault_impl_addr != empty(address), "vault impl is the zero addr"
+    assert _payment_token_addr != empty(address), "payment token is the zero addr"
+    assert _nft_contract_addr != empty(address), "nft contract is the zero addr"
+    assert _delegation_registry_addr != empty(address), "deleg registry is the zero addr"
     assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
     assert _protocol_fee <= _max_protocol_fee, "protocol fee > max fee"
     assert _protocol_wallet != empty(address), "protocol wallet not set"

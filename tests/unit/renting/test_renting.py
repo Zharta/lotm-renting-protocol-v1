@@ -107,6 +107,17 @@ def test_deploy_validation(
             protocol_wallet,
             protocol_wallet,
         )
+    with deploy_reverts():
+        renting_contract_def.deploy(
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            0,
+            1,
+            protocol_wallet,
+            protocol_wallet,
+        )
 
 
 def test_initial_state(
