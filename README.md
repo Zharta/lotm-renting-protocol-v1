@@ -107,6 +107,107 @@ The protocol supports the definition of a fee to be applied over the rental's am
 
 ## Development
 
+### Implementation
+
+#### Renting contract (`Renting.vy`)
+
+The renting contract is the single user-facing contract for each Renting Market. This contract does not hold any assets, it manages the creation of vaults (as minimal proxies to the vault implementation) and delegates the calls to the vaults, with the exception of the admin functions.
+
+##### State variables
+
+| **Variable**             | **Type**                    | **Mutable** | **Desciption**                                                                                                                                                |
+| ---                      | ---                         | :-:         | ---                                                                                                                                                           |
+| vault_impl_addr          | `address`                   | No          | address of the Vault implementation contract for the renting market                                                                                           |
+| payment_token_addr       | `address`                   | No          | address of the payment token (ERC20) contract for the renting market                                                                                          |
+| nft_contract_addr        | `address`                   | No          | address of the NFT (ERC721) contract for the renting market                                                                                                   |
+| delegation_registry_addr | `address`                   | No          | address of the delegation (warm.xyz) contract                                                                                                                 |
+| max_protocol_fee         | `uint256`                   | No          | maximum value for the admin configurable `protocol_fee` parameter                                                                                             |
+| protocol_wallet          | `address`                   | Yes         | wallet address to receive the protocol fees                                                                                                                   |
+| protocol_fee             | `uint256`                   | Yes         | fraction of the rentals' values (in bps) to be paid as fee                                                                                                    |
+| protocol_admin           | `address`                   | Yes         | wallet address of the protocol admin                                                                                                                          |
+| proposed_admin           | `address`                   | Yes         | wallet to be proposed as admin by using the `propose_admin` function, it becomes the `protocol_admin` after the wallet claims it by calling `claim_ownership` |
+| active_vaults            | `HashMap[uint256, address]` | Yes         | map of active vaults: a vault becomes active upon a deposit and is deactivated after a withdraw                                                               |
+
+
+##### Relevant external functions
+
+
+| **Function**              | **Roles Allowed**    | **Modifier** | **Description**                                                                                                                 |
+| ---                       | :-:                  | ---          | ---                                                                                                                             |
+| create_vaults_and_deposit | Any (becomes Owner)  | Nonpayable   | creates and initializes vaults for given tokens and delegates for each vault the deposit of the token and creation of a listing |
+| deposit                   | Owner                | Nonpayable   | initializes exisintg vaults for given tokens and delegates for each vault the deposit of the token  and creation of a listing   |
+| set_listings              | Owner                | Nonpayable   | delegates call to each token's vault to change the listing conditions                                                           |
+| cancel_listings           | Owner                | Nonpayable   | delegates call to each token's vault to cancel the listing (listing price = 0)                                                  |
+| start_rentals             | Any (becomes Renter) | Nonpayable   | delegates call to each token's vault to start a rental for the specified duration                                               |
+| close_rentals             | Renter               | Nonpayable   | delegates call to each token's vault to perform an early cancelation of the active rental                                       |
+| claim                     | Owner                | Nonpayable   | delegates call to each token's vault to claim all unclaimed owner rewards                                                       |
+| withdraw                  | Owner                | Nonpayable   | after delegating calls to each token's vault to withdraw it and claim pending rewards, marks the vault as inactive              |
+| delegate_to_wallet        | Owner                | Nonpayable   | delegates call to each token's vault to perform a delegation to a given hot wallet                                              |
+| set_protocol_fee          | Admin                | Nonpayable   | sets the protocol fee (in bps) to be charged for each rental                                                                    |
+| change_protocol_wallet    | Admin                | Nonpayable   | changes the wallet address to reveive the protcol fees                                                                          |
+| propose_admin             | Admin                | Nonpayable   | sets the `proposed_admin` variable, which can then claim ownership                                                              |
+| claim_ownership           | *proposed owner*     | Nonpayable   | claims ownership of the contract, setting the `protocol_admin` variable                                                         |
+| is_vault_available        | Any                  | View         | checks if the vault for a given token already exists and if is not active                                                       |
+| tokenid_to_vault          | Any                  | View         | returns the address of an existing or yet to be created vault, allowing asset approvals for deposits or creation of rentals     |
+
+
+#### Vault implementation contract (`Vault.vy`)
+
+The Vault is the implementation contract for each vault, which is deployed as a minimal proxy (ERC1167) by `Renting.vy` and accepts only calls from it. This contract holds the assets (NFT, payment tokens) for each token, holds the listing and rental states, performs rewards and fee payments and sets the delegation to hot wallets.
+
+##### State variables
+
+| **Variable**             | **Type**  | **Mutable** | **Desciption**                                                                                                                                   |
+| ---                      | ---       | :-:         | ---                                                                                                                                              |
+| payment_token_addr       | `address` | No          | address of the payment token (ERC20) contract for the renting market                                                                             |
+| nft_contract_addr        | `address` | No          | address of the NFT (ERC721) contract for the renting market                                                                                      |
+| delegation_registry_addr | `address` | No          | address of the delegation (warm.xyz) contract                                                                                                    |
+| owner                    | `address` | Yes         | wallet address of the owner of the deposited token                                                                                               |
+| caller                   | `address` | Yes         | address of the Renting contract who deployed and manages the vault                                                                               |
+| state                    | `bytes32` | Yes         | hash of the current vault state, which is externalized to reduce the gas costs associated with storage; empty means the vault is not initialized |
+| unclaimed_rewards        | `uint256` | Yes         | keeps the amount of the owner's unclaimed rewards, which result from rentals expiration and must be accounted for later claim                    |
+| unclaimed_protocol_fee   | `uint256` | Yes         | keeps the amount of unclaimed protocol fees, which result from rentals expiration and must be accounted for later payment                        |
+
+
+##### Externalized State
+
+The information regarding listings and rentals was externalized in order to reduce the gas costs while using the protocol. That requires the state to be passed as an argument to each function and validated by matching it's hash against the one stored in the contract. Conversly, changes to the state are hashed and stored, and the resulting state variables returned to the caller (the Renting contract), to either be published as events or returned directly to the user. The structures that hold the state are the `Listing` and the `Rentals`, although not every member is part of the state if is not required to keep the integrity of the contract.
+
+| **Struct** | **Variable**    | **Type**  | **Part of State** | **Desciption**                                                                                                               |
+| ---        | ---             | ---       | :-:               | ---                                                                                                                          |
+| Rental     | id              | `bytes32` | Yes               | id of a rental, calculated as the keccak256 of the renter, token_id, start and expiration; empty if there's no active rental |
+|            | owner           | `address` | Yes               | wallet address owner of the deposited NFT                                                                                    |
+|            | renter          | `address` | Yes               | wallet address renting the NFT                                                                                               |
+|            | delegate        | `address` | No                | used as hot wallet during the rental period                                                                                  |
+|            | token_id        | `uint256` | Yes               | id of the deposited token                                                                                                    |
+|            | start           | `uint256` | Yes               | timestamp marking the start of the rental period                                                                             |
+|            | min_expiration  | `uint256` | Yes               | timestamp marking the minimal period charged in case of rental cancelation by the renter                                     |
+|            | expiration      | `uint256` | Yes               | timestamp marking the end of the rental period                                                                               |
+|            | amount          | `uint256` | Yes               | amount (of the payment token) to be paid by the renter for the rental                                                        |
+|            | protocol_fee    | `uint256` | Yes               | fee in bps to be charged for the rental                                                                                      |
+|            | protocol_wallet | `address` | Yes               | wallet to receive the protocol fee                                                                                           |
+|            |                 |           |                   |                                                                                                                              |
+| Listing    | token_id        | `uint256` | Yes               | id of the deposited token                                                                                                    |
+|            | price           | `uint256` | Yes               | price per hour, 0 means not listed                                                                                           |
+|            | min_duration    | `uint256` | Yes               | min duration in hours                                                                                                        |
+|            | max_duration    | `uint256` | Yes               | max duration in hours, 0 means unlimited                                                                                     |
+
+##### Relevant external functions
+
+
+| **Function**       | **Roles Allowed** | **Modifier** | **Description**                                                                                                                                                                                                                                                 |
+| ---                | :-:               | ---          | ---                                                                                                                                                                                                                                                             |
+| initialise         | --                | Nonpayable   | called by Renting to set up the initial vault state                                                                                                                                                                                                             |
+| deposit            | Any               | Nonpayable   | transfers the token from the user to the vault, optionaly creates a listing and sets up a delegation to a given wallet                                                                                                                                          |
+| set_listing        | Any               | Nonpayable   | changes the listing conditions and optionaly sets up a delegation to a given wallet                                                                                                                                                                             |
+| start_rental       | Any               | Nonpayable   | creates a rental for a given renter and expiration, transfers the calculated rental amount from the renter to the vault and and creates the delegation to the given wallet                                                                                      |
+| close_rental       | Any               | Nonpayable   | cancels the delegation, calculates the pro-rata rental amount and protocol fees, accounts for the revised amount as unclaimed rewards and transfers the excess amount to the renter; also transfers the rental fees and any pending fees to the protocol wallet |
+| claim              | Any               | Nonpayable   | transfers any unclaimed rewards to the owner and any pending protocol fees to the protocol wallet                                                                                                                                                               |
+| withdraw           | Any               | Nonpayable   | transfers the token back to the owner together with any pending rewards, transfers any pending protocolo fees and uninitializes the vault                                                                                                                       |
+| delegate_to_wallet | Any               | Nonpayable   | creates a delegation for a given wallet if no rental is active                                                                                                                                                                                                  |
+| claimable_rewards  | Any               | Nonpayable   | calculates the amount of rewards claimable by the owner; it does not validate the input state as it is a convenience and has no side effects                                                                                                                    |
+| is_initialised     | Any               | Nonpayable   | return wether the vault is currently initialized                                                                                                                                                                                                                |
+
 ### Testing
 
 There are three types of tests implemented, running on py-evm using titanoboa:
@@ -128,7 +229,7 @@ The `ERC20.vy` and `ERC721.vy` contracts are used to deploy mock ERC20 and ERC72
 
 Run the following command to set everything up:
 ```
-make install-dev install
+make install-dev
 ```
 
 To run the tests:
@@ -148,3 +249,36 @@ make fuzz-tests
 ```
 make gas
 ```
+
+### Deployment
+
+For each environment a makefile rule is available to deploy the contracts, eg for DEV:
+```
+make deploy-dev
+```
+
+Because the protocol dependends on external contracts that may not be available in all environments, mocks are also deployed to replace them if needed.
+
+
+| **Stage** | **Network**     | **Payment Contract**                                 | **NFT Contract**                                                                                        | **Delegation Contract**                                              |
+| ---       | ---             | ---                                                  | ---                                                                                                     | ---                                                                  |
+| DEV       | Private network | Mock (`ERC20.vy`)                                    | Mock (`ERC721.vy`)                                                                                      | Mock (`HotWalletMock.vy`)                                            |
+| INT       | Sepolia         | Mock (`ERC20.vy`)                                    | Mock (`ERC721.vy`)                                                                                      | warm.xyz HotWalletProxy `0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4` |
+| PROD      | Mainnet         | ApeCoin `0x4d224452801ACEd8B2F0aebE155379bb5D594381` | Koda `0xE012Baf811CF9c05c408e879C399960D1f305903` and Mara `0x3Bdca51226202Fc2a64211Aa35A8d95D61C6ca99` | warm.xyz HotWalletProxy `0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c` |
+
+Additionaly, for each Renting Market in each environment (eg Koda Renting Market in PROD), the following contracts are deployed:
+
+| **Contract** | **Deployment parameters**            | **Description**                                                      |
+| ---          | ---                                  | ---                                                                  |
+| `Renting.vy` | `_vault_impl_addr: address`          | address of the Vault implementation contract for the renting market  |
+|              | `_payment_token_addr: address`       | address of the payment token (ERC20) contract for the renting market |
+|              | `_nft_contract_addr: address`        | address of the NFT (ERC721) contract for the renting market          |
+|              | `_delegation_registry_addr: address` | address of the delegation (warm.xyz) contract                        |
+|              | `_max_protocol_fee: uint256`         | maximum value for the admin configurable `protocol_fee` parameter    |
+|              | `_protocol_fee: uint256`             | fraction of the rentals' values (in bps) to be paid as fee           |
+|              | `_protocol_wallet: address`          | wallet address to receive the protocol fees                          |
+|              | `_protocol_admin: address`           | wallet address of the protocol admin                                 |
+|              |                                      |                                                                      |
+| `Vault.vy`   | `_payment_token_addr: address`       | address of the payment token (ERC20) contract for the renting market |
+|              | `_nft_contract_addr: address`        | address of the NFT (ERC721) contract for the renting market          |
+|              | `_delegation_registry_addr: address` | address of the delegation (warm.xyz) contract                        |
