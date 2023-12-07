@@ -42,6 +42,22 @@
             },
             "version": "1"
         },
+        "vault_impl_koda_ape_v2": {
+            "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
+            "address": "0xA62A2a84d19CFE2b99e29F49f0591C7ABe8f6768",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.koda",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
+                "nft_contract": "0x4Dc251DC5d8dBc96305bD4B73C3f8Cfe485BBceF",
+                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
+            },
+            "version": "2"
+        },
         "vault_impl_mara_ape": {
             "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
             "address": "0xabf197E026A431dD4C9Ef604c2Fb4fCf1CFD782B",
@@ -56,6 +72,22 @@
                 "nft_contract": "0xF81fbAba11370b308c29Aa208A860010F4e72b17",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
             }
+        },
+        "vault_impl_mara_ape_v2": {
+            "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
+            "address": "0xa6a1D93eAB387Ccf805cec49902524b1B50456D4",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.mara",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
+                "nft_contract": "0xF81fbAba11370b308c29Aa208A860010F4e72b17",
+                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
+            },
+            "version": "2"
         },
         "warm": {
             "address": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
