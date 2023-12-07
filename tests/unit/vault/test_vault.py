@@ -344,6 +344,44 @@ def test_cancel_listing(vault_contract, renting_contract, nft_contract, nft_owne
     assert vault_contract.state() == compute_state_hash(Rental(), new_listing)
 
 
+def test_cancel_listing_ongoing_rental(
+    vault_contract, renting_contract, nft_contract, nft_owner, renter, ape_contract, protocol_wallet
+):
+    token_id = 1
+    price = int(1e18)
+    expiration = boa.eval("block.timestamp") + 86400
+    min_duration = 0
+    max_duration = 0
+
+    renter_delegate = boa.env.generate_address("renter delegate")
+
+    nft_contract.approve(vault_contract, token_id, sender=nft_owner)
+    vault_contract.deposit(token_id, price, min_duration, max_duration, ZERO_ADDRESS, sender=renting_contract.address)
+
+    start_time = boa.eval("block.timestamp")
+    rental_amount = int(Decimal(expiration - start_time) * Decimal(price) / Decimal(3600))
+
+    ape_contract.approve(vault_contract, rental_amount, sender=renter)
+
+    listing = Listing(token_id, price, min_duration, max_duration)
+    active_rental_raw = vault_contract.start_rental(
+        VaultState(listing=listing).to_tuple(),
+        renter,
+        expiration,
+        renter_delegate,
+        PROTOCOL_FEE,
+        protocol_wallet,
+        sender=renting_contract.address,
+    )
+
+    active_rental = Rental(*active_rental_raw)
+
+    with boa.reverts("deleg disallowed, rental ongoing"):
+        vault_contract.set_listing(
+            VaultState(active_rental, listing).to_tuple(), token_id, nft_owner, 0, 0, 0, nft_owner, sender=renting_contract.address
+        )
+
+
 def test_start_rental_not_caller(vault_contract, nft_owner, renter, protocol_wallet):
     with boa.reverts("not caller"):
         vault_contract.start_rental(
