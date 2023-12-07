@@ -89,6 +89,22 @@
             },
             "version": "2"
         },
+        "vault_impl_otherdeed_ape_v2": {
+            "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
+            "address": "0x203cC6d267AeAeb36349055b9ed312fA0631EFb4",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.otherdeed",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
+                "nft_contract": "0xFe396dee00E7cfd8659Ea68e3B0910E1363e09e0",
+                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
+            },
+            "version": "2"
+        },
         "warm": {
             "address": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
             "contract": "WarmDelegationContract",
