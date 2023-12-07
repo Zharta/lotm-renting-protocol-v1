@@ -156,7 +156,7 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
     @param price The rental price per hour, a value of 0 means unlisted.
     @param min_duration The minimum rental duration in hours.
     @param max_duration The maximum rental duration in hours, 0 for unlimited.
-    @param delegate The address to delegate the NFT to while listed. If empty no delegation is done, neither any possible current delegation is changed.
+    @param delegate The address to delegate the NFT to while unlisted. If empty, no delegation is done, neither any possible current delegation is changed.
     """
 
     assert self._is_initialised(), "not initialised"
@@ -169,6 +169,7 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
 
     # create delegation
     if delegate != empty(address):
+        assert state.active_rental.expiration < block.timestamp, "deleg disallowed, rental ongoing"
         self._delegate_to_wallet(delegate)
 
 
