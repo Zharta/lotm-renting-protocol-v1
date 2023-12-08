@@ -193,7 +193,7 @@
             },
             "version": "2"
         },
-        "otherdeed": {
+        "otherdeed_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
             "address": "0xfdfE60Bd5e80b3a7D1E2d79c18373812ae0088e5",
             "contract": "RentingContract",
