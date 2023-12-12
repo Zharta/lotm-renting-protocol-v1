@@ -169,7 +169,7 @@ def set_listing(state: VaultState, token_id: uint256, sender: address, price: ui
 
     # create delegation
     if delegate != empty(address):
-        assert state.active_rental.expiration < block.timestamp, "deleg disallowed, rental ongoing"
+        assert state.active_rental.expiration < block.timestamp, "deleg while rental ongoing"
         self._delegate_to_wallet(delegate)
 
 
