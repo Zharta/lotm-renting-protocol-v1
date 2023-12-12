@@ -106,7 +106,7 @@
             "version": "2"
         },
         "warm": {
-            "address": "0xfAB7aE42bE865F5C3789f834fd5bbd7C3698cDB2",
+            "address": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
             "contract": "WarmDelegationContract",
             "properties_addresses": {}
         }
