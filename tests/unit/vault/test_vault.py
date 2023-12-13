@@ -376,9 +376,16 @@ def test_cancel_listing_ongoing_rental(
 
     active_rental = Rental(*active_rental_raw)
 
-    with boa.reverts("deleg disallowed, rental ongoing"):
+    with boa.reverts("deleg while rental ongoing"):
         vault_contract.set_listing(
-            VaultState(active_rental, listing).to_tuple(), token_id, nft_owner, 0, 0, 0, nft_owner, sender=renting_contract.address
+            VaultState(active_rental, listing).to_tuple(),
+            token_id,
+            nft_owner,
+            0,
+            0,
+            0,
+            nft_owner,
+            sender=renting_contract.address,
         )
 
 
