@@ -40,9 +40,10 @@ The assumptions are the following:
 ## Security
 Below are the smart contract audits performed for the protocol so far:
 
-| **Auditor** 	| **Status** 	| **PDF** 	|
-|:-----------:	|:----------:	|---------	|
-| Hacken      	| Ongoing    	| [PDF](audits/Audit_Hacken.pdf)  	|
+| **Auditor** 	| **Version** 	| **Status** 	| **PDF** 	                            |
+|:-----------:	|:----------:	|:----------:	|---------	                            |
+| Hacken      	| V1    	    | Done    	    | [PDF](audits/Audit_Hacken.pdf)  	    |
+| Hacken      	| V1.5    	    | Done    	    | [PDF](audits/Audit_Hacken_v15.pdf)  	|
 
 ## Architecture
 
