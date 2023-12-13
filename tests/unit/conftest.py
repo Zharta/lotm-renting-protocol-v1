@@ -35,6 +35,13 @@ def renter():
 
 
 @pytest.fixture(scope="session")
+def protocol_wallet():
+    acc = boa.env.generate_address("protocol_owner")
+    boa.env.set_balance(acc, 10**21)
+    return acc
+
+
+@pytest.fixture(scope="session")
 def nft_contract(owner):
     with boa.env.prank(owner):
         return boa.load("contracts/auxiliary/ERC721.vy")

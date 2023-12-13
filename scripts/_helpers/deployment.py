@@ -23,7 +23,9 @@ def load_contracts(env: Environment) -> list[ContractConfig]:
     with open(config_file, "r") as f:
         config = json.load(f)
     contracts = [
-        contract_map[c["contract"]](key=f"{scope}.{name}", address=c.get("address"), **c.get("properties", {}))
+        contract_map[c["contract"]](
+            key=f"{scope}.{name}", address=c.get("address"), abi_key=c.get("abi_key"), **c.get("properties", {})
+        )
         for scope in ["common", "renting"]
         for name, c in config[scope].items()
     ]
@@ -47,6 +49,16 @@ def store_contracts(env: Environment, contracts: list[ContractConfig]):
             key = f"{scope}.{name}"
             if key in contracts_dict:
                 c["address"] = contracts_dict[key].address()
+                if contracts_dict[key].abi_key:
+                    c["abi_key"] = contracts_dict[key].abi_key
+                if contracts_dict[key].version:
+                    c["version"] = contracts_dict[key].version
+            properties = c.get("properties", {})
+            addresses = c.get("properties_addresses", {})
+            for prop_key, prop_val in properties.items():
+                if prop_key.endswith("_key"):
+                    addresses[prop_key[:-4]] = contracts_dict[prop_val].address()
+            c["properties_addresses"] = addresses
 
     with open(config_file, "w") as f:
         f.write(json.dumps(config, indent=4, sort_keys=True))
@@ -61,7 +73,7 @@ class DeploymentManager:
             case Environment.dev:
                 self.owner = accounts.load("devacc")
             case Environment.int:
-                self.owner = accounts.load("goerliacc")
+                self.owner = accounts.load("intacc")
             case Environment.prod:
                 self.owner = accounts.load("prodacc")
 
