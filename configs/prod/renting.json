@@ -21,10 +21,90 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
-        "vault_impl": {
+        "otherdeed": {
+            "address": "0x790B2cF29Ed4F310bf7641f013C65D4560d28371",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
+        "vault_impl_koda_ape": {
+            "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
             "address": "0xcb1Bd8f8aE14beb58e647d0641bba816dbA446e7",
             "contract": "VaultImplContract",
-            "properties_addresses": {}
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.koda",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0xE012Baf811CF9c05c408e879C399960D1f305903",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381"
+            },
+            "version": "1"
+        },
+        "vault_impl_koda_ape_v2": {
+            "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
+            "address": "0xFd586c11ca3d9FEB3aB762078DB92CD021b0c2AD",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.koda",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0xE012Baf811CF9c05c408e879C399960D1f305903",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381"
+            },
+            "version": "2"
+        },
+        "vault_impl_mara_ape": {
+            "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
+            "address": "0xcb1Bd8f8aE14beb58e647d0641bba816dbA446e7",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.mara",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0x3Bdca51226202Fc2a64211Aa35A8d95D61C6ca99",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381"
+            },
+            "version": "1"
+        },
+        "vault_impl_mara_ape_v2": {
+            "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
+            "address": "0xf73108Afca1E0A662604f8F062CDb6fAa8661A7A",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.mara",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0x3Bdca51226202Fc2a64211Aa35A8d95D61C6ca99",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381"
+            },
+            "version": "2"
+        },
+        "vault_impl_otherdeed_ape_v2": {
+            "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
+            "address": "0x9f2d2fe35Cc5b030d2a4D96f0Ed6D264C5a30a6c",
+            "contract": "VaultImplContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.otherdeed",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0x790B2cF29Ed4F310bf7641f013C65D4560d28371",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381"
+            },
+            "version": "2"
         },
         "warm": {
             "address": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
@@ -34,36 +114,106 @@
     },
     "renting": {
         "koda": {
+            "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
             "address": "0xEE5c149313a95184F71C812ee3b9c6DE7901fDBC",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.koda",
                 "payment_token_key": "common.ape_token",
-                "vault_impl_key": "common.vault_impl"
+                "vault_impl_key": "common.vault_impl_koda_ape"
             },
             "properties_addresses": {
                 "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
                 "nft_contract": "0xE012Baf811CF9c05c408e879C399960D1f305903",
                 "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
                 "vault_impl": "0xcb1Bd8f8aE14beb58e647d0641bba816dbA446e7"
-            }
+            },
+            "version": "1"
+        },
+        "koda_v2": {
+            "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
+            "address": "0x1F3AF672e1f767d5E6dF25d45c59f35C2D865e23",
+            "contract": "RentingContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 1000,
+                "nft_contract_key": "common.koda",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x314BA3811129AE06Fc35894a3Bb62157028A9Fd9",
+                "protocol_fee": 0,
+                "protocol_wallet": "0x07d96cC26566BFCA358C61fBe7be3Ca771Da7EA6",
+                "vault_impl_key": "common.vault_impl_koda_ape_v2"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0xE012Baf811CF9c05c408e879C399960D1f305903",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
+                "vault_impl": "0xFd586c11ca3d9FEB3aB762078DB92CD021b0c2AD"
+            },
+            "version": "2"
         },
         "mara": {
+            "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
             "address": "0x99a4EC7d9EeEd97C9b9A4411368F64309ca279aD",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.mara",
                 "payment_token_key": "common.ape_token",
-                "vault_impl_key": "common.vault_impl"
+                "vault_impl_key": "common.vault_impl_mara_ape"
             },
             "properties_addresses": {
                 "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
                 "nft_contract": "0x3Bdca51226202Fc2a64211Aa35A8d95D61C6ca99",
                 "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
                 "vault_impl": "0xcb1Bd8f8aE14beb58e647d0641bba816dbA446e7"
-            }
+            },
+            "version": "1"
+        },
+        "mara_v2": {
+            "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
+            "address": "0x0Bce649673e5B6221Cf3100d8e5333d890B555ae",
+            "contract": "RentingContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 1000,
+                "nft_contract_key": "common.mara",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x314BA3811129AE06Fc35894a3Bb62157028A9Fd9",
+                "protocol_fee": 0,
+                "protocol_wallet": "0x07d96cC26566BFCA358C61fBe7be3Ca771Da7EA6",
+                "vault_impl_key": "common.vault_impl_mara_ape_v2"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0x3Bdca51226202Fc2a64211Aa35A8d95D61C6ca99",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
+                "vault_impl": "0xf73108Afca1E0A662604f8F062CDb6fAa8661A7A"
+            },
+            "version": "2"
+        },
+        "otherdeed_v2": {
+            "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
+            "address": "0x25a4710517c680daBd31E5e43a03A7D4e8486D95",
+            "contract": "RentingContract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 1000,
+                "nft_contract_key": "common.otherdeed",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x314BA3811129AE06Fc35894a3Bb62157028A9Fd9",
+                "protocol_fee": 0,
+                "protocol_wallet": "0x07d96cC26566BFCA358C61fBe7be3Ca771Da7EA6",
+                "vault_impl_key": "common.vault_impl_otherdeed_ape_v2"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
+                "nft_contract": "0x790B2cF29Ed4F310bf7641f013C65D4560d28371",
+                "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
+                "vault_impl": "0x9f2d2fe35Cc5b030d2a4D96f0Ed6D264C5a30a6c"
+            },
+            "version": "2"
         }
     }
 }
