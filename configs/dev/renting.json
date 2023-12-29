@@ -22,7 +22,7 @@
             "properties_addresses": {}
         },
         "otherdeed": {
-            "address": "0xe0aA552A10d7EC8760Fc6c246D391E698a82dDf9",
+            "address": "0x9E4c14403d7d9A8A782044E86a93CAE09D7B2ac9",
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
@@ -36,7 +36,7 @@
                 "payment_token_key": "common.ape_token"
             },
             "properties_addresses": {
-                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "delegation_registry": "0xB123284FE148C61FFe0C8fFa71092a8A4cf22bc0",
                 "nft_contract": "0xADeD61D42dE86f9058386D1D0d739d20C7eAfC43",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31"
             },
@@ -68,7 +68,7 @@
                 "payment_token_key": "common.ape_token"
             },
             "properties_addresses": {
-                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "delegation_registry": "0xB123284FE148C61FFe0C8fFa71092a8A4cf22bc0",
                 "nft_contract": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31"
             },
@@ -92,7 +92,7 @@
         },
         "vault_impl_otherdeed_ape": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
-            "address": "0x54614d53FD2b0f2C1591acf7C5076A2a43a380E1",
+            "address": "0x3390809cB869A2eF1C5f42B34280630b091a1Eba",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -101,7 +101,7 @@
             },
             "properties_addresses": {
                 "delegation_registry": "0xB123284FE148C61FFe0C8fFa71092a8A4cf22bc0",
-                "nft_contract": "0xe0aA552A10d7EC8760Fc6c246D391E698a82dDf9",
+                "nft_contract": "0x9E4c14403d7d9A8A782044E86a93CAE09D7B2ac9",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31"
             },
             "version": "2"
@@ -125,7 +125,7 @@
                 "vault_impl_key": "common.vault_impl_koda_ape"
             },
             "properties_addresses": {
-                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "delegation_registry": "0xB123284FE148C61FFe0C8fFa71092a8A4cf22bc0",
                 "nft_contract": "0xADeD61D42dE86f9058386D1D0d739d20C7eAfC43",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
                 "vault_impl": "0x875e74a1887DBC77bfB2207d77c0208B691B6F65"
@@ -165,7 +165,7 @@
                 "vault_impl_key": "common.vault_impl_mara_ape"
             },
             "properties_addresses": {
-                "delegation_registry": "0xd62F2607372553C10d6A66477a79602621366392",
+                "delegation_registry": "0xB123284FE148C61FFe0C8fFa71092a8A4cf22bc0",
                 "nft_contract": "0x198120FB40B7301063fb7e2cd4b846D6E7d743c4",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
                 "vault_impl": "0xbd6D3d5aaDF256d780cB654646f191B7907A3BF1"
@@ -196,7 +196,7 @@
         },
         "otherdeed_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
-            "address": "0x34E0f62F4A15ceE860Ddf2AE86a641D7A4B0473E",
+            "address": "0xd1Af62344Df69cC3F689f80d15E58c0754b81085",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -210,9 +210,9 @@
             },
             "properties_addresses": {
                 "delegation_registry": "0xB123284FE148C61FFe0C8fFa71092a8A4cf22bc0",
-                "nft_contract": "0xe0aA552A10d7EC8760Fc6c246D391E698a82dDf9",
+                "nft_contract": "0x9E4c14403d7d9A8A782044E86a93CAE09D7B2ac9",
                 "payment_token": "0xcE1aF299dA9C64BCAe084eBFB99E5572EEC97e31",
-                "vault_impl": "0x54614d53FD2b0f2C1591acf7C5076A2a43a380E1"
+                "vault_impl": "0x3390809cB869A2eF1C5f42B34280630b091a1Eba"
             },
             "version": "2"
         }
