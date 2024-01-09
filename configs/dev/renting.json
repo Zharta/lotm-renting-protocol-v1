@@ -119,7 +119,7 @@
     },
     "renting": {
         "koda": {
-            "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
+            "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
             "address": "0xCd5F3dcbfcC152179244932f81FFeC0bdfcbcE8F",
             "contract": "RentingContract",
             "properties": {
@@ -163,7 +163,7 @@
             "version": "2"
         },
         "mara": {
-            "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
+            "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
             "address": "0x1f6380D177724657362732ce9cBfd176851b6F77",
             "contract": "RentingContract",
             "properties": {
