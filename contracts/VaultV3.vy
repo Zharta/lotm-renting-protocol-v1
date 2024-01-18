@@ -30,15 +30,11 @@ def __init__(
     _payment_token_addr: address,
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
-    _registry_addr: address
 ):
 
     payment_token_addr = _payment_token_addr
     nft_contract_addr = _nft_contract_addr
     delegation_registry_addr = _delegation_registry_addr
-    registry_addr = _registry_addr
-
-
 
 
 # Functions
@@ -61,31 +57,5 @@ def delegate_to_wallet(sender: address, delegate: address, expiration: uint256):
 
 @view
 @external
-def onERC721Received(_operator: address, _from: address, _tokenId: uint256, _data: Bytes[1024]) -> bytes4:
-    pass
-
-@view
-@external
 def is_initialised() -> bool:
-    pass
-
-@view
-@external
-def owner() -> address:
-    pass
-
-
-@view
-@external
-def payment_token_addr() -> address:
-    pass
-
-@view
-@external
-def nft_contract_addr() -> address:
-    pass
-
-@view
-@external
-def delegation_registry_addr() -> address:
-    pass
+    return False
