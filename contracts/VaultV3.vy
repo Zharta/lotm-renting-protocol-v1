@@ -10,36 +10,47 @@ interface IDelegationRegistry:
     def setHotWallet(hot_wallet_address: address, expiration_timestamp: uint256, lock_hot_wallet_address: bool): nonpayable
     def setExpirationTimestamp(expiration_timestamp: uint256): nonpayable
 
+interface IStaking:
+    def depositApeCoin(amount: uint256, recipient: address): nonpayable
+    def depositBAYC(nfts: DynArray[SingleNft,1]): nonpayable
+    def depositMAYC(nfts: DynArray[SingleNft,1]): nonpayable
+    def withdrawApeCoin(amount: uint256, recipient: address): nonpayable
+    def withdrawBAYC(nfts: DynArray[SingleNft,1], recipient: address): nonpayable
+    def withdrawMAYC(nfts: DynArray[SingleNft,1], recipient: address): nonpayable
+    def claimApeCoin(recipient: address): nonpayable
+    def claimBAYC(nfts: DynArray[uint256,1], recipient: address): nonpayable
+    def claimMAYC(nfts: DynArray[uint256,1], recipient: address): nonpayable
+
 
 # Structs
 
+struct SingleNft:
+    tokenId: uint32
+    amount: uint224
+
+
 # Global Variables
 
-STAKING_DEPOSIT_METHOD: constant(bytes4[3]) = [
-    method_id("depositApeCoin(uint256,address)", output_type=bytes4),
-    method_id("depositBAYC((uint32,uint224)[])", output_type=bytes4),
-    method_id("depositMAYC((uint32,uint224)[])", output_type=bytes4),
-]
+MAX_STAKE_POOL_ID: constant(uint256) = 2
 
-STAKING_WITHDRAW_METHOD: constant(bytes4[3]) = [
-    method_id("withdrawApeCoin(uint256,address)", output_type=bytes4),
-    method_id("withdrawBAYC((uint32,uint224)[],address)", output_type=bytes4),
-    method_id("withdrawMAYC((uint32,uint224)[],address)", output_type=bytes4),
-]
+STAKING_DEPOSIT_METHOD: constant(bytes4[3]) = [0xbd5023a9, 0x46583a05, 0x8ecbffa7]
+# depositApeCoin(uint256,address), depositBAYC((uint32,uint224)[]), depositMAYC((uint32,uint224)[])
 
-STAKING_CLAIM_METHOD: constant(bytes4[3]) = [
-    method_id("claimApeCoin(address)", output_type=bytes4),
-    method_id("claimBAYC(uint256[],address)", output_type=bytes4),
-    method_id("claimMAYC(uint256[],address)", output_type=bytes4),
-]
+STAKING_WITHDRAW_METHOD: constant(bytes4[3]) = [0xe4e81847, 0xaceb3629, 0xed23c906]
+# withdrawApeCoin(uint256,address), withdrawBAYC((uint32,uint224)[],address), withdrawMAYC((uint32,uint224)[],address)
 
+STAKING_CLAIM_METHOD: constant(bytes4[3]) = [0x2ee2de66, 0xb682e859, 0x57a26300]
+# claimApeCoin(address), claimBAYC(uint256[],address), claimMAYC(uint256[],address)
+
+caller: public(address)
 nft_owner: public(address)
 token_id: public(uint256)
-payment_token_addr: public(immutable(address))
-nft_contract_addr: public(immutable(address))
-delegation_registry_addr: public(immutable(address))
+payment_token: public(immutable(IERC20))
+nft_contract: public(immutable(IERC721))
+delegation_registry: public(immutable(IDelegationRegistry))
 staking_addr: public(immutable(address))
-staking_pool_id: public(immutable(uint256))
+staking_pool_id: public(uint256)
+
 
 
 ##### EXTERNAL METHODS - WRITE #####
@@ -51,21 +62,30 @@ def __init__(
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
     _staking_addr: address,
-    _staking_pool_id: uint256,
 ):
 
-    payment_token_addr = _payment_token_addr
-    nft_contract_addr = _nft_contract_addr
-    delegation_registry_addr = _delegation_registry_addr
+    payment_token = IERC20(_payment_token_addr)
+    nft_contract = IERC721(_nft_contract_addr)
+    delegation_registry = IDelegationRegistry(_delegation_registry_addr)
     staking_addr = _staking_addr
-    staking_pool_id = _staking_pool_id
 
 
 # Functions
 
 @external
-def initialise(token_id: uint256, owner: address):
-    pass
+def initialise(token_id: uint256, nft_owner: address, staking_pool_id: uint256):
+    assert not self._is_initialised(), "already initialised"
+    assert staking_pool_id <= MAX_STAKE_POOL_ID, "invalid staking pool id"
+
+    if self.caller != empty(address):
+        assert msg.sender == self.caller, "not caller"
+    else:
+        self.caller = msg.sender
+
+    self.token_id = token_id
+    self.nft_owner = nft_owner
+    self.staking_pool_id = staking_pool_id
+
 
 @external
 def deposit(delegate: address):
@@ -73,29 +93,124 @@ def deposit(delegate: address):
 
 @external
 def withdraw(sender: address):
-    pass
+    assert self._is_initialised(), "not initialised"
+    assert msg.sender == self.caller, "not caller"
+    nft_contract.safeTransferFrom(self, sender, self.token_id, b"")
+    self.nft_owner = empty(address)
 
 @external
 def delegate_to_wallet(delegate: address, expiration: uint256):
-    pass
+    assert self._is_initialised(), "not initialised"
+    assert msg.sender == self.caller, "not caller"
+
+    if delegation_registry.getHotWallet(self) == delegate:
+        delegation_registry.setExpirationTimestamp(expiration)
+    else:
+        delegation_registry.setHotWallet(delegate, expiration, False)
 
 @view
 @external
 def is_initialised() -> bool:
-    return False
+    return self._is_initialised()
+
 
 @external
 def staking_deposit(sender: address, amount: uint256):
-    pass
+    assert self._is_initialised(), "not initialised"
+    assert msg.sender == self.caller, "not caller"
+    assert payment_token.allowance(sender, self) >= amount, "insufficient allowance"
+
+    assert payment_token.transferFrom(sender, self, amount), "transferFrom failed"
+    self._staking_deposit(sender, amount)
+
+    # TODO: log event in Renting contract
+
 
 @external
-def staking_withdraw(sender: address, amount: uint256):
-    pass
+def staking_withdraw(wallet: address, amount: uint256):
+    assert self._is_initialised(), "not initialised"
+    assert msg.sender == self.caller, "not caller"
+    self._staking_withdraw(wallet, amount)
+
+    # TODO: log event in Renting contract
+
 
 @external
-def staking_claim(sender: address, amount: uint256):
-    pass
+def staking_claim(wallet: address):
+    assert self._is_initialised(), "not initialised"
+    assert msg.sender == self.caller, "not caller"
+
+    self._staking_claim(wallet)
+
+    # TODO: log event in Renting contract
 
 @external
-def staking_compound(sender: address):
-    pass
+def staking_compound(wallet: address):
+    assert self._is_initialised(), "not initialised"
+    assert msg.sender == self.caller, "not caller"
+
+    self._staking_claim(self)
+    self._staking_deposit(wallet, payment_token.balanceOf(self))
+
+    # TODO: log event in Renting contract
+
+@internal
+def _staking_deposit(wallet: address, amount: uint256):
+    payment_token.approve(staking_addr, amount)
+
+    if self.staking_pool_id == 0:
+        raw_call(
+            staking_addr,
+            _abi_encode(STAKING_DEPOSIT_METHOD[self.staking_pool_id], self.token_id, self)
+        )
+    else:
+        nfts: DynArray[SingleNft, 1] = [
+            SingleNft({tokenId: convert(self.token_id, uint32), amount: convert(amount, uint224)})
+        ]
+
+        raw_call(
+            staking_addr,
+            _abi_encode(STAKING_DEPOSIT_METHOD[self.staking_pool_id], nfts)
+        )
+
+
+@internal
+def _staking_withdraw(wallet: address, amount: uint256):
+    payment_token.approve(staking_addr, amount)
+
+    if self.staking_pool_id == 0:
+        raw_call(
+            staking_addr,
+            _abi_encode(STAKING_WITHDRAW_METHOD[self.staking_pool_id], self.token_id, wallet)
+        )
+    else:
+        nfts: DynArray[SingleNft, 1] = [
+            SingleNft({tokenId: convert(self.token_id, uint32), amount: convert(amount, uint224)})
+        ]
+
+        raw_call(
+            staking_addr,
+            _abi_encode(STAKING_WITHDRAW_METHOD[self.staking_pool_id], nfts, wallet)
+        )
+
+
+@internal
+def _staking_claim(wallet: address):
+
+    if self.staking_pool_id == 0:
+        raw_call(
+            staking_addr,
+            _abi_encode(STAKING_CLAIM_METHOD[self.staking_pool_id], self.token_id, wallet)
+        )
+    else:
+        nfts: DynArray[uint256, 1] = [self.token_id]
+        raw_call(
+            staking_addr,
+            _abi_encode(STAKING_CLAIM_METHOD[self.staking_pool_id], nfts, wallet)
+        )
+
+
+@view
+@internal
+def _is_initialised() -> bool:
+    return self.nft_owner != empty(address)
