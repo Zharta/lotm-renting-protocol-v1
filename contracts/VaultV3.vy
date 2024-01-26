@@ -89,7 +89,14 @@ def initialise(token_id: uint256, nft_owner: address, staking_pool_id: uint256):
 
 @external
 def deposit(delegate: address):
-    pass
+    assert self._is_initialised(), "not initialised"
+    assert msg.sender == self.caller, "not caller"
+
+    nft_contract.safeTransferFrom(self.nft_owner, self, self.token_id, b"")
+
+    if delegate != empty(address):
+        self._delegate_to_wallet(delegate, 0)
+
 
 @external
 def withdraw(sender: address):
@@ -102,16 +109,7 @@ def withdraw(sender: address):
 def delegate_to_wallet(delegate: address, expiration: uint256):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
-
-    if delegation_registry.getHotWallet(self) == delegate:
-        delegation_registry.setExpirationTimestamp(expiration)
-    else:
-        delegation_registry.setHotWallet(delegate, expiration, False)
-
-@view
-@external
-def is_initialised() -> bool:
-    return self._is_initialised()
+    self._delegate_to_wallet(delegate, expiration)
 
 
 @external
@@ -153,6 +151,27 @@ def staking_compound(wallet: address):
     self._staking_deposit(wallet, payment_token.balanceOf(self))
 
     # TODO: log event in Renting contract
+
+
+@view
+@external
+def is_initialised() -> bool:
+    return self._is_initialised()
+
+
+@view
+@external
+def onERC721Received(_operator: address, _from: address, _tokenId: uint256, _data: Bytes[1024]) -> bytes4:
+    return method_id("onERC721Received(address,address,uint256,bytes)", output_type=bytes4)
+
+
+@internal
+def _delegate_to_wallet(delegate: address, expiration: uint256):
+    if delegation_registry.getHotWallet(self) == delegate:
+        delegation_registry.setExpirationTimestamp(expiration)
+    else:
+        delegation_registry.setHotWallet(delegate, expiration, False)
+
 
 @internal
 def _staking_deposit(wallet: address, amount: uint256):

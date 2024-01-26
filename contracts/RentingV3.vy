@@ -9,16 +9,16 @@ interface ISelf:
 
 interface IVault:
     def is_initialised() -> bool: view
-    def initialise(token_id: uint256, owner: address): nonpayable
+    def initialise(token_id: uint256, nft_owner: address, staking_pool_id: uint256): nonpayable
     def deposit(delegate: address): nonpayable
     def withdraw(sender: address): nonpayable
     def delegate_to_wallet(delegate: address, expiration: uint256): nonpayable
     def nft_owner() -> address: view
-
     def staking_deposit(sender: address, amount: uint256): nonpayable
-    def staking_withdraw(sender: address, amount: uint256): nonpayable
-    def staking_claim(sender: address, amount: uint256): nonpayable
-    def staking_compound(sender: address): nonpayable
+    def staking_withdraw(wallet: address, amount: uint256): nonpayable
+    def staking_claim(wallet: address): nonpayable
+    def staking_compound(wallet: address): nonpayable
+
 
 interface ERC721Receiver:
     def onERC721Received(_operator: address, _from: address, _tokenId: uint256, _data: Bytes[1024]) -> bytes4: view
@@ -193,6 +193,7 @@ nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
 staking_addr: public(immutable(address))
 max_protocol_fee: public(immutable(uint256))
+staking_pool_id: public(immutable(uint256))
 
 protocol_wallet: public(address)
 protocol_fee: public(uint256)
@@ -226,6 +227,7 @@ def __init__(
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
     _staking_addr: address,
+    _staking_pool_id: uint256,
     _max_protocol_fee: uint256,
     _protocol_fee: uint256,
     _protocol_wallet: address,
@@ -247,6 +249,7 @@ def __init__(
     delegation_registry_addr = _delegation_registry_addr
     staking_addr = _staking_addr
     max_protocol_fee = _max_protocol_fee
+    staking_pool_id = _staking_pool_id
 
     self.protocol_wallet = _protocol_wallet
     self.protocol_fee = _protocol_fee
@@ -744,6 +747,6 @@ def _create_vault_if_needed(token_id: uint256) -> address:
         vault = create_minimal_proxy_to(vault_impl_addr, salt=convert(token_id, bytes32))
         # log VaultsCreated(msg.sender, nft_contract_addr, vault_logs, delegate)?
     if not IVault(vault).is_initialised():
-        IVault(vault).initialise(token_id, msg.sender)
+        IVault(vault).initialise(token_id, msg.sender, staking_pool_id)
 
     return vault
