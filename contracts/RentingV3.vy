@@ -413,6 +413,7 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
     rental_logs: DynArray[RentalLog, 32] = []
     protocol_fees_amount: uint256 = self.protocol_fees_amount
+    payback_amounts: uint256 = 0
 
     for token_context in token_contexts:
         vault: IVault = self._get_vault(token_context.token_id)
@@ -430,6 +431,7 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
             token_context.active_rental.amount
         )
         payback_amount: uint256 = token_context.active_rental.amount - pro_rata_rental_amount
+        payback_amounts += payback_amount
 
         protocol_fee_amount: uint256 = pro_rata_rental_amount * token_context.active_rental.protocol_fee / 10000
         protocol_fees_amount += protocol_fee_amount
@@ -443,10 +445,6 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
         # revoke delegation
         vault.delegate_to_wallet(empty(address), 0)
 
-        # transfer unused payment to renter
-        assert IERC20(payment_token_addr).transfer(token_context.active_rental.renter, payback_amount), "transfer failed"
-
-
         rental_logs.append(RentalLog({
             id: token_context.active_rental.id,
             vault: vault.address,
@@ -459,6 +457,8 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
             protocol_fee: token_context.active_rental.protocol_fee,
             protocol_wallet: token_context.active_rental.protocol_wallet
         }))
+
+    assert IERC20(payment_token_addr).transfer(msg.sender, payback_amounts), "transfer failed"
 
     if protocol_fees_amount > 0:
         self.protocol_fees_amount = 0
@@ -529,45 +529,52 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def stake_deposit(token_id: uint256, amount: uint256):
-    """
-    check if msg.sender is owner or has permission
-    call vault stake_deposit
-    """
+    # TODO check if msg.sender is owner / nft_owner
+    # TODO batch?
+
     assert staking_addr != empty(address), "staking not supported"
+    vault: IVault = self._get_vault(token_id)
+    vault.staking_deposit(msg.sender, amount)
+
+    # TODO: log event
+
 
 @external
 def stake_withdraw(token_id: uint256, recepient: address, amount: uint256):
-    """
-    check if msg.sender is owner or has permission
-    check if stacked_amount - locked_amount >= amount
-    call vault stake_withdraw
-    """
+    # TODO check if msg.sender is owner / nft_owner
+    # TODO batch?
+
     assert staking_addr != empty(address), "staking not supported"
+    vault: IVault = self._get_vault(token_id)
+    vault.staking_withdraw(recepient, amount)
+
+    # TODO: log event
+
 
 @external
 def stake_claim(token_id: uint256, recepient: address):
-    """
-    check if msg.sender is owner or has permission
-    check if not stake claims lock exists
-    call vault stake_claim
-    """
+    # TODO check if msg.sender is owner / nft_owner
+    # TODO batch?
+
     assert staking_addr != empty(address), "staking not supported"
+    vault: IVault = self._get_vault(token_id)
+    vault.staking_claim(recepient)
+
+    # TODO: log event
 
 @external
 def stake_compound(token_id: uint256):
-    """
-    check if msg.sender is owner
-    check if pool limit is not exceeded
-    call vault stake_compound
-    """
-    assert staking_addr != empty(address), "staking not supported"
+    # TODO check if msg.sender is owner / nft_owner
+    # TODO batch?
 
+    assert staking_addr != empty(address), "staking not supported"
+    vault: IVault = self._get_vault(token_id)
+    vault.staking_compound(msg.sender)
+
+    # TODO: log event
 
 @external
 def claim(token_contexts: DynArray[TokenContext, 32]):
-    """
-    transfer unclaimed_rewards[msg.sender]
-    """
 
     reward_logs: DynArray[RewardLog, 32] = []
 

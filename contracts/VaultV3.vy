@@ -121,7 +121,6 @@ def staking_deposit(sender: address, amount: uint256):
     assert payment_token.transferFrom(sender, self, amount), "transferFrom failed"
     self._staking_deposit(sender, amount)
 
-    # TODO: log event in Renting contract
 
 
 @external
@@ -130,27 +129,19 @@ def staking_withdraw(wallet: address, amount: uint256):
     assert msg.sender == self.caller, "not caller"
     self._staking_withdraw(wallet, amount)
 
-    # TODO: log event in Renting contract
-
 
 @external
 def staking_claim(wallet: address):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
-
     self._staking_claim(wallet)
-
-    # TODO: log event in Renting contract
 
 @external
 def staking_compound(wallet: address):
     assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
-
     self._staking_claim(self)
     self._staking_deposit(wallet, payment_token.balanceOf(self))
-
-    # TODO: log event in Renting contract
 
 
 @view
