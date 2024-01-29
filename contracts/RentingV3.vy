@@ -181,6 +181,28 @@ event ApprovalForAll:
     operator: indexed(address)
     approved: bool
 
+event StakingDeposit:
+    owner: address
+    nft_contract: address
+    token_id: uint256
+    amount: uint256
+
+event StakingWithdraw:
+    owner: address
+    nft_contract: address
+    token_id: uint256
+    amount: uint256
+
+event StakingClaim:
+    owner: address
+    nft_contract: address
+    token_id: uint256
+
+event StakingCompound:
+    owner: address
+    nft_contract: address
+    token_id: uint256
+
 
 # Global Variables
 
@@ -536,7 +558,7 @@ def stake_deposit(token_id: uint256, amount: uint256):
     vault: IVault = self._get_vault(token_id)
     vault.staking_deposit(msg.sender, amount)
 
-    # TODO: log event
+    log StakingDeposit(msg.sender, nft_contract_addr, token_id, amount)
 
 
 @external
@@ -548,7 +570,7 @@ def stake_withdraw(token_id: uint256, recepient: address, amount: uint256):
     vault: IVault = self._get_vault(token_id)
     vault.staking_withdraw(recepient, amount)
 
-    # TODO: log event
+    log StakingWithdraw(msg.sender, nft_contract_addr, token_id, amount)
 
 
 @external
@@ -560,7 +582,7 @@ def stake_claim(token_id: uint256, recepient: address):
     vault: IVault = self._get_vault(token_id)
     vault.staking_claim(recepient)
 
-    # TODO: log event
+    log StakingClaim(msg.sender, nft_contract_addr, token_id)
 
 @external
 def stake_compound(token_id: uint256):
@@ -571,7 +593,8 @@ def stake_compound(token_id: uint256):
     vault: IVault = self._get_vault(token_id)
     vault.staking_compound(msg.sender)
 
-    # TODO: log event
+    log StakingCompound(msg.sender, nft_contract_addr, token_id)
+
 
 @external
 def claim(token_contexts: DynArray[TokenContext, 32]):
@@ -607,9 +630,12 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def claim_fees():
-    """
-    transfer protocol_fees_amount
-    """
+    assert msg.sender == self.protocol_admin, "not admin"
+    assert self.protocol_fees_amount > 0, "no fees to claim"
+    protocol_fees_amount: uint256 = self.protocol_fees_amount
+    self.protocol_fees_amount = 0
+    assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+
 
 @external
 def set_protocol_fee(protocol_fee: uint256):
