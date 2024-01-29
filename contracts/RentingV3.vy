@@ -639,34 +639,39 @@ def claim_fees():
 
 @external
 def set_protocol_fee(protocol_fee: uint256):
+    assert msg.sender == self.protocol_admin, "not protocol admin"
+    assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
+    assert protocol_fee != self.protocol_fee, "protocol fee is the same"
 
-    """
-    """
+    self.protocol_fee = protocol_fee
     log ProtocolFeeSet(self.protocol_fee, protocol_fee, self.protocol_wallet)
-
 
 
 @external
 def change_protocol_wallet(new_protocol_wallet: address):
+    assert msg.sender == self.protocol_admin, "not protocol admin"
+    assert new_protocol_wallet != empty(address), "wallet is the zero address"
 
-    """
-    """
+    self.protocol_wallet = new_protocol_wallet
     log ProtocolWalletChanged(self.protocol_wallet, new_protocol_wallet)
 
 
 @external
 def propose_admin(_address: address):
+    assert msg.sender == self.protocol_admin, "not the admin"
+    assert _address != empty(address), "_address is the zero address"
+    assert self.protocol_admin != _address, "proposed admin addr is the admin"
+    assert self.proposed_admin != _address, "proposed admin addr is the same"
 
-    """
-    """
+    self.proposed_admin = _address
     log AdminProposed(self.protocol_admin, _address)
 
 
 @external
 def claim_ownership():
-
-    """
-    """
+    assert msg.sender == self.proposed_admin, "not the proposed"
+    self.protocol_admin = self.proposed_admin
+    self.proposed_admin = empty(address)
     log OwnershipTransferred(self.protocol_admin, self.proposed_admin)
 
 
