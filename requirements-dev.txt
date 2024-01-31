@@ -4,37 +4,33 @@
 #
 #    pip-compile --extra=dev --output-file=requirements-dev.txt pyproject.toml
 #
-aiohttp==3.8.5
+aiohttp==3.9.3
     # via web3
 aiosignal==1.3.1
     # via aiohttp
-appnope==0.1.3
-    # via ipython
-asttokens==2.2.1
+annotated-types==0.6.0
+    # via pydantic
+asttokens==2.4.1
     # via
     #   stack-data
     #   vyper
-async-timeout==4.0.2
-    # via aiohttp
-attrs==23.1.0
+attrs==23.2.0
     # via
     #   aiohttp
     #   hypothesis
     #   jsonschema
     #   referencing
-backcall==0.2.0
-    # via ipython
 base58==1.0.3
     # via
     #   py-cid
     #   py-multihash
-bitarray==2.8.1
+bitarray==2.9.2
     # via eth-account
-black==23.7.0
+black==24.1.1
     # via lotm-renting-protocol-v1 (pyproject.toml)
-boto3==1.28.20
+boto3==1.34.32
     # via lotm-renting-protocol-v1 (pyproject.toml)
-botocore==1.31.20
+botocore==1.34.32
     # via
     #   boto3
     #   s3transfer
@@ -42,30 +38,28 @@ cached-property==1.5.2
     # via
     #   py-ecc
     #   py-evm
-certifi==2023.7.22
+cbor2==5.6.0
+    # via vyper
+certifi==2023.11.17
     # via requests
-cffi==1.15.1
+cffi==1.16.0
     # via
     #   cryptography
     #   pynacl
-cfgv==3.3.1
+cfgv==3.4.0
     # via pre-commit
-charset-normalizer==3.2.0
-    # via
-    #   aiohttp
-    #   requests
-click==8.1.6
+charset-normalizer==3.3.2
+    # via requests
+click==8.1.7
     # via
     #   black
     #   eth-ape
     #   lotm-renting-protocol-v1 (pyproject.toml)
-commonmark==0.9.1
-    # via rich
-coverage==7.2.7
+coverage==7.4.1
     # via lotm-renting-protocol-v1 (pyproject.toml)
-cryptography==41.0.3
+cryptography==42.0.2
     # via pyjwt
-cytoolz==0.12.2
+cytoolz==0.12.3
     # via eth-utils
 dataclassy==0.11.1
     # via eip712
@@ -73,13 +67,13 @@ decorator==5.1.1
     # via ipython
 deprecated==1.2.14
     # via pygithub
-distlib==0.3.7
+distlib==0.3.8
     # via virtualenv
-docstring-to-markdown==0.12
+docstring-to-markdown==0.13
     # via python-lsp-server
-eip712==0.2.1
+eip712==0.2.3
     # via eth-ape
-eth-abi==4.1.0
+eth-abi==4.2.1
     # via
     #   eip712
     #   eth-account
@@ -87,26 +81,27 @@ eth-abi==4.1.0
     #   eth-tester
     #   titanoboa
     #   web3
-eth-account==0.8.0
+eth-account==0.10.0
     # via
     #   eip712
     #   eth-ape
     #   eth-tester
     #   titanoboa
     #   web3
-eth-ape==0.6.15
+eth-ape==0.7.7
     # via lotm-renting-protocol-v1 (pyproject.toml)
-eth-bloom==2.0.0
+eth-bloom==3.0.0
     # via py-evm
-eth-hash[pycryptodome,pysha3]==0.5.2
+eth-hash[pycryptodome,pysha3]==0.6.0
     # via
     #   eip712
     #   eth-bloom
+    #   eth-pydantic-types
     #   eth-tester
     #   eth-utils
     #   trie
     #   web3
-eth-keyfile==0.6.1
+eth-keyfile==0.7.0
     # via eth-account
 eth-keys==0.4.0
     # via
@@ -114,24 +109,32 @@ eth-keys==0.4.0
     #   eth-keyfile
     #   eth-tester
     #   py-evm
-eth-rlp==0.3.0
+eth-pydantic-types==0.1.0a5
+    # via
+    #   eth-ape
+    #   ethpm-types
+    #   evm-trace
+eth-rlp==1.0.1
     # via eth-account
-eth-stdlib==0.2.6
+eth-stdlib==0.2.7
     # via titanoboa
 eth-tester[py-evm]==0.9.1b1
-    # via web3
-eth-typing==3.4.0
+    # via
+    #   eth-tester
+    #   web3
+eth-typing==3.5.2
     # via
     #   eip712
     #   eth-abi
     #   eth-ape
     #   eth-keys
+    #   eth-pydantic-types
     #   eth-utils
     #   py-ecc
     #   py-evm
     #   titanoboa
     #   web3
-eth-utils==2.2.0
+eth-utils==2.3.1
     # via
     #   eip712
     #   eth-abi
@@ -139,6 +142,7 @@ eth-utils==2.2.0
     #   eth-ape
     #   eth-keyfile
     #   eth-keys
+    #   eth-pydantic-types
     #   eth-rlp
     #   eth-tester
     #   ethpm-types
@@ -148,21 +152,21 @@ eth-utils==2.2.0
     #   rlp
     #   trie
     #   web3
-ethpm-types==0.5.3
-    # via
-    #   eth-ape
-    #   evm-trace
-evm-trace==0.1.0a22
+ethpm-types==0.6.7
+    # via eth-ape
+evm-trace==0.1.2
+    # via eth-ape
+evmchains==0.0.2
     # via eth-ape
 execnet==2.0.2
     # via pytest-xdist
-executing==1.2.0
+executing==2.0.1
     # via stack-data
-filelock==3.12.2
+filelock==3.13.1
     # via virtualenv
-flake8==6.1.0
+flake8==7.0.0
     # via python-lsp-server
-frozenlist==1.4.0
+frozenlist==1.4.1
     # via
     #   aiohttp
     #   aiosignal
@@ -170,34 +174,33 @@ hexbytes==0.3.1
     # via
     #   eip712
     #   eth-account
-    #   eth-ape
+    #   eth-pydantic-types
     #   eth-rlp
-    #   ethpm-types
     #   trie
     #   web3
-hypothesis==6.82.2
+hypothesis==6.97.4
     # via
     #   lotm-renting-protocol-v1 (pyproject.toml)
     #   titanoboa
-identify==2.5.26
+identify==2.5.33
     # via pre-commit
-idna==3.4
+idna==3.6
     # via
     #   requests
     #   yarl
 ijson==3.2.3
     # via eth-ape
-importlib-metadata==6.8.0
+importlib-metadata==7.0.1
     # via
     #   eth-ape
     #   vyper
 iniconfig==2.0.0
     # via pytest
-ipython==8.14.0
+ipython==8.21.0
     # via
     #   eth-ape
     #   lotm-renting-protocol-v1 (pyproject.toml)
-jedi==0.18.2
+jedi==0.19.1
     # via
     #   ipython
     #   python-lsp-server
@@ -205,9 +208,9 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-jsonschema==4.19.0
+jsonschema==4.21.1
     # via web3
-jsonschema-specifications==2023.7.1
+jsonschema-specifications==2023.12.1
     # via jsonschema
 lazyasd==0.1.4
     # via eth-ape
@@ -215,23 +218,27 @@ lru-dict==1.2.0
     # via
     #   py-evm
     #   web3
+markdown-it-py==3.0.0
+    # via rich
 matplotlib-inline==0.1.6
     # via ipython
 mccabe==0.7.0
     # via flake8
+mdurl==0.1.2
+    # via markdown-it-py
 morphys==1.0
     # via
     #   py-cid
     #   py-multibase
     #   py-multicodec
     #   py-multihash
-msgspec==0.17.0
+msgspec==0.18.6
     # via evm-trace
 multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
-mypy==1.4.1
+mypy==1.8.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
 mypy-extensions==1.0.0
     # via
@@ -241,43 +248,40 @@ mypy-extensions==1.0.0
     #   py-evm
 nodeenv==1.8.0
     # via pre-commit
-numpy==1.25.2
+numpy==1.26.3
     # via pandas
-packaging==23.1
+packaging==23.2
     # via
     #   black
     #   eth-ape
     #   pytest
     #   pytoolconfig
+    #   vyper
 pandas==1.5.3
     # via eth-ape
 parsimonious==0.9.0
     # via eth-abi
 parso==0.8.3
     # via jedi
-pathspec==0.11.2
+pathspec==0.12.1
     # via black
-pexpect==4.8.0
+pexpect==4.9.0
     # via ipython
-pickleshare==0.7.5
-    # via ipython
-platformdirs==3.10.0
+platformdirs==4.2.0
     # via
     #   black
     #   pytoolconfig
     #   virtualenv
-pluggy==1.2.0
+pluggy==1.4.0
     # via
     #   eth-ape
     #   pytest
     #   python-lsp-server
-plyvel==1.5.0
-    # via titanoboa
-pre-commit==3.3.3
+pre-commit==3.6.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
-prompt-toolkit==3.0.39
+prompt-toolkit==3.0.43
     # via ipython
-protobuf==4.23.4
+protobuf==4.25.2
     # via web3
 ptyprocess==0.7.0
     # via pexpect
@@ -292,7 +296,7 @@ py-evm==0.7.0a4
     #   eth-tester
     #   evm-trace
     #   titanoboa
-py-geth==3.13.0
+py-geth==4.2.0
     # via
     #   eth-ape
     #   web3
@@ -302,41 +306,51 @@ py-multicodec==0.2.1
     # via py-cid
 py-multihash==0.2.3
     # via py-cid
-pycodestyle==2.11.0
+pycodestyle==2.11.1
     # via flake8
 pycparser==2.21
     # via cffi
-pycryptodome==3.18.0
+pycryptodome==3.20.0
     # via
     #   eth-hash
     #   eth-keyfile
+    #   eth-stdlib
     #   vyper
-pydantic==1.10.12
+pydantic==2.5.3
     # via
     #   eth-ape
+    #   eth-pydantic-types
     #   ethpm-types
     #   evm-trace
+    #   evmchains
+    #   pydantic-settings
+pydantic-core==2.14.6
+    # via pydantic
+pydantic-settings==2.1.0
+    # via eth-ape
 pyethash==0.1.27
     # via py-evm
-pyflakes==3.1.0
+pyflakes==3.2.0
     # via flake8
 pygithub==1.59.1
     # via eth-ape
-pygments==2.16.1
+pygments==2.17.2
     # via
     #   ipython
     #   rich
 pyjwt[crypto]==2.8.0
-    # via pygithub
+    # via
+    #   pygithub
+    #   pyjwt
 pynacl==1.5.0
     # via pygithub
-pytest==7.4.0
+pytest==7.4.4
     # via
     #   eth-ape
     #   lotm-renting-protocol-v1 (pyproject.toml)
     #   pytest-xdist
     #   titanoboa
-pytest-xdist==3.3.1
+pytest-xdist==3.5.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
 python-baseconv==1.2.2
     # via py-multibase
@@ -345,25 +359,29 @@ python-dateutil==2.8.2
     #   botocore
     #   eth-ape
     #   pandas
-python-lsp-jsonrpc==1.0.0
+python-dotenv==1.0.1
+    # via pydantic-settings
+python-lsp-jsonrpc==1.1.2
     # via python-lsp-server
-python-lsp-server[flake8]==1.7.4
+python-lsp-server[flake8]==1.10.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
-pytoolconfig[global]==1.2.5
-    # via rope
-pytz==2023.3
+pytoolconfig[global]==1.3.1
+    # via
+    #   pytoolconfig
+    #   rope
+pytz==2023.4
     # via pandas
-pyunormalize==15.0.0
+pyunormalize==15.1.0
     # via web3
 pyyaml==6.0.1
     # via
     #   eth-ape
     #   pre-commit
-referencing==0.30.2
+referencing==0.33.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2023.6.3
+regex==2023.12.25
     # via parsimonious
 requests==2.31.0
     # via
@@ -372,7 +390,7 @@ requests==2.31.0
     #   pygithub
     #   titanoboa
     #   web3
-rich==12.6.0
+rich==13.7.0
     # via
     #   eth-ape
     #   titanoboa
@@ -383,23 +401,20 @@ rlp==3.0.0
     #   eth-tester
     #   py-evm
     #   trie
-rope==1.9.0
+rope==1.12.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
-rpds-py==0.9.2
+rpds-py==0.17.1
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.6.1
+s3transfer==0.10.0
     # via boto3
 safe-pysha3==1.0.4
-    # via
-    #   eth-hash
-    #   eth-stdlib
+    # via eth-hash
 semantic-version==2.10.0
     # via
     #   eth-tester
     #   py-geth
-    #   vyper
 six==1.16.0
     # via
     #   asttokens
@@ -411,63 +426,73 @@ sortedcontainers==2.4.0
     # via
     #   hypothesis
     #   trie
-sqlalchemy==2.0.19
+sqlalchemy==2.0.25
     # via eth-ape
-stack-data==0.6.2
+stack-data==0.6.3
     # via ipython
-titanoboa @ git+https://github.com/vyperlang/titanoboa@44c14406eda4fefc0dad99a287dff7fae2172a18
-    # via lotm-renting-protocol-v1 (pyproject.toml)
-toolz==0.12.0
+titanoboa[forking-recommended] @ git+https://github.com/vyperlang/titanoboa
+    # via
+    #   lotm-renting-protocol-v1 (pyproject.toml)
+    #   titanoboa
+toolz==0.12.1
     # via cytoolz
-tqdm==4.65.0
+tqdm==4.66.1
     # via eth-ape
-traitlets==5.9.0
+traitlets==5.14.1
     # via
     #   eth-ape
     #   ipython
     #   matplotlib-inline
-trie==2.1.1
+trie==2.2.0
     # via py-evm
-typing-extensions==4.7.1
+typing-extensions==4.9.0
     # via
+    #   eth-pydantic-types
+    #   eth-rlp
+    #   eth-typing
+    #   ethpm-types
     #   mypy
     #   pydantic
+    #   pydantic-core
     #   sqlalchemy
     #   web3
-ujson==5.8.0
+ujson==5.9.0
     # via
     #   python-lsp-jsonrpc
     #   python-lsp-server
     #   titanoboa
-urllib3==1.26.16
+urllib3==2.0.7
     # via
     #   botocore
+    #   eth-ape
     #   requests
 varint==1.0.2
     # via
     #   py-multicodec
     #   py-multihash
-virtualenv==20.24.2
+virtualenv==20.25.0
     # via pre-commit
-vyper==0.3.9
+vyper==0.3.10
     # via
     #   lotm-renting-protocol-v1 (pyproject.toml)
     #   titanoboa
 watchdog==3.0.0
     # via eth-ape
-wcwidth==0.2.6
+wcwidth==0.2.13
     # via prompt-toolkit
-web3[tester]==6.8.0
-    # via eth-ape
-websockets==11.0.3
+web3[tester]==6.15.0
+    # via
+    #   eth-ape
+    #   web3
+websockets==12.0
     # via web3
-wheel==0.41.1
+wheel==0.42.0
     # via vyper
-wrapt==1.15.0
+wrapt==1.16.0
     # via deprecated
-yarl==1.9.2
+yarl==1.9.4
     # via aiohttp
-zipp==3.16.2
+zipp==3.17.0
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:

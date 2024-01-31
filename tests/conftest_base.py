@@ -5,6 +5,8 @@ from textwrap import dedent
 
 import boa
 import vyper
+from boa.contracts.vyper.event import Event
+from boa.contracts.vyper.vyper_contract import VyperContract
 from eth.exceptions import Revert
 from web3 import Web3
 
@@ -12,25 +14,21 @@ ZERO_ADDRESS = boa.eval("empty(address)")
 ZERO_BYTES32 = boa.eval("empty(bytes32)")
 
 
-def get_last_event(contract: boa.vyper.contract.VyperContract, name: str = None):
+def get_last_event(contract: VyperContract, name: str = None):
     print("CONTRACT LOGS", contract.get_logs())
     print("\n\n\n")
-    matching_events = [
-        e for e in contract.get_logs() if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)
-    ]
+    matching_events = [e for e in contract.get_logs() if isinstance(e, Event) and (name is None or name == e.event_type.name)]
     return EventWrapper(matching_events[-1])
 
 
-def get_events(contract: boa.vyper.contract.VyperContract, name: str = None):
+def get_events(contract: VyperContract, name: str = None):
     return [
-        EventWrapper(e)
-        for e in contract.get_logs()
-        if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)
+        EventWrapper(e) for e in contract.get_logs() if isinstance(e, Event) and (name is None or name == e.event_type.name)
     ]
 
 
 class EventWrapper:
-    def __init__(self, event: boa.vyper.event.Event):
+    def __init__(self, event: Event):
         self.event = event
         self.event_name = event.event_type.name
 

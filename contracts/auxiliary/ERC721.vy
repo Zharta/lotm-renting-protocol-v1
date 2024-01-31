@@ -6,7 +6,7 @@
 @author Takayuki Jimba (@yudetamago)
 """
 
-# @version 0.3.9
+# @version 0.3.10
 
 from vyper.interfaces import ERC165
 from vyper.interfaces import ERC721

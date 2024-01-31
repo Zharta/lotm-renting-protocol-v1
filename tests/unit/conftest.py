@@ -60,12 +60,12 @@ def delegation_registry_warm_contract():
 
 @pytest.fixture(scope="session")
 def vault_contract_def():
-    return boa.load_partial("contracts/Vault.vy")
+    return boa.load_partial("contracts/VaultV3.vy")
 
 
 @pytest.fixture(scope="session")
 def renting_contract_def():
-    return boa.load_partial("contracts/Renting.vy")
+    return boa.load_partial("contracts/RentingV3.vy")
 
 
 @pytest.fixture(scope="module")
