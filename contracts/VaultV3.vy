@@ -43,10 +43,6 @@ STAKING_CLAIM_METHOD: constant(bytes4[3]) = [0x2ee2de66, 0xb682e859, 0x57a26300]
 # claimApeCoin(address), claimBAYC(uint256[],address), claimMAYC(uint256[],address)
 
 caller: public(address)
-# XXX remove
-nft_owner: public(address)
-# XXX remove
-token_id: public(uint256)
 payment_token: public(immutable(IERC20))
 nft_contract: public(immutable(IERC721))
 delegation_registry: public(immutable(IDelegationRegistry))
@@ -75,8 +71,7 @@ def __init__(
 # Functions
 
 @external
-def initialise(token_id: uint256, nft_owner: address, staking_pool_id: uint256):
-    assert not self._is_initialised(), "already initialised"
+def initialise(staking_pool_id: uint256):
     assert staking_pool_id <= MAX_STAKE_POOL_ID, "invalid staking pool id"
 
     if self.caller != empty(address):
@@ -84,74 +79,57 @@ def initialise(token_id: uint256, nft_owner: address, staking_pool_id: uint256):
     else:
         self.caller = msg.sender
 
-    self.token_id = token_id
-    self.nft_owner = nft_owner
     self.staking_pool_id = staking_pool_id
 
 
 @external
-def deposit(delegate: address):
-    assert self._is_initialised(), "not initialised"
+def deposit(token_id: uint256, nft_owner: address, delegate: address):
     assert msg.sender == self.caller, "not caller"
 
-    nft_contract.safeTransferFrom(self.nft_owner, self, self.token_id, b"")
+    nft_contract.safeTransferFrom(nft_owner, self, token_id, b"")
 
     if delegate != empty(address):
         self._delegate_to_wallet(delegate, 0)
 
 
 @external
-def withdraw(sender: address):
-    assert self._is_initialised(), "not initialised"
+def withdraw(token_id: uint256, wallet: address):
     assert msg.sender == self.caller, "not caller"
-    nft_contract.safeTransferFrom(self, sender, self.token_id, b"")
-    self.nft_owner = empty(address)
-    if delegate != empty(address):
-        self._delegate_to_wallet(empty(address), 0)
+    nft_contract.safeTransferFrom(self, wallet, token_id, b"")
+    self._delegate_to_wallet(empty(address), 0)
 
 @external
 def delegate_to_wallet(delegate: address, expiration: uint256):
-    assert self._is_initialised(), "not initialised"
     assert msg.sender == self.caller, "not caller"
     self._delegate_to_wallet(delegate, expiration)
 
 
 @external
-def staking_deposit(sender: address, amount: uint256):
-    assert self._is_initialised(), "not initialised"
+def staking_deposit(sender: address, amount: uint256, token_id: uint256):
     assert msg.sender == self.caller, "not caller"
     assert payment_token.allowance(sender, self) >= amount, "insufficient allowance"
 
     assert payment_token.transferFrom(sender, self, amount), "transferFrom failed"
-    self._staking_deposit(sender, amount)
-
+    self._staking_deposit(sender, amount, token_id)
 
 
 @external
-def staking_withdraw(wallet: address, amount: uint256):
-    assert self._is_initialised(), "not initialised"
+def staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
     assert msg.sender == self.caller, "not caller"
-    self._staking_withdraw(wallet, amount)
+    self._staking_withdraw(wallet, amount, token_id)
 
 
 @external
-def staking_claim(wallet: address):
-    assert self._is_initialised(), "not initialised"
+def staking_claim(wallet: address, token_id: uint256):
     assert msg.sender == self.caller, "not caller"
-    self._staking_claim(wallet)
+    self._staking_claim(wallet, token_id)
+
 
 @external
-def staking_compound(wallet: address):
-    assert self._is_initialised(), "not initialised"
+def staking_compound(wallet: address, token_id: uint256):
     assert msg.sender == self.caller, "not caller"
-    self._staking_claim(self)
-    self._staking_deposit(wallet, payment_token.balanceOf(self))
-
-
-@view
-@external
-def is_initialised() -> bool:
-    return self._is_initialised()
+    self._staking_claim(self, token_id)
+    self._staking_deposit(wallet, payment_token.balanceOf(self), token_id)
 
 
 @view
@@ -169,17 +147,17 @@ def _delegate_to_wallet(delegate: address, expiration: uint256):
 
 
 @internal
-def _staking_deposit(wallet: address, amount: uint256):
+def _staking_deposit(wallet: address, amount: uint256, token_id: uint256):
     payment_token.approve(staking_addr, amount)
 
     if self.staking_pool_id == 0:
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_DEPOSIT_METHOD[self.staking_pool_id], self.token_id, self)
+            _abi_encode(STAKING_DEPOSIT_METHOD[self.staking_pool_id], token_id, self)
         )
     else:
         nfts: DynArray[SingleNft, 1] = [
-            SingleNft({tokenId: convert(self.token_id, uint32), amount: convert(amount, uint224)})
+            SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})
         ]
 
         raw_call(
@@ -189,17 +167,17 @@ def _staking_deposit(wallet: address, amount: uint256):
 
 
 @internal
-def _staking_withdraw(wallet: address, amount: uint256):
+def _staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
     payment_token.approve(staking_addr, amount)
 
     if self.staking_pool_id == 0:
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_WITHDRAW_METHOD[self.staking_pool_id], self.token_id, wallet)
+            _abi_encode(STAKING_WITHDRAW_METHOD[self.staking_pool_id], token_id, wallet)
         )
     else:
         nfts: DynArray[SingleNft, 1] = [
-            SingleNft({tokenId: convert(self.token_id, uint32), amount: convert(amount, uint224)})
+            SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})
         ]
 
         raw_call(
@@ -209,22 +187,16 @@ def _staking_withdraw(wallet: address, amount: uint256):
 
 
 @internal
-def _staking_claim(wallet: address):
+def _staking_claim(wallet: address, token_id: uint256):
 
     if self.staking_pool_id == 0:
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_CLAIM_METHOD[self.staking_pool_id], self.token_id, wallet)
+            _abi_encode(STAKING_CLAIM_METHOD[self.staking_pool_id], token_id, wallet)
         )
     else:
-        nfts: DynArray[uint256, 1] = [self.token_id]
+        nfts: DynArray[uint256, 1] = [token_id]
         raw_call(
             staking_addr,
             _abi_encode(STAKING_CLAIM_METHOD[self.staking_pool_id], nfts, wallet)
         )
-
-
-@view
-@internal
-def _is_initialised() -> bool:
-    return self.nft_owner != empty(address)

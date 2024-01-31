@@ -11,16 +11,14 @@ interface ISelf:
 
 
 interface IVault:
-    def is_initialised() -> bool: view
-    def initialise(token_id: uint256, nft_owner: address, staking_pool_id: uint256): nonpayable
-    def deposit(delegate: address): nonpayable
-    def withdraw(sender: address): nonpayable
+    def initialise(staking_pool_id: uint256): nonpayable
+    def deposit(token_id: uint256, nft_owner: address, delegate: address): nonpayable
+    def withdraw(token_id: uint256, wallet: address): nonpayable
     def delegate_to_wallet(delegate: address, expiration: uint256): nonpayable
-    def nft_owner() -> address: view
-    def staking_deposit(sender: address, amount: uint256): nonpayable
-    def staking_withdraw(wallet: address, amount: uint256): nonpayable
-    def staking_claim(wallet: address): nonpayable
-    def staking_compound(wallet: address): nonpayable
+    def staking_deposit(sender: address, amount: uint256, token_id: uint256): nonpayable
+    def staking_withdraw(wallet: address, amount: uint256, token_id: uint256): nonpayable
+    def staking_claim(wallet: address, token_id: uint256): nonpayable
+    def staking_compound(wallet: address, token_id: uint256): nonpayable
 
 
 interface ERC721Receiver:
@@ -31,8 +29,8 @@ interface ERC721Receiver:
 
 struct TokenContext:
     token_id: uint256
-    active_rental: Rental
     nft_owner: address
+    active_rental: Rental
 
 struct Rental:
     id: bytes32 # keccak256 of the renter, token_id, start and expiration
@@ -319,10 +317,9 @@ def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: add
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
         assert not self._is_rental_active(token_context.active_rental), "active rental"
+        assert msg.sender == token_context.nft_owner, "not owner"
         vault: IVault = self._get_vault(token_context.token_id)
 
-        # TODO avoid this vault double call
-        assert msg.sender == vault.nft_owner(), "not owner"
         vault.delegate_to_wallet(delegate, 0)
 
         vault_logs.append(VaultLog({vault: vault.address, token_id: token_context.token_id}))
@@ -334,11 +331,16 @@ def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: add
 @external
 def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
 
+    vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
+
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
         assert self._is_rental_active(token_context.active_rental), "no active rental"
         assert msg.sender == token_context.active_rental.renter, "not renter"
-        self._get_vault(token_context.token_id).delegate_to_wallet(delegate, token_context.active_rental.expiration)
+
+        vault: IVault = self._get_vault(token_context.token_id)
+        vault.delegate_to_wallet(delegate, token_context.active_rental.expiration)
+
         self._store_rental_state(token_context.token_id, Rental({
             id: token_context.active_rental.id,
             owner: token_context.active_rental.owner,
@@ -352,7 +354,10 @@ def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delega
             protocol_fee: token_context.active_rental.protocol_fee,
             protocol_wallet: token_context.active_rental.protocol_wallet
         }))
-        # TODO log DelegatedToWallet?
+
+        vault_logs.append(VaultLog({vault: vault.address, token_id: token_context.token_id}))
+
+    log DelegatedToWallet(msg.sender, delegate, nft_contract_addr, vault_logs)
 
 
 
@@ -363,8 +368,8 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
     for token_id in token_ids:
         assert self.rental_states[token_id] == empty_state_hash, "invalid state"
-        vault: address = self._create_vault_if_needed(token_id)
-        IVault(vault).deposit(delegate)
+        vault: IVault = self._create_vault_if_needed(token_id)
+        vault.deposit(token_id, msg.sender, delegate)
 
         self.rental_states[token_id] = empty_state_hash
         self._mint_token_to(msg.sender, token_id)
@@ -372,7 +377,7 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
         log Transfer(empty(address), msg.sender, token_id)
 
         vault_logs.append(VaultLog({
-            vault: vault,
+            vault: vault.address,
             token_id: token_id
         }))
 
@@ -589,16 +594,15 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
         vault: IVault = self._get_vault(token_context.token_id)
 
-        rental: Rental = self._consolidate_claims(token_context.active_rental)
+        rental: Rental = self._consolidate_claims(token_context.active_rental, False)
 
-        # TODO avoid storing state twice
         self._store_rental_state(token_context.token_id, empty(Rental))
 
         # TODO should we burn the token?
         self._burn_token_from(msg.sender, token_context.token_id)
         log Transfer(empty(address), msg.sender, token_context.token_id)
 
-        vault.withdraw(msg.sender)
+        vault.withdraw(token_context.token_id, msg.sender)
         self._revoke_listings([token_context.token_id])
 
         withdrawal_log.append(WithdrawalLog({
@@ -630,54 +634,50 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     )
 
 @external
-def stake_deposit(token_id: uint256, amount: uint256):
+def stake_deposit(token_context: TokenContext, amount: uint256):
     # TODO batch
     assert staking_addr != empty(address), "staking not supported"
-    vault: IVault = self._get_vault(token_id)
+    assert msg.sender == token_context.nft_owner, "not owner"
+    assert self._is_context_valid(token_context), "invalid context"
 
-    # TODO avoid this vault double call
-    assert msg.sender == vault.nft_owner(), "not owner"
-    vault.staking_deposit(msg.sender, amount)
+    self._get_vault(token_context.token_id).staking_deposit(msg.sender, amount, token_context.token_id)
 
-    log StakingDeposit(msg.sender, nft_contract_addr, token_id, amount)
+    log StakingDeposit(msg.sender, nft_contract_addr, token_context.token_id, amount)
 
 
 @external
-def stake_withdraw(token_id: uint256, recepient: address, amount: uint256):
+def stake_withdraw(token_context: TokenContext, recepient: address, amount: uint256):
     # TODO batch
     assert staking_addr != empty(address), "staking not supported"
-    vault: IVault = self._get_vault(token_id)
+    assert msg.sender == token_context.nft_owner, "not owner"
+    assert self._is_context_valid(token_context), "invalid context"
 
-    # TODO avoid this vault double call
-    assert msg.sender == vault.nft_owner(), "not owner"
-    vault.staking_withdraw(recepient, amount)
+    self._get_vault(token_context.token_id).staking_withdraw(recepient, amount, token_context.token_id)
 
-    log StakingWithdraw(msg.sender, nft_contract_addr, token_id, amount)
+    log StakingWithdraw(msg.sender, nft_contract_addr, token_context.token_id, amount)
 
 
 @external
-def stake_claim(token_id: uint256, recepient: address):
+def stake_claim(token_context: TokenContext, recepient: address):
     # TODO batch
     assert staking_addr != empty(address), "staking not supported"
-    vault: IVault = self._get_vault(token_id)
+    assert msg.sender == token_context.nft_owner, "not owner"
+    assert self._is_context_valid(token_context), "invalid context"
 
-    # TODO avoid this vault double call
-    assert msg.sender == vault.nft_owner(), "not owner"
-    vault.staking_claim(recepient)
+    self._get_vault(token_context.token_id).staking_claim(recepient, token_context.token_id)
 
-    log StakingClaim(msg.sender, nft_contract_addr, token_id)
+    log StakingClaim(msg.sender, nft_contract_addr, token_context.token_id)
 
 @external
-def stake_compound(token_id: uint256):
+def stake_compound(token_context: TokenContext):
     # TODO batch
     assert staking_addr != empty(address), "staking not supported"
-    vault: IVault = self._get_vault(token_id)
+    assert msg.sender == token_context.nft_owner, "not owner"
+    assert self._is_context_valid(token_context), "invalid context"
 
-    # TODO avoid this vault double call
-    assert msg.sender == vault.nft_owner(), "not owner"
-    vault.staking_compound(msg.sender)
+    self._get_vault(token_context.token_id).staking_compound(msg.sender, token_context.token_id)
 
-    log StakingCompound(msg.sender, nft_contract_addr, token_id)
+    log StakingCompound(msg.sender, nft_contract_addr, token_context.token_id)
 
 
 @external
@@ -967,15 +967,14 @@ def _get_vault(token_id: uint256) -> IVault:
 
 
 @internal
-def _create_vault_if_needed(token_id: uint256) -> address:
+def _create_vault_if_needed(token_id: uint256) -> IVault:
     vault: address = self._tokenid_to_vault(token_id)
     if not vault.is_contract:
         vault = create_minimal_proxy_to(vault_impl_addr, salt=convert(token_id, bytes32))
+        IVault(vault).initialise(staking_pool_id)
         # log VaultsCreated(msg.sender, nft_contract_addr, vault_logs, delegate)?
-    if not IVault(vault).is_initialised():
-        IVault(vault).initialise(token_id, msg.sender, staking_pool_id)
 
-    return vault
+    return IVault(vault)
 
 
 @internal
@@ -1008,7 +1007,7 @@ def _compute_real_rental_amount(duration: uint256, real_duration: uint256, renta
     return rental_amount * real_duration / duration
 
 @internal
-def _consolidate_claims(active_rental: Rental) -> Rental:
+def _consolidate_claims(active_rental: Rental, store_rental: bool = True) -> Rental:
     if active_rental.amount == 0 or active_rental.expiration >= block.timestamp:
         return active_rental
     else:
@@ -1030,7 +1029,9 @@ def _consolidate_claims(active_rental: Rental) -> Rental:
             protocol_fee: active_rental.protocol_fee,
             protocol_wallet: active_rental.protocol_wallet
         })
-        self._store_rental_state(active_rental.token_id, new_rental)
+
+        if store_rental:
+            self._store_rental_state(active_rental.token_id, new_rental)
 
         return new_rental
 
