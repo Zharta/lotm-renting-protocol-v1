@@ -43,7 +43,9 @@ STAKING_CLAIM_METHOD: constant(bytes4[3]) = [0x2ee2de66, 0xb682e859, 0x57a26300]
 # claimApeCoin(address), claimBAYC(uint256[],address), claimMAYC(uint256[],address)
 
 caller: public(address)
+# XXX remove
 nft_owner: public(address)
+# XXX remove
 token_id: public(uint256)
 payment_token: public(immutable(IERC20))
 nft_contract: public(immutable(IERC721))
@@ -104,6 +106,8 @@ def withdraw(sender: address):
     assert msg.sender == self.caller, "not caller"
     nft_contract.safeTransferFrom(self, sender, self.token_id, b"")
     self.nft_owner = empty(address)
+    if delegate != empty(address):
+        self._delegate_to_wallet(empty(address), 0)
 
 @external
 def delegate_to_wallet(delegate: address, expiration: uint256):

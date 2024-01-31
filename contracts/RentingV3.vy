@@ -66,6 +66,7 @@ struct SignedListing:
 struct TokenContextAndListing:
     token_context: TokenContext
     signed_listing: SignedListing
+    listings_signature: Signature
 
 struct RentalLog:
     id: bytes32
@@ -381,11 +382,7 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
 @external
 def revoke_listing(token_ids: DynArray[uint256, 32]):
-
-    for token_id in token_ids:
-        assert self.id_to_owner[token_id] == msg.sender, "not owner"
-        self.listing_revocations[token_id] = block.timestamp
-
+    self._revoke_listings(token_ids)
     log ListingsRevoked(msg.sender, block.timestamp, token_ids)
 
 
@@ -524,16 +521,13 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         assert msg.sender == context.token_context.active_rental.renter, "not renter of active rental"
         assert self._is_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
         assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
+        assert context.token_context.active_rental.min_expiration <= block.timestamp, "min expiration not reached"
 
         # TODO check signer(listings) == admin
 
-        real_expiration_adjusted: uint256 = block.timestamp
-        #if block.timestamp < token_context.active_rental.min_expiration:
-            #real_expiration_adjusted = token_context.active_rental.min_expiration
-
         pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
             context.token_context.active_rental.expiration - context.token_context.active_rental.start,
-            real_expiration_adjusted - context.token_context.active_rental.start,
+            block.timestamp - context.token_context.active_rental.start,
             context.token_context.active_rental.amount
         )
         new_rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
@@ -605,6 +599,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
         log Transfer(empty(address), msg.sender, token_context.token_id)
 
         vault.withdraw(msg.sender)
+        self._revoke_listings([token_context.token_id])
 
         withdrawal_log.append(WithdrawalLog({
             vault: vault.address,
@@ -636,7 +631,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def stake_deposit(token_id: uint256, amount: uint256):
-    # TODO batch?
+    # TODO batch
     assert staking_addr != empty(address), "staking not supported"
     vault: IVault = self._get_vault(token_id)
 
@@ -649,7 +644,7 @@ def stake_deposit(token_id: uint256, amount: uint256):
 
 @external
 def stake_withdraw(token_id: uint256, recepient: address, amount: uint256):
-    # TODO batch?
+    # TODO batch
     assert staking_addr != empty(address), "staking not supported"
     vault: IVault = self._get_vault(token_id)
 
@@ -662,7 +657,7 @@ def stake_withdraw(token_id: uint256, recepient: address, amount: uint256):
 
 @external
 def stake_claim(token_id: uint256, recepient: address):
-    # TODO batch?
+    # TODO batch
     assert staking_addr != empty(address), "staking not supported"
     vault: IVault = self._get_vault(token_id)
 
@@ -674,7 +669,7 @@ def stake_claim(token_id: uint256, recepient: address):
 
 @external
 def stake_compound(token_id: uint256):
-    # TODO batch?
+    # TODO batch
     assert staking_addr != empty(address), "staking not supported"
     vault: IVault = self._get_vault(token_id)
 
@@ -987,6 +982,13 @@ def _create_vault_if_needed(token_id: uint256) -> address:
 def _transfer_erc20(_from: address, _to: address, _amount: uint256):
     assert IERC20(payment_token_addr).allowance(_from, self) >= _amount, "insufficient allowance"
     assert IERC20(payment_token_addr).transferFrom(_from, _to, _amount), "transferFrom failed"
+
+
+@internal
+def _revoke_listings(token_ids: DynArray[uint256, 32]):
+    for token_id in token_ids:
+        assert self.id_to_owner[token_id] == msg.sender, "not owner"
+        self.listing_revocations[token_id] = block.timestamp
 
 
 @pure
