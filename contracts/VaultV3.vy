@@ -107,9 +107,6 @@ def delegate_to_wallet(delegate: address, expiration: uint256):
 @external
 def staking_deposit(sender: address, amount: uint256, token_id: uint256):
     assert msg.sender == self.caller, "not caller"
-    assert payment_token.allowance(sender, self) >= amount, "insufficient allowance"
-
-    assert payment_token.transferFrom(sender, self, amount), "transferFrom failed"
     self._staking_deposit(sender, amount, token_id)
 
 

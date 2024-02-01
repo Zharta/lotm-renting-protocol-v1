@@ -66,6 +66,10 @@ struct TokenContextAndListing:
     signed_listing: SignedListing
     listings_signature: Signature
 
+struct TokenContextAndAmount:
+    token_context: TokenContext
+    amount: uint256
+
 struct RentalLog:
     id: bytes32
     vault: address
@@ -105,6 +109,10 @@ struct WithdrawalLog:
 struct VaultLog:
     vault: address
     token_id: uint256
+
+struct StakingLog:
+    token_id: uint256
+    amount: uint256
 
 
 # Events
@@ -202,24 +210,24 @@ event ApprovalForAll:
 event StakingDeposit:
     owner: address
     nft_contract: address
-    token_id: uint256
-    amount: uint256
+    tokens: DynArray[StakingLog, 32]
 
 event StakingWithdraw:
     owner: address
     nft_contract: address
-    token_id: uint256
-    amount: uint256
+    recepient: address
+    tokens: DynArray[StakingLog, 32]
 
 event StakingClaim:
     owner: address
     nft_contract: address
-    token_id: uint256
+    recepient: address
+    tokens: DynArray[uint256, 32]
 
 event StakingCompound:
     owner: address
     nft_contract: address
-    token_id: uint256
+    tokens: DynArray[uint256, 32]
 
 
 # Global Variables
@@ -634,50 +642,75 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     )
 
 @external
-def stake_deposit(token_context: TokenContext, amount: uint256):
-    # TODO batch
+def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
     assert staking_addr != empty(address), "staking not supported"
-    assert msg.sender == token_context.nft_owner, "not owner"
-    assert self._is_context_valid(token_context), "invalid context"
 
-    self._get_vault(token_context.token_id).staking_deposit(msg.sender, amount, token_context.token_id)
+    staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
+    total_amount: uint256 = 0
+    for context in token_contexts:
+        assert msg.sender == context.token_context.nft_owner, "not owner"
+        assert self._is_context_valid(context.token_context), "invalid context"
+        total_amount += context.amount
 
-    log StakingDeposit(msg.sender, nft_contract_addr, token_context.token_id, amount)
+    assert IERC20(payment_token_addr).allowance(msg.sender, self) >= total_amount, "insufficient allowance"
+
+    for context in token_contexts:
+        vault: IVault = self._get_vault(context.token_context.token_id)
+        assert IERC20(payment_token_addr).transferFrom(msg.sender, vault.address, context.amount), "transferFrom failed"
+        vault.staking_deposit(msg.sender, context.amount, context.token_context.token_id)
+        staking_log.append(StakingLog({
+            token_id: context.token_context.token_id,
+            amount: context.amount
+        }))
+
+    log StakingDeposit(msg.sender, nft_contract_addr, staking_log)
 
 
 @external
-def stake_withdraw(token_context: TokenContext, recepient: address, amount: uint256):
-    # TODO batch
+def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recepient: address):
     assert staking_addr != empty(address), "staking not supported"
-    assert msg.sender == token_context.nft_owner, "not owner"
-    assert self._is_context_valid(token_context), "invalid context"
 
-    self._get_vault(token_context.token_id).staking_withdraw(recepient, amount, token_context.token_id)
+    staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
 
-    log StakingWithdraw(msg.sender, nft_contract_addr, token_context.token_id, amount)
+    for context in token_contexts:
+        assert msg.sender == context.token_context.nft_owner, "not owner"
+        assert self._is_context_valid(context.token_context), "invalid context"
+
+        self._get_vault(context.token_context.token_id).staking_withdraw(recepient, context.amount, context.token_context.token_id)
+        staking_log.append(StakingLog({
+            token_id: context.token_context.token_id,
+            amount: context.amount
+        }))
+
+    log StakingWithdraw(msg.sender, nft_contract_addr, recepient, staking_log)
 
 
 @external
-def stake_claim(token_context: TokenContext, recepient: address):
-    # TODO batch
+def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recepient: address):
     assert staking_addr != empty(address), "staking not supported"
-    assert msg.sender == token_context.nft_owner, "not owner"
-    assert self._is_context_valid(token_context), "invalid context"
+    tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
 
-    self._get_vault(token_context.token_id).staking_claim(recepient, token_context.token_id)
+    for context in token_contexts:
+        assert msg.sender == context.token_context.nft_owner, "not owner"
+        assert self._is_context_valid(context.token_context), "invalid context"
+        self._get_vault(context.token_context.token_id).staking_claim(recepient, context.token_context.token_id)
+        tokens.append(context.token_context.token_id)
 
-    log StakingClaim(msg.sender, nft_contract_addr, token_context.token_id)
+    log StakingClaim(msg.sender, nft_contract_addr, recepient, tokens)
 
 @external
-def stake_compound(token_context: TokenContext):
-    # TODO batch
+def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
     assert staking_addr != empty(address), "staking not supported"
-    assert msg.sender == token_context.nft_owner, "not owner"
-    assert self._is_context_valid(token_context), "invalid context"
+    tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
 
-    self._get_vault(token_context.token_id).staking_compound(msg.sender, token_context.token_id)
+    for context in token_contexts:
+        assert msg.sender == context.token_context.nft_owner, "not owner"
+        assert self._is_context_valid(context.token_context), "invalid context"
 
-    log StakingCompound(msg.sender, nft_contract_addr, token_context.token_id)
+        self._get_vault(context.token_context.token_id).staking_compound(msg.sender, context.token_context.token_id)
+        tokens.append(context.token_context.token_id)
+
+    log StakingCompound(msg.sender, nft_contract_addr, tokens)
 
 
 @external
@@ -858,6 +891,7 @@ def _tokenid_to_vault(token_id: uint256) -> address:
 @pure
 @internal
 def _state_hash(rental: Rental) -> bytes32:
+    # TODO add token_id and nft_owner
     return keccak256(
         concat(
             rental.id,
