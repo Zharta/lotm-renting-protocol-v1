@@ -64,7 +64,6 @@ struct SignedListing:
 struct TokenContextAndListing:
     token_context: TokenContext
     signed_listing: SignedListing
-    listings_signature: Signature
 
 struct TokenContextAndAmount:
     token_context: TokenContext
@@ -232,6 +231,12 @@ event StakingCompound:
 
 # Global Variables
 
+ZHARTA_DOMAIN_NAME: constant(String[6]) = "Zharta"
+ZHARTA_DOMAIN_VERSION: constant(String[1]) = "1"
+
+DOMAIN_TYPE_HASH: constant(bytes32) = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+LISTING_TYPE_HASH: constant(bytes32) = keccak256("Listing(uint256 token_id,uint256 price,uint256 min_duration,uint256 max_duration,uint256 timestamp)")
+
 _COLLISION_OFFSET: constant(bytes1) = 0xFF
 _DEPLOYMENT_CODE: constant(bytes9) = 0x602D3D8160093D39F3
 _PRE: constant(bytes10) = 0x363d3d373d3d3d363d73
@@ -241,9 +246,7 @@ SUPPORTED_INTERFACES: constant(bytes4[2]) = [0x01ffc9a7, 0x80ac58cd] # ERC165, E
 
 name: constant(String[10]) = ""
 symbol: constant(String[4]) = ""
-
-empty_state_hash: immutable(bytes32)
-
+listing_sig_domain_separator: immutable(bytes32)
 vault_impl_addr: public(immutable(address))
 payment_token_addr: public(immutable(address))
 nft_contract_addr: public(immutable(address))
@@ -312,8 +315,15 @@ def __init__(
     self.protocol_fee = _protocol_fee
     self.protocol_admin = _protocol_admin
 
-    empty_state_hash = self._state_hash(empty(Rental))
-
+    listing_sig_domain_separator = keccak256(
+        _abi_encode(
+            DOMAIN_TYPE_HASH,
+            keccak256(ZHARTA_DOMAIN_NAME),
+            keccak256(ZHARTA_DOMAIN_VERSION),
+            chain.id,
+            self
+        )
+    )
 
 
 
@@ -349,19 +359,23 @@ def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delega
         vault: IVault = self._get_vault(token_context.token_id)
         vault.delegate_to_wallet(delegate, token_context.active_rental.expiration)
 
-        self._store_rental_state(token_context.token_id, Rental({
-            id: token_context.active_rental.id,
-            owner: token_context.active_rental.owner,
-            renter: token_context.active_rental.renter,
-            delegate: delegate,
-            token_id: token_context.active_rental.token_id,
-            start: token_context.active_rental.start,
-            min_expiration: token_context.active_rental.min_expiration,
-            expiration: token_context.active_rental.expiration,
-            amount: token_context.active_rental.amount,
-            protocol_fee: token_context.active_rental.protocol_fee,
-            protocol_wallet: token_context.active_rental.protocol_wallet
-        }))
+        self._store_token_state(
+            token_context.token_id,
+            token_context.nft_owner,
+            Rental({
+                id: token_context.active_rental.id,
+                owner: token_context.active_rental.owner,
+                renter: token_context.active_rental.renter,
+                delegate: delegate,
+                token_id: token_context.active_rental.token_id,
+                start: token_context.active_rental.start,
+                min_expiration: token_context.active_rental.min_expiration,
+                expiration: token_context.active_rental.expiration,
+                amount: token_context.active_rental.amount,
+                protocol_fee: token_context.active_rental.protocol_fee,
+                protocol_wallet: token_context.active_rental.protocol_wallet
+            })
+        )
 
         vault_logs.append(VaultLog({vault: vault.address, token_id: token_context.token_id}))
 
@@ -375,11 +389,11 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
-        assert self.rental_states[token_id] == empty_state_hash, "invalid state"
+        assert self.rental_states[token_id] == empty(bytes32), "invalid state"
         vault: IVault = self._create_vault_if_needed(token_id)
         vault.deposit(token_id, msg.sender, delegate)
 
-        self.rental_states[token_id] = empty_state_hash
+        self._state_hash(token_id, msg.sender, empty(Rental))
         self._mint_token_to(msg.sender, token_id)
 
         log Transfer(empty(address), msg.sender, token_id)
@@ -402,18 +416,20 @@ def revoke_listing(token_ids: DynArray[uint256, 32]):
 @external
 def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, delegate: address, signature: Signature):
 
-    rental_logs: DynArray[RentalLog, 32] = []
+    signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
+    for context in token_contexts:
+        signed_listings.append(context.signed_listing)
+    assert self._are_listings_signed_by(signed_listings, signature, self.protocol_admin), "invalid signature"
 
+    rental_logs: DynArray[RentalLog, 32] = []
     expiration: uint256 = block.timestamp + duration * 3600
 
     for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
-        assert self._is_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
+        assert self._is_listing_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
         assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
-
-        # TODO check signer(listings) == admin
 
         rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
         self._transfer_erc20(msg.sender, self, rental_amount)
@@ -421,7 +437,7 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
         vault.delegate_to_wallet(delegate, expiration)
 
         # store unclaimed rewards
-        self._consolidate_claims(context.token_context.active_rental)
+        self._consolidate_claims(context.token_context.token_id, context.token_context.nft_owner, context.token_context.active_rental)
 
         # create rental
         rental_id: bytes32 = self._compute_rental_id(msg.sender, context.token_context.token_id, block.timestamp, expiration)
@@ -440,7 +456,7 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
             protocol_wallet: self.protocol_wallet
         })
 
-        self._store_rental_state(context.token_context.token_id, new_rental)
+        self._store_token_state(context.token_context.token_id, context.token_context.nft_owner, new_rental)
 
         rental_logs.append(RentalLog({
             id: rental_id,
@@ -488,7 +504,7 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
         protocol_fees_amount += protocol_fee_amount
 
         # clear active rental
-        self._store_rental_state(token_context.token_id, empty(Rental))
+        self._store_token_state(token_context.token_id, token_context.nft_owner, empty(Rental))
 
         # set unclaimed rewards
         self.unclaimed_rewards[token_context.nft_owner] += pro_rata_rental_amount - protocol_fee_amount
@@ -521,6 +537,11 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 @external
 def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature: Signature):
 
+    signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
+    for context in token_contexts:
+        signed_listings.append(context.signed_listing)
+    assert self._are_listings_signed_by(signed_listings, signature, self.protocol_admin), "invalid signature"
+
     rental_logs: DynArray[RentalExtensionLog, 32] = []
     protocol_fees_amount: uint256 = self.protocol_fees_amount
     payback_amounts: uint256 = 0
@@ -532,11 +553,9 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
         assert msg.sender == context.token_context.active_rental.renter, "not renter of active rental"
-        assert self._is_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
+        assert self._is_listing_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
         assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
         assert context.token_context.active_rental.min_expiration <= block.timestamp, "min expiration not reached"
-
-        # TODO check signer(listings) == admin
 
         pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
             context.token_context.active_rental.expiration - context.token_context.active_rental.start,
@@ -552,7 +571,7 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         protocol_fees_amount += protocol_fee_amount
 
         # clear active rental
-        self._store_rental_state(context.token_context.token_id, empty(Rental))
+        self._store_token_state(context.token_context.token_id, context.token_context.nft_owner, empty(Rental))
 
         # set unclaimed rewards
         self.unclaimed_rewards[context.token_context.nft_owner] += pro_rata_rental_amount - protocol_fee_amount
@@ -602,9 +621,9 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
         vault: IVault = self._get_vault(token_context.token_id)
 
-        rental: Rental = self._consolidate_claims(token_context.active_rental, False)
+        rental: Rental = self._consolidate_claims(token_context.token_id, token_context.nft_owner, token_context.active_rental, False)
 
-        self._store_rental_state(token_context.token_id, empty(Rental))
+        self._clear_token_state(token_context.token_id)
 
         # TODO should we burn the token?
         self._burn_token_from(msg.sender, token_context.token_id)
@@ -722,7 +741,7 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
         assert self._is_context_valid(token_context), "invalid context"
         assert token_context.nft_owner == msg.sender, "not owner"
 
-        result_active_rental: Rental = self._consolidate_claims(token_context.active_rental)
+        result_active_rental: Rental = self._consolidate_claims(token_context.token_id, token_context.nft_owner, token_context.active_rental)
 
         reward_logs.append(RewardLog({
             token_id: token_context.token_id,
@@ -890,10 +909,11 @@ def _tokenid_to_vault(token_id: uint256) -> address:
 
 @pure
 @internal
-def _state_hash(rental: Rental) -> bytes32:
-    # TODO add token_id and nft_owner
+def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes32:
     return keccak256(
         concat(
+            convert(token_id, bytes32),
+            convert(nft_owner, bytes32),
             rental.id,
             convert(rental.owner, bytes32),
             convert(rental.renter, bytes32),
@@ -935,13 +955,18 @@ def _is_rental_active(rental: Rental) -> bool:
 
 @view
 @internal
-def _is_context_valid(token_context: TokenContext) -> bool:
-    return self.rental_states[token_context.token_id] == self._state_hash(token_context.active_rental)
+def _is_context_valid(context: TokenContext) -> bool:
+    return self.rental_states[context.token_id] == self._state_hash(context.token_id, context.nft_owner, context.active_rental)
 
 
 @internal
-def _store_rental_state(token_id: uint256, rental: Rental):
-    self.rental_states[token_id] = self._state_hash(rental)
+def _store_token_state(token_id: uint256, nft_owner: address, rental: Rental):
+    self.rental_states[token_id] = self._state_hash(token_id, nft_owner, rental)
+
+
+@internal
+def _clear_token_state(token_id: uint256):
+    self.rental_states[token_id] = empty(bytes32)
 
 
 @internal
@@ -1041,7 +1066,7 @@ def _compute_real_rental_amount(duration: uint256, real_duration: uint256, renta
     return rental_amount * real_duration / duration
 
 @internal
-def _consolidate_claims(active_rental: Rental, store_rental: bool = True) -> Rental:
+def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Rental, store_state: bool = True) -> Rental:
     if active_rental.amount == 0 or active_rental.expiration >= block.timestamp:
         return active_rental
     else:
@@ -1055,7 +1080,7 @@ def _consolidate_claims(active_rental: Rental, store_rental: bool = True) -> Ren
             owner: active_rental.owner,
             renter: active_rental.renter,
             delegate: active_rental.delegate,
-            token_id: active_rental.token_id,
+            token_id: token_id,
             start: active_rental.start,
             min_expiration: active_rental.min_expiration,
             expiration: active_rental.expiration,
@@ -1064,27 +1089,31 @@ def _consolidate_claims(active_rental: Rental, store_rental: bool = True) -> Ren
             protocol_wallet: active_rental.protocol_wallet
         })
 
-        if store_rental:
-            self._store_rental_state(active_rental.token_id, new_rental)
+        if store_state:
+            self._store_token_state(token_id, nft_owner, new_rental)
 
         return new_rental
 
 
 
 @internal
-def _is_signed_by(signed_listing: SignedListing, signer: address) -> bool:
-    # TODO make it eip712
+def _is_listing_signed_by(signed_listing: SignedListing, signer: address) -> bool:
     return ecrecover(
         keccak256(
             concat(
-                convert(signed_listing.listing.token_id, bytes32),
-                convert(signed_listing.listing.price, bytes32),
-                convert(signed_listing.listing.min_duration, bytes32),
-                convert(signed_listing.listing.max_duration, bytes32),
-                convert(signed_listing.listing.timestamp, bytes32)
+                convert("\x19\x01", Bytes[2]),
+                _abi_encode(
+                    listing_sig_domain_separator,
+                    keccak256(_abi_encode(LISTING_TYPE_HASH, signed_listing.listing))
+                )
             )
         ),
         signed_listing.signature.v,
         signed_listing.signature.r,
         signed_listing.signature.s
     ) == signer
+
+
+@internal
+def _are_listings_signed_by(signed_listings: DynArray[SignedListing, 32], signature: Signature, signer: address) -> bool:
+    return False
