@@ -244,6 +244,8 @@ _POST: constant(bytes15) = 0x5af43d82803e903d91602b57fd5bf3
 
 SUPPORTED_INTERFACES: constant(bytes4[2]) = [0x01ffc9a7, 0x80ac58cd] # ERC165, ERC721
 
+LISTINGS_SIGNATURE_VALID_PERIOD: constant(uint256) = 120
+
 name: constant(String[10]) = ""
 symbol: constant(String[4]) = ""
 listing_sig_domain_separator: immutable(bytes32)
@@ -414,12 +416,18 @@ def revoke_listing(token_ids: DynArray[uint256, 32]):
 
 
 @external
-def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, delegate: address, signature: Signature):
+def start_rentals(
+    token_contexts: DynArray[TokenContextAndListing, 32],
+    duration: uint256,
+    delegate: address,
+    signature: Signature,
+    signature_timestamp: uint256
+):
 
     signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
     for context in token_contexts:
         signed_listings.append(context.signed_listing)
-    assert self._are_listings_signed_by(signed_listings, signature, self.protocol_admin), "invalid signature"
+    assert self._are_listings_signed_by(signed_listings, signature, signature_timestamp, self.protocol_admin), "invalid signature"
 
     rental_logs: DynArray[RentalLog, 32] = []
     expiration: uint256 = block.timestamp + duration * 3600
@@ -535,12 +543,12 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
 
 @external
-def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature: Signature):
+def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature: Signature, signature_timestamp: uint256):
 
     signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
     for context in token_contexts:
         signed_listings.append(context.signed_listing)
-    assert self._are_listings_signed_by(signed_listings, signature, self.protocol_admin), "invalid signature"
+    assert self._are_listings_signed_by(signed_listings, signature, signature_timestamp, self.protocol_admin), "invalid signature"
 
     rental_logs: DynArray[RentalExtensionLog, 32] = []
     protocol_fees_amount: uint256 = self.protocol_fees_amount
@@ -1115,5 +1123,13 @@ def _is_listing_signed_by(signed_listing: SignedListing, signer: address) -> boo
 
 
 @internal
-def _are_listings_signed_by(signed_listings: DynArray[SignedListing, 32], signature: Signature, signer: address) -> bool:
-    return False
+def _are_listings_signed_by(signed_listings: DynArray[SignedListing, 32], signature: Signature, signature_timestamp: uint256, signer: address) -> bool:
+    if signature_timestamp + LISTINGS_SIGNATURE_VALID_PERIOD < block.timestamp:
+        return False
+
+    return ecrecover(
+        keccak256(_abi_encode(signed_listings, signature_timestamp)),
+        signature.v,
+        signature.r,
+        signature.s
+    ) == signer
