@@ -72,13 +72,10 @@ def __init__(
 
 @external
 def initialise(staking_pool_id: uint256):
+    assert self.caller == empty(address), "already initialised"
     assert staking_pool_id <= MAX_STAKE_POOL_ID, "invalid staking pool id"
 
-    if self.caller != empty(address):
-        assert msg.sender == self.caller, "not caller"
-    else:
-        self.caller = msg.sender
-
+    self.caller = msg.sender
     self.staking_pool_id = staking_pool_id
 
 
@@ -89,7 +86,7 @@ def deposit(token_id: uint256, nft_owner: address, delegate: address):
     nft_contract.safeTransferFrom(nft_owner, self, token_id, b"")
 
     if delegate != empty(address):
-        self._delegate_to_wallet(delegate, 0)
+        self._delegate_to_wallet(delegate, max_value(uint256))
 
 
 @external
