@@ -2,6 +2,7 @@ from textwrap import dedent
 
 import boa
 import pytest
+from eth_account import Account
 
 
 @pytest.fixture(scope="session")
@@ -13,11 +14,16 @@ def accounts():
 
 
 @pytest.fixture(scope="session")
-def owner():
-    acc = boa.env.generate_address("owner")
-    boa.env.eoa = acc
-    boa.env.set_balance(acc, 10**21)
-    return acc
+def owner_account():
+    return Account.create()
+
+
+@pytest.fixture(scope="session")
+def owner(owner_account):
+    # acc = boa.env.generate_address("owner")
+    boa.env.eoa = owner_account.address
+    boa.env.set_balance(owner_account.address, 10**21)
+    return owner_account.address
 
 
 @pytest.fixture(scope="session")
@@ -56,6 +62,11 @@ def ape_contract(owner):
 @pytest.fixture(scope="session")
 def delegation_registry_warm_contract():
     return boa.load("contracts/auxiliary/HotWalletMock.vy")
+
+
+@pytest.fixture(scope="session")
+def ape_staking_contract_def():
+    return boa.load_partial("tests/stubs/ApeStaking.vy")
 
 
 @pytest.fixture(scope="session")

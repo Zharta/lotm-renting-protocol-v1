@@ -94,6 +94,7 @@ def withdraw(token_id: uint256, wallet: address):
     assert msg.sender == self.caller, "not caller"
     nft_contract.safeTransferFrom(self, wallet, token_id, b"")
     self._delegate_to_wallet(empty(address), 0)
+    # TODO if we support the apecoin pool, should we claim here?
 
 @external
 def delegate_to_wallet(delegate: address, expiration: uint256):
@@ -123,7 +124,7 @@ def staking_claim(wallet: address, token_id: uint256):
 def staking_compound(wallet: address, token_id: uint256):
     assert msg.sender == self.caller, "not caller"
     self._staking_claim(self, token_id)
-    self._staking_deposit(wallet, payment_token.balanceOf(self), token_id)
+    self._staking_deposit(self, payment_token.balanceOf(self), token_id)
 
 
 @view
@@ -147,7 +148,7 @@ def _staking_deposit(wallet: address, amount: uint256, token_id: uint256):
     if self.staking_pool_id == 0:
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_DEPOSIT_METHOD[self.staking_pool_id], token_id, self)
+            concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id], _abi_encode(amount, self))
         )
     else:
         nfts: DynArray[SingleNft, 1] = [
@@ -156,7 +157,7 @@ def _staking_deposit(wallet: address, amount: uint256, token_id: uint256):
 
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_DEPOSIT_METHOD[self.staking_pool_id], nfts)
+            concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id], _abi_encode(nfts))
         )
 
 
@@ -167,7 +168,7 @@ def _staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
     if self.staking_pool_id == 0:
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_WITHDRAW_METHOD[self.staking_pool_id], token_id, wallet)
+            concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id], _abi_encode(amount, wallet))
         )
     else:
         nfts: DynArray[SingleNft, 1] = [
@@ -176,7 +177,7 @@ def _staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
 
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_WITHDRAW_METHOD[self.staking_pool_id], nfts, wallet)
+            concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet))
         )
 
 
@@ -186,11 +187,11 @@ def _staking_claim(wallet: address, token_id: uint256):
     if self.staking_pool_id == 0:
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_CLAIM_METHOD[self.staking_pool_id], token_id, wallet)
+            concat(STAKING_CLAIM_METHOD[self.staking_pool_id], _abi_encode(wallet))
         )
     else:
         nfts: DynArray[uint256, 1] = [token_id]
         raw_call(
             staking_addr,
-            _abi_encode(STAKING_CLAIM_METHOD[self.staking_pool_id], nfts, wallet)
+            concat(STAKING_CLAIM_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet))
         )
