@@ -2,11 +2,6 @@ import contextlib
 from dataclasses import dataclass, field
 from functools import cached_property
 from textwrap import dedent
-from eth_account import Account
-from eth_account.messages import encode_structured_data, encode_intended_validator
-from eth_utils import keccak, encode_hex
-from eth_abi import encode
-
 
 import boa
 import vyper
@@ -14,6 +9,10 @@ from boa.contracts.vyper.event import Event
 from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.environment import register_raw_precompile
 from eth.exceptions import Revert
+from eth_abi import encode
+from eth_account import Account
+from eth_account.messages import encode_intended_validator, encode_structured_data
+from eth_utils import encode_hex, keccak
 from web3 import Web3
 
 ZERO_ADDRESS = boa.eval("empty(address)")
@@ -260,7 +259,6 @@ def compute_state_hash(token_id: int, nft_owner: str, rental: Rental):
 
 
 def sign_listing(listing: Listing, key: str, verifying_contract: str) -> SignedListing:
-
     typed_data = {
         "types": {
             "EIP712Domain": [
@@ -290,15 +288,16 @@ def sign_listing(listing: Listing, key: str, verifying_contract: str) -> SignedL
     signed_msg = Account.from_key(key).sign_message(signable_msg)
     return SignedListing(listing, Signature(signed_msg.v, signed_msg.r, signed_msg.s))
 
+
 @boa.precompile("def debug_bytes32(data: bytes32)")
 def debug_bytes32(data: bytes):
     print(f"DEBUG: {data.hex()}")
 
-def sign_listings(signed_listings, timestamp, key, verifying_contract) -> Signature:
 
+def sign_listings(signed_listings, timestamp, key, verifying_contract) -> Signature:
     encoded_listings = encode(
         ("((uint256,uint256,uint256,uint256,uint256),(uint256,uint256,uint256))[]",),
-        ([listing.to_tuple() for listing in signed_listings],)
+        ([listing.to_tuple() for listing in signed_listings],),
     )
     encoded_timestamp = encode(("uint256",), (timestamp,))
     hash = keccak(primitive=encoded_listings)

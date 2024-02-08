@@ -8,10 +8,10 @@ from ...conftest_base import (
     ZERO_BYTES32,
     Listing,
     Rental,
-    Signature,
-    SignedListing,
     RentalLog,
     RewardLog,
+    Signature,
+    SignedListing,
     TokenContext,
     TokenContextAndListing,
     VaultLog,
@@ -91,7 +91,7 @@ def test_deploy_validation(
             0,
             0,
             ZERO_ADDRESS,
-            protocol_wallet
+            protocol_wallet,
         )
 
     with deploy_reverts():
@@ -105,7 +105,7 @@ def test_deploy_validation(
             0,
             0,
             protocol_wallet,
-            ZERO_ADDRESS
+            ZERO_ADDRESS,
         )
     with deploy_reverts():
         renting_contract_def.deploy(
@@ -118,7 +118,7 @@ def test_deploy_validation(
             10001,
             0,
             protocol_wallet,
-            protocol_wallet
+            protocol_wallet,
         )
 
     with deploy_reverts():
@@ -132,21 +132,12 @@ def test_deploy_validation(
             0,
             1,
             protocol_wallet,
-            protocol_wallet
+            protocol_wallet,
         )
 
     with deploy_reverts():
         renting_contract_def.deploy(
-            ZERO_ADDRESS,
-            ZERO_ADDRESS,
-            ZERO_ADDRESS,
-            ZERO_ADDRESS,
-            ZERO_ADDRESS,
-            0,
-            0,
-            1,
-            protocol_wallet,
-            protocol_wallet
+            ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, 0, 0, 1, protocol_wallet, protocol_wallet
         )
 
 
@@ -241,14 +232,8 @@ def test_deposit_after_withdraw(renting_contract, nft_contract, nft_owner, deleg
     assert vault_log.token_id == token_id
 
 
-
 def test_withdraw(
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    vault_contract_def,
-    protocol_wallet,
-    delegation_registry_warm_contract
+    renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
     token_id = 1
 
@@ -263,14 +248,8 @@ def test_withdraw(
     assert nft_contract.ownerOf(token_id) == nft_owner
 
 
-
 def test_withdraw_logs_nfts_withdrawn(
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    vault_contract_def,
-    protocol_wallet,
-    delegation_registry_warm_contract
+    renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
     token_id = 1
 
@@ -294,12 +273,7 @@ def test_withdraw_logs_nfts_withdrawn(
 
 
 def test_withdraw_removes_delegation(
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    vault_contract_def,
-    protocol_wallet,
-    delegation_registry_warm_contract
+    renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -313,12 +287,7 @@ def test_withdraw_removes_delegation(
 
 
 def test_withdraw_burns_renting_token(
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    vault_contract_def,
-    protocol_wallet,
-    delegation_registry_warm_contract
+    renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -338,12 +307,7 @@ def test_withdraw_burns_renting_token(
 
 
 def test_withdraw_reverts_if_not_owner(
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    vault_contract_def,
-    protocol_wallet,
-    delegation_registry_warm_contract
+    renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -356,12 +320,7 @@ def test_withdraw_reverts_if_not_owner(
 
 
 def test_withdraw_reverts_if_active_rental(
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    vault_contract_def,
-    protocol_wallet,
-    delegation_registry_warm_contract
+    renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -369,19 +328,16 @@ def test_withdraw_reverts_if_active_rental(
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
-    renting_contract.start_rentals([TokenContext(token_id, Rental(), Listing(token_id, 1, 0, 0)).to_tuple()], 1, ZERO_ADDRESS, sender=nft_owner)
+    renting_contract.start_rentals(
+        [TokenContext(token_id, Rental(), Listing(token_id, 1, 0, 0)).to_tuple()], 1, ZERO_ADDRESS, sender=nft_owner
+    )
 
     with boa.reverts():
         renting_contract.withdraw([TokenContext(token_id, nft_owner, Rental()).to_tuple()], sender=nft_owner)
 
 
 def test_withdraw_reverts_if_invalid_context(
-    renting_contract,
-    nft_contract,
-    nft_owner,
-    vault_contract_def,
-    protocol_wallet,
-    delegation_registry_warm_contract
+    renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -400,6 +356,7 @@ def test_withdraw_reverts_if_invalid_context(
 
     with boa.reverts():
         renting_contract.withdraw([TokenContext(token_id, nft_owner, Rental(token_id=2)).to_tuple()], sender=nft_owner)
+
 
 # @external
 # def start_rentals(
@@ -476,7 +433,7 @@ def test_start_rentals(
     vault_contract_def,
     owner,
     owner_key,
-    protocol_wallet
+    protocol_wallet,
 ):
     token_id = 1
     price = int(1e18)
@@ -507,7 +464,7 @@ def test_start_rentals(
         renter_delegate,
         owner_sig.to_tuple(),
         start_time,
-        sender=renter
+        sender=renter,
     )
     event = get_last_event(renting_contract, "RentalStarted")
 
