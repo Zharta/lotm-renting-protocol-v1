@@ -27,10 +27,24 @@ def owner(owner_account):
 
 
 @pytest.fixture(scope="session")
-def nft_owner():
-    acc = boa.env.generate_address("nft_owner")
-    boa.env.set_balance(acc, 10**21)
-    return acc
+def owner_key(owner_account):
+    return owner_account.key
+
+
+@pytest.fixture(scope="session")
+def nft_owner_account():
+    return Account.create()
+
+
+@pytest.fixture(scope="session")
+def nft_owner(nft_owner_account):
+    boa.env.set_balance(nft_owner_account.address, 10**21)
+    return nft_owner_account.address
+
+
+@pytest.fixture(scope="session")
+def nft_owner_key(nft_owner_account):
+    return nft_owner_account.key
 
 
 @pytest.fixture(scope="session")

@@ -5,11 +5,6 @@
 from vyper.interfaces import ERC20 as IERC20
 from vyper.interfaces import ERC721 as IERC721
 
-interface ISelf:
-    def tokenid_to_vault(token_id: uint256) -> address: view
-    def is_vault_available(token_id: uint256) -> bool: view
-
-
 interface IVault:
     def initialise(staking_pool_id: uint256): nonpayable
     def deposit(token_id: uint256, nft_owner: address, delegate: address): nonpayable
@@ -23,7 +18,6 @@ interface IVault:
 
 interface ERC721Receiver:
     def onERC721Received(_operator: address, _from: address, _tokenId: uint256, _data: Bytes[1024]) -> bytes4: view
-
 
 # Structs
 
@@ -43,7 +37,6 @@ struct Rental:
     expiration: uint256
     amount: uint256
     protocol_fee: uint256
-    protocol_wallet: address
 
 struct Listing:
     token_id: uint256
@@ -79,7 +72,6 @@ struct RentalLog:
     expiration: uint256
     amount: uint256
     protocol_fee: uint256
-    protocol_wallet: address
 
 struct RentalExtensionLog:
     id: bytes32
@@ -92,7 +84,6 @@ struct RentalExtensionLog:
     amount_settled: uint256
     extension_amount: uint256
     protocol_fee: uint256
-    protocol_wallet: address
 
 
 struct RewardLog:
@@ -115,13 +106,6 @@ struct StakingLog:
 
 
 # Events
-
-# is this needed?
-# event VaultsCreated:
-#     owner: address
-#     nft_contract: address
-#     vaults: DynArray[VaultLog, 32]
-#     delegate: address
 
 event NftsDeposited:
     owner: address
@@ -250,7 +234,7 @@ name: constant(String[10]) = ""
 symbol: constant(String[4]) = ""
 listing_sig_domain_separator: immutable(bytes32)
 vault_impl_addr: public(immutable(address))
-payment_token_addr: public(immutable(address))
+payment_token: public(immutable(IERC20))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
 staking_addr: public(immutable(address))
@@ -306,7 +290,7 @@ def __init__(
     assert _protocol_admin != empty(address), "admin wallet not set"
 
     vault_impl_addr = _vault_impl_addr
-    payment_token_addr = _payment_token_addr
+    payment_token = IERC20(_payment_token_addr)
     nft_contract_addr = _nft_contract_addr
     delegation_registry_addr = _delegation_registry_addr
     staking_addr = _staking_addr
@@ -375,7 +359,6 @@ def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delega
                 expiration: token_context.active_rental.expiration,
                 amount: token_context.active_rental.amount,
                 protocol_fee: token_context.active_rental.protocol_fee,
-                protocol_wallet: token_context.active_rental.protocol_wallet
             })
         )
 
@@ -395,7 +378,7 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
         vault: IVault = self._create_vault_if_needed(token_id)
         vault.deposit(token_id, msg.sender, delegate)
 
-        self._state_hash(token_id, msg.sender, empty(Rental))
+        self._store_token_state(token_id, msg.sender, empty(Rental))
         self._mint_token_to(msg.sender, token_id)
 
         log Transfer(empty(address), msg.sender, token_id)
@@ -411,6 +394,8 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
 @external
 def revoke_listing(token_ids: DynArray[uint256, 32]):
+    for token_id in token_ids:
+        assert self.id_to_owner[token_id] == msg.sender, "not owner"
     self._revoke_listings(token_ids)
     log ListingsRevoked(msg.sender, block.timestamp, token_ids)
 
@@ -461,7 +446,6 @@ def start_rentals(
             expiration: expiration,
             amount: rental_amount,
             protocol_fee: self.protocol_fee,
-            protocol_wallet: self.protocol_wallet
         })
 
         self._store_token_state(context.token_context.token_id, context.token_context.nft_owner, new_rental)
@@ -476,7 +460,6 @@ def start_rentals(
             expiration: expiration,
             amount: rental_amount,
             protocol_fee: new_rental.protocol_fee,
-            protocol_wallet: new_rental.protocol_wallet
         }))
 
     log RentalStarted(msg.sender, delegate, nft_contract_addr, rental_logs)
@@ -530,14 +513,13 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
             expiration: block.timestamp,
             amount: pro_rata_rental_amount,
             protocol_fee: token_context.active_rental.protocol_fee,
-            protocol_wallet: token_context.active_rental.protocol_wallet
         }))
 
-    assert IERC20(payment_token_addr).transfer(msg.sender, payback_amounts), "transfer failed"
+    assert payment_token.transfer(msg.sender, payback_amounts), "transfer failed"
 
     if protocol_fees_amount > 0:
         self.protocol_fees_amount = 0
-        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+        assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
 
     log RentalClosed(msg.sender, nft_contract_addr, rental_logs)
 
@@ -598,18 +580,17 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
             amount_settled: pro_rata_rental_amount,
             extension_amount: new_rental_amount,
             protocol_fee: context.token_context.active_rental.protocol_fee,
-            protocol_wallet: context.token_context.active_rental.protocol_wallet
         }))
 
     if payback_amounts > extension_amounts:
-        assert IERC20(payment_token_addr).transfer(msg.sender, payback_amounts - extension_amounts), "transfer failed"
+        assert payment_token.transfer(msg.sender, payback_amounts - extension_amounts), "transfer failed"
     elif payback_amounts < extension_amounts:
-        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, extension_amounts - payback_amounts), "transfer failed"
+        assert payment_token.transfer(self.protocol_wallet, extension_amounts - payback_amounts), "transfer failed"
         self._transfer_erc20(self.protocol_wallet, msg.sender, extension_amounts - payback_amounts)
 
     if protocol_fees_amount > 0:
         self.protocol_fees_amount = 0
-        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+        assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
 
     log RentalExtended(msg.sender, nft_contract_addr, rental_logs)
 
@@ -635,7 +616,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
         # TODO should we burn the token?
         self._burn_token_from(msg.sender, token_context.token_id)
-        log Transfer(empty(address), msg.sender, token_context.token_id)
+        log Transfer(msg.sender, empty(address), token_context.token_id)
 
         vault.withdraw(token_context.token_id, msg.sender)
         self._revoke_listings([token_context.token_id])
@@ -653,12 +634,12 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     # transfer reward to nft owner
     if rewards_to_claim > 0:
-        assert IERC20(payment_token_addr).transfer(msg.sender, rewards_to_claim), "transfer failed"
+        assert payment_token.transfer(msg.sender, rewards_to_claim), "transfer failed"
         self.unclaimed_rewards[msg.sender] = 0
 
     # transfer protocol fee to protocol wallet
     if protocol_fee_to_claim > 0:
-        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
+        assert payment_token.transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
         self.protocol_fees_amount = 0
 
     log NftsWithdrawn(
@@ -679,11 +660,11 @@ def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
         assert self._is_context_valid(context.token_context), "invalid context"
         total_amount += context.amount
 
-    assert IERC20(payment_token_addr).allowance(msg.sender, self) >= total_amount, "insufficient allowance"
+    assert payment_token.allowance(msg.sender, self) >= total_amount, "insufficient allowance"
 
     for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
-        assert IERC20(payment_token_addr).transferFrom(msg.sender, vault.address, context.amount), "transferFrom failed"
+        assert payment_token.transferFrom(msg.sender, vault.address, context.amount), "transferFrom failed"
         vault.staking_deposit(msg.sender, context.amount, context.token_context.token_id)
         staking_log.append(StakingLog({
             token_id: context.token_context.token_id,
@@ -761,12 +742,12 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 
     # transfer reward to nft owner
     assert rewards_to_claim > 0, "no rewards to claim"
-    assert IERC20(payment_token_addr).transfer(msg.sender, rewards_to_claim), "transfer failed"
+    assert payment_token.transfer(msg.sender, rewards_to_claim), "transfer failed"
     self.unclaimed_rewards[msg.sender] = 0
 
     # transfer protocol fee to protocol wallet
     if protocol_fee_to_claim > 0:
-        assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
+        assert payment_token.transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
         self.protocol_fees_amount = 0
 
     log RewardsClaimed(msg.sender, rewards_to_claim, protocol_fee_to_claim, reward_logs)
@@ -775,17 +756,15 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 @external
 def claim_fees():
     assert msg.sender == self.protocol_admin, "not admin"
-    assert self.protocol_fees_amount > 0, "no fees to claim"
     protocol_fees_amount: uint256 = self.protocol_fees_amount
     self.protocol_fees_amount = 0
-    assert IERC20(payment_token_addr).transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+    assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
 
 
 @external
 def set_protocol_fee(protocol_fee: uint256):
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
-    assert protocol_fee != self.protocol_fee, "protocol fee is the same"
 
     self.protocol_fee = protocol_fee
     log ProtocolFeeSet(self.protocol_fee, protocol_fee, self.protocol_wallet)
@@ -804,8 +783,6 @@ def change_protocol_wallet(new_protocol_wallet: address):
 def propose_admin(_address: address):
     assert msg.sender == self.protocol_admin, "not the admin"
     assert _address != empty(address), "_address is the zero address"
-    assert self.protocol_admin != _address, "proposed admin addr is the admin"
-    assert self.proposed_admin != _address, "proposed admin addr is the same"
 
     self.proposed_admin = _address
     log AdminProposed(self.protocol_admin, _address)
@@ -824,11 +801,6 @@ def claim_ownership():
 def tokenid_to_vault(token_id: uint256) -> address:
     return self._tokenid_to_vault(token_id)
 
-
-@view
-@external
-def is_vault_available(token_id: uint256) -> bool:
-    return self.id_to_owner[token_id] == empty(address)
 
 # ERC721
 
@@ -931,7 +903,6 @@ def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes3
             convert(rental.expiration, bytes32),
             convert(rental.amount, bytes32),
             convert(rental.protocol_fee, bytes32),
-            convert(rental.protocol_wallet, bytes32),
         )
     )
 
@@ -958,7 +929,7 @@ def _convert_keccak256_2_address(digest: bytes32) -> address:
 @view
 @internal
 def _is_rental_active(rental: Rental) -> bool:
-    return rental.expiration < block.timestamp
+    return rental.expiration > block.timestamp
 
 
 @view
@@ -1046,14 +1017,13 @@ def _create_vault_if_needed(token_id: uint256) -> IVault:
 
 @internal
 def _transfer_erc20(_from: address, _to: address, _amount: uint256):
-    assert IERC20(payment_token_addr).allowance(_from, self) >= _amount, "insufficient allowance"
-    assert IERC20(payment_token_addr).transferFrom(_from, _to, _amount), "transferFrom failed"
+    assert payment_token.allowance(_from, self) >= _amount, "insufficient allowance"
+    assert payment_token.transferFrom(_from, _to, _amount), "transferFrom failed"
 
 
 @internal
 def _revoke_listings(token_ids: DynArray[uint256, 32]):
     for token_id in token_ids:
-        assert self.id_to_owner[token_id] == msg.sender, "not owner"
         self.listing_revocations[token_id] = block.timestamp
 
 
@@ -1094,7 +1064,6 @@ def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Re
             expiration: active_rental.expiration,
             amount: 0,
             protocol_fee: active_rental.protocol_fee,
-            protocol_wallet: active_rental.protocol_wallet
         })
 
         if store_state:
@@ -1128,7 +1097,14 @@ def _are_listings_signed_by(signed_listings: DynArray[SignedListing, 32], signat
         return False
 
     return ecrecover(
-        keccak256(_abi_encode(signed_listings, signature_timestamp)),
+        keccak256(
+            concat(
+                convert("\x19\x00", Bytes[2]),
+                convert(self, bytes20),
+                keccak256(_abi_encode(signed_listings)),
+                convert(signature_timestamp, bytes32)
+            )
+        ),
         signature.v,
         signature.r,
         signature.s

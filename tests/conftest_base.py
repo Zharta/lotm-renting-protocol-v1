@@ -2,11 +2,17 @@ import contextlib
 from dataclasses import dataclass, field
 from functools import cached_property
 from textwrap import dedent
+from eth_account import Account
+from eth_account.messages import encode_structured_data, encode_intended_validator
+from eth_utils import keccak, encode_hex
+from eth_abi import encode
+
 
 import boa
 import vyper
 from boa.contracts.vyper.event import Event
 from boa.contracts.vyper.vyper_contract import VyperContract
+from boa.environment import register_raw_precompile
 from eth.exceptions import Revert
 from web3 import Web3
 
@@ -107,7 +113,6 @@ class Rental:
     expiration: int = 0
     amount: int = 0
     protocol_fee: int = 0
-    protocol_wallet: str = ZERO_ADDRESS
 
     def to_tuple(self):
         return (
@@ -121,7 +126,6 @@ class Rental:
             self.expiration,
             self.amount,
             self.protocol_fee,
-            self.protocol_wallet,
         )
 
 
@@ -131,9 +135,10 @@ class Listing:
     price: int = 0
     min_duration: int = 0
     max_duration: int = 0
+    timestamp: int = 0
 
     def to_tuple(self):
-        return (self.token_id, self.price, self.min_duration, self.max_duration)
+        return (self.token_id, self.price, self.min_duration, self.max_duration, self.timestamp)
 
 
 @dataclass
@@ -153,7 +158,6 @@ class RentalLog:
     expiration: int
     amount: int
     protocol_fee: int = 0
-    protocol_wallet: str = ZERO_ADDRESS
 
     def to_rental(self, renter: str = ZERO_ADDRESS):
         return Rental(
@@ -167,7 +171,6 @@ class RentalLog:
             self.expiration,
             self.amount,
             self.protocol_fee,
-            self.protocol_wallet,
         )
 
 
@@ -191,11 +194,11 @@ class WithdrawalLog:
 @dataclass
 class TokenContext:
     token_id: int = 0
+    nft_owner: str = ZERO_ADDRESS
     active_rental: Rental = field(default_factory=Rental)
-    listing: Listing = field(default_factory=Listing)
 
     def to_tuple(self):
-        return (self.token_id, self.active_rental.to_tuple(), self.listing.to_tuple())
+        return (self.token_id, self.nft_owner, self.active_rental.to_tuple())
 
 
 @dataclass
@@ -207,11 +210,41 @@ class VaultState:
         return (self.active_rental.to_tuple(), self.listing.to_tuple())
 
 
-def compute_state_hash(rental: Rental, listing: Listing):
+@dataclass
+class Signature:
+    v: int
+    r: int
+    s: int
+
+    def to_tuple(self):
+        return (self.v, self.r, self.s)
+
+
+@dataclass
+class SignedListing:
+    listing: Listing
+    signature: Signature
+
+    def to_tuple(self):
+        return (self.listing.to_tuple(), self.signature.to_tuple())
+
+
+@dataclass
+class TokenContextAndListing:
+    token_context: TokenContext
+    signed_listing: SignedListing
+
+    def to_tuple(self):
+        return (self.token_context.to_tuple(), self.signed_listing.to_tuple())
+
+
+def compute_state_hash(token_id: int, nft_owner: str, rental: Rental):
     return boa.eval(
         dedent(
             f"""keccak256(
             concat(
+                convert({token_id}, bytes32),
+                convert({nft_owner}, bytes32),
                 {rental.id},
                 convert({rental.owner}, bytes32),
                 convert({rental.renter}, bytes32),
@@ -221,11 +254,56 @@ def compute_state_hash(rental: Rental, listing: Listing):
                 convert({rental.expiration}, bytes32),
                 convert({rental.amount}, bytes32),
                 convert({rental.protocol_fee}, bytes32),
-                convert({rental.protocol_wallet}, bytes32),
-                convert({listing.token_id}, bytes32),
-                convert({listing.price}, bytes32),
-                convert({listing.min_duration}, bytes32),
-                convert({listing.max_duration}, bytes32)
             ))"""
         )
     )
+
+
+def sign_listing(listing: Listing, key: str, verifying_contract: str) -> SignedListing:
+
+    typed_data = {
+        "types": {
+            "EIP712Domain": [
+                {"name": "name", "type": "string"},
+                {"name": "version", "type": "string"},
+                {"name": "chainId", "type": "uint256"},
+                {"name": "verifyingContract", "type": "address"},
+            ],
+            "Listing": [
+                {"name": "token_id", "type": "uint256"},
+                {"name": "price", "type": "uint256"},
+                {"name": "min_duration", "type": "uint256"},
+                {"name": "max_duration", "type": "uint256"},
+                {"name": "timestamp", "type": "uint256"},
+            ],
+        },
+        "primaryType": "Listing",
+        "domain": {
+            "name": "Zharta",
+            "version": "1",
+            "chainId": boa.eval("chain.id"),
+            "verifyingContract": verifying_contract,
+        },
+        "message": vars(listing),
+    }
+    signable_msg = encode_structured_data(typed_data)
+    signed_msg = Account.from_key(key).sign_message(signable_msg)
+    return SignedListing(listing, Signature(signed_msg.v, signed_msg.r, signed_msg.s))
+
+@boa.precompile("def debug_bytes32(data: bytes32)")
+def debug_bytes32(data: bytes):
+    print(f"DEBUG: {data.hex()}")
+
+def sign_listings(signed_listings, timestamp, key, verifying_contract) -> Signature:
+
+    encoded_listings = encode(
+        ("((uint256,uint256,uint256,uint256,uint256),(uint256,uint256,uint256))[]",),
+        ([listing.to_tuple() for listing in signed_listings],)
+    )
+    encoded_timestamp = encode(("uint256",), (timestamp,))
+    hash = keccak(primitive=encoded_listings)
+    # register_raw_precompile("0x00000000000000000000000000000000000000ff", debug_bytes32)
+
+    signable_msg = encode_intended_validator(verifying_contract, hexstr=encode_hex(hash + encoded_timestamp))
+    signed_msg = Account.from_key(key).sign_message(signable_msg)
+    return Signature(signed_msg.v, signed_msg.r, signed_msg.s)
