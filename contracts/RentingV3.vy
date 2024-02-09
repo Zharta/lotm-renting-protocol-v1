@@ -314,6 +314,8 @@ def __init__(
     )
 
 
+# TODO: method to claim ownership of the NFT given the vault ownership
+
 
 @external
 def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
