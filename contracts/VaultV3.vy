@@ -94,7 +94,9 @@ def withdraw(token_id: uint256, wallet: address):
     assert msg.sender == self.caller, "not caller"
     nft_contract.safeTransferFrom(self, wallet, token_id, b"")
     self._delegate_to_wallet(empty(address), 0)
-    # TODO if we support the apecoin pool, should we claim here?
+    # TODO: if we support the apecoin pool, we should claim here
+    #       otherwise, if users don't stake claim before, the staking rewards are lost
+    #       to the next depositor of the same NFT
 
 @external
 def delegate_to_wallet(delegate: address, expiration: uint256):
@@ -121,7 +123,7 @@ def staking_claim(wallet: address, token_id: uint256):
 
 
 @external
-def staking_compound(wallet: address, token_id: uint256):
+def staking_compound(token_id: uint256):
     assert msg.sender == self.caller, "not caller"
     self._staking_claim(self, token_id)
     self._staking_deposit(self, payment_token.balanceOf(self), token_id)
