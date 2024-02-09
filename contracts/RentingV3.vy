@@ -523,6 +523,7 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
     assert payment_token.transfer(msg.sender, payback_amounts), "transfer failed"
 
+    # TODO: only accrue, don't transfer
     if protocol_fees_amount > 0:
         self.protocol_fees_amount = 0
         assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
@@ -555,12 +556,17 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
 
         # TODO: allow for extension of rentals with the min duration
 
+        real_expiration_adjusted: uint256 = block.timestamp
+        if block.timestamp < context.token_context.active_rental.min_expiration:
+            real_expiration_adjusted = context.token_context.active_rental.min_expiration
+
         pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
             context.token_context.active_rental.expiration - context.token_context.active_rental.start,
-            block.timestamp - context.token_context.active_rental.start,
+            real_expiration_adjusted - context.token_context.active_rental.start,
             context.token_context.active_rental.amount
         )
         new_rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
+        extension_amounts += new_rental_amount
 
         payback_amount: uint256 = context.token_context.active_rental.amount - pro_rata_rental_amount
         payback_amounts += payback_amount
@@ -593,9 +599,9 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
     if payback_amounts > extension_amounts:
         assert payment_token.transfer(msg.sender, payback_amounts - extension_amounts), "transfer failed"
     elif payback_amounts < extension_amounts:
-        assert payment_token.transfer(self.protocol_wallet, extension_amounts - payback_amounts), "transfer failed"
-        self._transfer_erc20(self.protocol_wallet, msg.sender, extension_amounts - payback_amounts)
+        self._transfer_erc20(msg.sender, self, extension_amounts - payback_amounts)
 
+    # TODO: only accrue, don't transfer
     if protocol_fees_amount > 0:
         self.protocol_fees_amount = 0
         assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
