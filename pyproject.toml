@@ -4,7 +4,7 @@ description = "Koda Renting Protocol by Zharta"
 classifiers = ["Private :: Do Not Upload"]
 version = "0"
 dependencies = [
-    "eth-ape",
+    "eth-ape~=0.6",
     "vyper==0.3.10",
 ]
 

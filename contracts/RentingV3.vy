@@ -13,7 +13,7 @@ interface IVault:
     def staking_deposit(sender: address, amount: uint256, token_id: uint256): nonpayable
     def staking_withdraw(wallet: address, amount: uint256, token_id: uint256): nonpayable
     def staking_claim(wallet: address, token_id: uint256): nonpayable
-    def staking_compound(wallet: address, token_id: uint256): nonpayable
+    def staking_compound(token_id: uint256): nonpayable
 
 
 interface ERC721Receiver:
@@ -198,13 +198,13 @@ event StakingDeposit:
 event StakingWithdraw:
     owner: address
     nft_contract: address
-    recepient: address
+    recipient: address
     tokens: DynArray[StakingLog, 32]
 
 event StakingClaim:
     owner: address
     nft_contract: address
-    recepient: address
+    recipient: address
     tokens: DynArray[uint256, 32]
 
 event StakingCompound:
@@ -254,13 +254,15 @@ listing_revocations: public(HashMap[uint256, uint256]) # token_id -> timestamp
 
 id_to_owner: HashMap[uint256, address]
 id_to_approvals: HashMap[uint256, address]
-id_to_token_count: HashMap[address, uint256]
 owner_to_operators: HashMap[address, HashMap[address, bool]]
 owner_to_nft_count: HashMap[address, uint256]
+
+# TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
 
 unclaimed_rewards: HashMap[address, uint256] # wallet -> amount
 protocol_fees_amount: uint256
 
+# TODO is this needed? it's not in the standard and would save gas
 totalSupply: public(uint256)
 
 ##### EXTERNAL METHODS - WRITE #####
@@ -375,7 +377,7 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
     for token_id in token_ids:
         assert self.rental_states[token_id] == empty(bytes32), "invalid state"
-        vault: IVault = self._create_vault_if_needed(token_id)
+        vault: IVault = self._create_vault(token_id)
         vault.deposit(token_id, msg.sender, delegate)
 
         self._store_token_state(token_id, msg.sender, empty(Rental))
@@ -409,6 +411,10 @@ def start_rentals(
     signature_timestamp: uint256
 ):
 
+    # TODO: should we have each listing signed individually?
+    #       for batch actions, this would avoid one loop just to verify
+    #       and the other for the actions themselves
+    #       meaning that it would cost less gas
     signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
     for context in token_contexts:
         signed_listings.append(context.signed_listing)
@@ -547,6 +553,8 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
         assert context.token_context.active_rental.min_expiration <= block.timestamp, "min expiration not reached"
 
+        # TODO: allow for extension of rentals with the min duration
+
         pro_rata_rental_amount: uint256 = self._compute_real_rental_amount(
             context.token_context.active_rental.expiration - context.token_context.active_rental.start,
             block.timestamp - context.token_context.active_rental.start,
@@ -605,6 +613,8 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
+        # TODO: to work with the Lending, shouldn't this assert be against the token_context.nft_owner
+        #       and not the vault NFT owner?
         assert self.id_to_owner[token_context.token_id] == msg.sender, "not owner"
         assert not self._is_rental_active(token_context.active_rental), "active rental"
 
@@ -675,7 +685,7 @@ def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
 
 
 @external
-def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recepient: address):
+def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
     assert staking_addr != empty(address), "staking not supported"
 
     staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
@@ -684,27 +694,27 @@ def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recepien
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
 
-        self._get_vault(context.token_context.token_id).staking_withdraw(recepient, context.amount, context.token_context.token_id)
+        self._get_vault(context.token_context.token_id).staking_withdraw(recipient, context.amount, context.token_context.token_id)
         staking_log.append(StakingLog({
             token_id: context.token_context.token_id,
             amount: context.amount
         }))
 
-    log StakingWithdraw(msg.sender, nft_contract_addr, recepient, staking_log)
+    log StakingWithdraw(msg.sender, nft_contract_addr, recipient, staking_log)
 
 
 @external
-def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recepient: address):
+def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
     assert staking_addr != empty(address), "staking not supported"
     tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
 
     for context in token_contexts:
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
-        self._get_vault(context.token_context.token_id).staking_claim(recepient, context.token_context.token_id)
+        self._get_vault(context.token_context.token_id).staking_claim(recipient, context.token_context.token_id)
         tokens.append(context.token_context.token_id)
 
-    log StakingClaim(msg.sender, nft_contract_addr, recepient, tokens)
+    log StakingClaim(msg.sender, nft_contract_addr, recipient, tokens)
 
 @external
 def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
@@ -715,7 +725,7 @@ def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
 
-        self._get_vault(context.token_context.token_id).staking_compound(msg.sender, context.token_context.token_id)
+        self._get_vault(context.token_context.token_id).staking_compound(context.token_context.token_id)
         tokens.append(context.token_context.token_id)
 
     log StakingCompound(msg.sender, nft_contract_addr, tokens)
@@ -1005,12 +1015,12 @@ def _get_vault(token_id: uint256) -> IVault:
 
 
 @internal
-def _create_vault_if_needed(token_id: uint256) -> IVault:
+def _create_vault(token_id: uint256) -> IVault:
+    # only creates a vault if needed
     vault: address = self._tokenid_to_vault(token_id)
     if not vault.is_contract:
         vault = create_minimal_proxy_to(vault_impl_addr, salt=convert(token_id, bytes32))
         IVault(vault).initialise(staking_pool_id)
-        # log VaultsCreated(msg.sender, nft_contract_addr, vault_logs, delegate)?
 
     return IVault(vault)
 
