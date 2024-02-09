@@ -391,10 +391,13 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
 
 @external
-def revoke_listing(token_ids: DynArray[uint256, 32]):
-    for token_id in token_ids:
-        assert self.id_to_owner[token_id] == msg.sender, "not owner"
-    self._revoke_listings(token_ids)
+def revoke_listing(token_contexts: DynArray[TokenContext, 32]):
+    token_ids: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
+    for token_context in token_contexts:
+        assert self._is_context_valid(token_context), "invalid context"
+        assert token_context.nft_owner == msg.sender, "not owner"
+        self.listing_revocations[token_context.token_id] = block.timestamp
+        token_ids.append(token_context.token_id)
     log ListingsRevoked(msg.sender, block.timestamp, token_ids)
 
 
@@ -624,7 +627,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
         log Transfer(msg.sender, empty(address), token_context.token_id)
 
         vault.withdraw(token_context.token_id, msg.sender)
-        self._revoke_listings([token_context.token_id])
+        self.listing_revocations[token_context.token_id] = block.timestamp
 
         withdrawal_log.append(WithdrawalLog({
             vault: vault.address,
@@ -1027,12 +1030,6 @@ def _transfer_payment_token(_to: address, _amount: uint256):
 def _receive_payment_token(_from: address, _amount: uint256):
     assert payment_token.allowance(_from, self) >= _amount, "insufficient allowance"
     assert payment_token.transferFrom(_from, self, _amount), "transferFrom failed"
-
-
-@internal
-def _revoke_listings(token_ids: DynArray[uint256, 32]):
-    for token_id in token_ids:
-        self.listing_revocations[token_id] = block.timestamp
 
 
 @pure
