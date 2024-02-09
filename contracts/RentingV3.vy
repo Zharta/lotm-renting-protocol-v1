@@ -527,11 +527,8 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
         assert msg.sender == context.token_context.active_rental.renter, "not renter of active rental"
-        assert context.token_context.active_rental.min_expiration <= block.timestamp, "min expiration not reached"
 
         self._check_valid_listing(context.signed_listing, signature_timestamp, context.token_context.nft_owner)
-
-        # TODO: allow for extension of rentals with the min duration
 
         real_expiration_adjusted: uint256 = block.timestamp
         if block.timestamp < context.token_context.active_rental.min_expiration:
@@ -551,14 +548,23 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         protocol_fee_amount: uint256 = pro_rata_rental_amount * context.token_context.active_rental.protocol_fee / 10000
         protocol_fees_amount += protocol_fee_amount
 
+        new_rental: Rental = Rental({
+            id: context.token_context.active_rental.id,
+            owner: context.token_context.nft_owner,
+            renter: msg.sender,
+            delegate: context.token_context.active_rental.delegate,
+            token_id: context.token_context.token_id,
+            start: block.timestamp,
+            min_expiration: block.timestamp + context.signed_listing.listing.min_duration * 3600,
+            expiration: expiration,
+            amount: new_rental_amount,
+            protocol_fee: self.protocol_fee,
+        })
         # clear active rental
-        self._store_token_state(context.token_context.token_id, context.token_context.nft_owner, empty(Rental))
+        self._store_token_state(context.token_context.token_id, context.token_context.nft_owner, new_rental)
 
         # set unclaimed rewards
         self.unclaimed_rewards[context.token_context.nft_owner] += pro_rata_rental_amount - protocol_fee_amount
-
-        # revoke delegation
-        vault.delegate_to_wallet(empty(address), 0)
 
         rental_logs.append(RentalExtensionLog({
             id: context.token_context.active_rental.id,
