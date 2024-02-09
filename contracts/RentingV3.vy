@@ -621,8 +621,6 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
-        # TODO: to work with the Lending, shouldn't this assert be against the token_context.nft_owner
-        #       and not the vault NFT owner?
         assert self.id_to_owner[token_context.token_id] == msg.sender, "not owner"
         assert not self._is_rental_active(token_context.active_rental), "active rental"
 
@@ -632,7 +630,6 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
         self._clear_token_state(token_context.token_id)
 
-        # TODO should we burn the token?
         self._burn_token_from(msg.sender, token_context.token_id)
         log Transfer(msg.sender, empty(address), token_context.token_id)
 
