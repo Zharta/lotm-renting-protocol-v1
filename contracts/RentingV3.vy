@@ -52,7 +52,8 @@ struct Signature:
 
 struct SignedListing:
     listing: Listing
-    signature: Signature
+    owner_signature: Signature
+    admin_signature: Signature
 
 struct TokenContextAndListing:
     token_context: TokenContext
@@ -402,22 +403,7 @@ def revoke_listing(token_contexts: DynArray[TokenContext, 32]):
 
 
 @external
-def start_rentals(
-    token_contexts: DynArray[TokenContextAndListing, 32],
-    duration: uint256,
-    delegate: address,
-    signature: Signature,
-    signature_timestamp: uint256
-):
-
-    # TODO: should we have each listing signed individually?
-    #       for batch actions, this would avoid one loop just to verify
-    #       and the other for the actions themselves
-    #       meaning that it would cost less gas
-    signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
-    for context in token_contexts:
-        signed_listings.append(context.signed_listing)
-    assert self._are_listings_signed_by(signed_listings, signature, signature_timestamp, self.protocol_admin), "invalid signature"
+def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, delegate: address, signature_timestamp: uint256):
 
     rental_logs: DynArray[RentalLog, 32] = []
     expiration: uint256 = block.timestamp + duration * 3600
@@ -426,8 +412,7 @@ def start_rentals(
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
-        assert self._is_listing_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
-        assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
+        self._check_valid_listing(context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
         rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
         self._receive_payment_token(msg.sender, rental_amount)
@@ -529,12 +514,7 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
 
 @external
-def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature: Signature, signature_timestamp: uint256):
-
-    signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
-    for context in token_contexts:
-        signed_listings.append(context.signed_listing)
-    assert self._are_listings_signed_by(signed_listings, signature, signature_timestamp, self.protocol_admin), "invalid signature"
+def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature_timestamp: uint256):
 
     rental_logs: DynArray[RentalExtensionLog, 32] = []
     protocol_fees_amount: uint256 = 0
@@ -547,9 +527,9 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
         assert msg.sender == context.token_context.active_rental.renter, "not renter of active rental"
-        assert self._is_listing_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
-        assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
         assert context.token_context.active_rental.min_expiration <= block.timestamp, "min expiration not reached"
+
+        self._check_valid_listing(context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
         # TODO: allow for extension of rentals with the min duration
 
@@ -1077,9 +1057,16 @@ def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Re
         return new_rental
 
 
+@internal
+def _check_valid_listing(signed_listing: SignedListing, signature_timestamp:uint256, nft_owner: address):
+    assert self._is_listing_signed_by_owner(signed_listing, nft_owner), "invalid owner signature"
+    assert self._is_listing_signed_by_admin(signed_listing, signature_timestamp), "invalid admin signature"
+    assert signature_timestamp + LISTINGS_SIGNATURE_VALID_PERIOD > block.timestamp, "listing expired"
+    assert self.listing_revocations[signed_listing.listing.token_id] < signed_listing.listing.timestamp, "listing revoked"
+
 
 @internal
-def _is_listing_signed_by(signed_listing: SignedListing, signer: address) -> bool:
+def _is_listing_signed_by_owner(signed_listing: SignedListing, owner: address) -> bool:
     return ecrecover(
         keccak256(
             concat(
@@ -1090,27 +1077,24 @@ def _is_listing_signed_by(signed_listing: SignedListing, signer: address) -> boo
                 )
             )
         ),
-        signed_listing.signature.v,
-        signed_listing.signature.r,
-        signed_listing.signature.s
-    ) == signer
+        signed_listing.owner_signature.v,
+        signed_listing.owner_signature.r,
+        signed_listing.owner_signature.s
+    ) == owner
 
 
 @internal
-def _are_listings_signed_by(signed_listings: DynArray[SignedListing, 32], signature: Signature, signature_timestamp: uint256, signer: address) -> bool:
-    if signature_timestamp + LISTINGS_SIGNATURE_VALID_PERIOD < block.timestamp:
-        return False
-
+def _is_listing_signed_by_admin(signed_listing: SignedListing, signature_timestamp: uint256) -> bool:
     return ecrecover(
         keccak256(
             concat(
                 convert("\x19\x00", Bytes[2]),
                 convert(self, bytes20),
-                keccak256(_abi_encode(signed_listings)),
+                keccak256(_abi_encode(signed_listing.owner_signature)),
                 convert(signature_timestamp, bytes32)
             )
         ),
-        signature.v,
-        signature.r,
-        signature.s
-    ) == signer
+        signed_listing.admin_signature.v,
+        signed_listing.admin_signature.r,
+        signed_listing.admin_signature.s
+    ) == self.protocol_admin
