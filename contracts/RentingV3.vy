@@ -262,9 +262,6 @@ owner_to_nft_count: HashMap[address, uint256]
 unclaimed_rewards: HashMap[address, uint256] # wallet -> amount
 protocol_fees_amount: uint256
 
-# TODO is this needed? it's not in the standard and would save gas
-totalSupply: public(uint256)
-
 ##### EXTERNAL METHODS - WRITE #####
 
 
@@ -312,9 +309,6 @@ def __init__(
             self
         )
     )
-
-
-# TODO: method to claim ownership of the NFT given the vault ownership
 
 
 @external
@@ -433,7 +427,7 @@ def start_rentals(
         assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
 
         rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
-        self._transfer_erc20(msg.sender, self, rental_amount)
+        self._receive_payment_token(msg.sender, rental_amount)
 
         vault.delegate_to_wallet(delegate, expiration)
 
@@ -478,7 +472,7 @@ def start_rentals(
 def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
     rental_logs: DynArray[RentalLog, 32] = []
-    protocol_fees_amount: uint256 = self.protocol_fees_amount
+    protocol_fees_amount: uint256 = 0
     payback_amounts: uint256 = 0
 
     for token_context in token_contexts:
@@ -525,10 +519,8 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
     assert payment_token.transfer(msg.sender, payback_amounts), "transfer failed"
 
-    # TODO: only accrue, don't transfer
     if protocol_fees_amount > 0:
-        self.protocol_fees_amount = 0
-        assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+        self.protocol_fees_amount += protocol_fees_amount
 
     log RentalClosed(msg.sender, nft_contract_addr, rental_logs)
 
@@ -542,7 +534,7 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
     assert self._are_listings_signed_by(signed_listings, signature, signature_timestamp, self.protocol_admin), "invalid signature"
 
     rental_logs: DynArray[RentalExtensionLog, 32] = []
-    protocol_fees_amount: uint256 = self.protocol_fees_amount
+    protocol_fees_amount: uint256 = 0
     payback_amounts: uint256 = 0
     extension_amounts: uint256 = 0
     expiration: uint256 = block.timestamp + duration * 3600
@@ -599,14 +591,12 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         }))
 
     if payback_amounts > extension_amounts:
-        assert payment_token.transfer(msg.sender, payback_amounts - extension_amounts), "transfer failed"
+        self._transfer_payment_token(msg.sender, payback_amounts - extension_amounts)
     elif payback_amounts < extension_amounts:
-        self._transfer_erc20(msg.sender, self, extension_amounts - payback_amounts)
+        self._receive_payment_token(msg.sender, extension_amounts - payback_amounts)
 
-    # TODO: only accrue, don't transfer
     if protocol_fees_amount > 0:
-        self.protocol_fees_amount = 0
-        assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+        self.protocol_fees_amount += protocol_fees_amount
 
     log RentalExtended(msg.sender, nft_contract_addr, rental_logs)
 
@@ -654,7 +644,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     # transfer protocol fee to protocol wallet
     if protocol_fee_to_claim > 0:
-        assert payment_token.transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
+        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
         self.protocol_fees_amount = 0
 
     log NftsWithdrawn(
@@ -762,10 +752,18 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 
     # transfer protocol fee to protocol wallet
     if protocol_fee_to_claim > 0:
-        assert payment_token.transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
+        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
         self.protocol_fees_amount = 0
 
     log RewardsClaimed(msg.sender, rewards_to_claim, protocol_fee_to_claim, reward_logs)
+
+
+@external
+def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
+    for token_context in token_contexts:
+        assert self._is_context_valid(token_context), "invalid context"
+        assert self.id_to_owner[token_context.token_id] == msg.sender, "not owner"
+        self._store_token_state(token_context.token_id, msg.sender, empty(Rental))
 
 
 @external
@@ -773,7 +771,7 @@ def claim_fees():
     assert msg.sender == self.protocol_admin, "not admin"
     protocol_fees_amount: uint256 = self.protocol_fees_amount
     self.protocol_fees_amount = 0
-    assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+    self._transfer_payment_token(self.protocol_wallet, protocol_fees_amount)
 
 
 @external
@@ -781,8 +779,8 @@ def set_protocol_fee(protocol_fee: uint256):
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
 
-    self.protocol_fee = protocol_fee
     log ProtocolFeeSet(self.protocol_fee, protocol_fee, self.protocol_wallet)
+    self.protocol_fee = protocol_fee
 
 
 @external
@@ -790,8 +788,8 @@ def change_protocol_wallet(new_protocol_wallet: address):
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert new_protocol_wallet != empty(address), "wallet is the zero address"
 
-    self.protocol_wallet = new_protocol_wallet
     log ProtocolWalletChanged(self.protocol_wallet, new_protocol_wallet)
+    self.protocol_wallet = new_protocol_wallet
 
 
 @external
@@ -799,16 +797,17 @@ def propose_admin(_address: address):
     assert msg.sender == self.protocol_admin, "not the admin"
     assert _address != empty(address), "_address is the zero address"
 
-    self.proposed_admin = _address
     log AdminProposed(self.protocol_admin, _address)
+    self.proposed_admin = _address
 
 
 @external
 def claim_ownership():
     assert msg.sender == self.proposed_admin, "not the proposed"
+
+    log OwnershipTransferred(self.protocol_admin, self.proposed_admin)
     self.protocol_admin = self.proposed_admin
     self.proposed_admin = empty(address)
-    log OwnershipTransferred(self.protocol_admin, self.proposed_admin)
 
 
 @view
@@ -966,13 +965,11 @@ def _clear_token_state(token_id: uint256):
 @internal
 def _mint_token_to(_to: address, _token_id: uint256):
     self._add_token_to(_to, _token_id)
-    self._increase_total_supply()
 
 
 @internal
 def _burn_token_from(_owner: address, _token_id: uint256):
     self._remove_token_from(_owner, _token_id)
-    self._decrease_total_supply()
 
 
 @internal
@@ -1004,15 +1001,6 @@ def _transfer_from(_from: address, _to: address, _token_id: uint256, _sender: ad
 
 
 @internal
-def _increase_total_supply():
-    self.totalSupply += 1
-
-@internal
-def _decrease_total_supply():
-    self.totalSupply -= 1
-
-
-@internal
 def _get_vault(token_id: uint256) -> IVault:
     vault: address = self._tokenid_to_vault(token_id)
     assert vault.is_contract, "no vault exists for token_id"
@@ -1031,9 +1019,14 @@ def _create_vault(token_id: uint256) -> IVault:
 
 
 @internal
-def _transfer_erc20(_from: address, _to: address, _amount: uint256):
+def _transfer_payment_token(_to: address, _amount: uint256):
+    assert payment_token.transfer(_to, _amount), "transferFrom failed"
+
+
+@internal
+def _receive_payment_token(_from: address, _amount: uint256):
     assert payment_token.allowance(_from, self) >= _amount, "insufficient allowance"
-    assert payment_token.transferFrom(_from, _to, _amount), "transferFrom failed"
+    assert payment_token.transferFrom(_from, self, _amount), "transferFrom failed"
 
 
 @internal
@@ -1065,7 +1058,7 @@ def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Re
     else:
         protocol_fee_amount: uint256 = active_rental.amount * active_rental.protocol_fee / 10000
 
-        self.unclaimed_rewards[active_rental.renter] += active_rental.amount - protocol_fee_amount
+        self.unclaimed_rewards[active_rental.owner] += active_rental.amount - protocol_fee_amount
         self.protocol_fees_amount += protocol_fee_amount
 
         new_rental: Rental = Rental({
