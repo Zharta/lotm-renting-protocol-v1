@@ -229,6 +229,10 @@ event StakingCompound:
     nft_contract: address
     tokens: DynArray[uint256, 32]
 
+event FeesClaimed:
+    fee_wallet: address
+    amount: uint256
+
 
 # Global Variables
 
@@ -264,16 +268,12 @@ protocol_fee: public(uint256)
 protocol_admin: public(address)
 proposed_admin: public(address)
 
-# active_vaults: public(HashMap[uint256, address]) # token_id -> vault
-
 # TODO could this be more efficient using merkle proofs?
 rental_states: public(HashMap[uint256, bytes32]) # token_id -> hash(token_context)
 listing_revocations: public(HashMap[uint256, uint256]) # token_id -> timestamp
 
-# TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
-
-unclaimed_rewards: HashMap[address, uint256] # wallet -> amount
-protocol_fees_amount: uint256
+unclaimed_rewards: public(HashMap[address, uint256]) # wallet -> amount
+protocol_fees_amount: public(uint256)
 
 ##### EXTERNAL METHODS - WRITE #####
 
@@ -792,6 +792,17 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
     log RewardsClaimed(msg.sender, rewards_to_claim, protocol_fee_to_claim, reward_logs)
 
 
+@view
+@external
+def claimable_rewards(nft_owner: address, token_contexts: DynArray[TokenContext, 32]) -> uint256:
+    rewards: uint256 = self.unclaimed_rewards[nft_owner]
+    for context in token_contexts:
+        assert self._is_context_valid(context), "invalid context"
+        assert context.nft_owner == nft_owner, "not owner"
+        if context.active_rental.expiration < block.timestamp:
+            rewards += context.active_rental.amount * (10000 - context.active_rental.protocol_fee) / 10000
+    return rewards
+
 @external
 def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
     for token_context in token_contexts:
@@ -806,7 +817,7 @@ def claim_fees():
     protocol_fees_amount: uint256 = self.protocol_fees_amount
     self.protocol_fees_amount = 0
     self._transfer_payment_token(self.protocol_wallet, protocol_fees_amount)
-    # TODO log event?
+    log FeesClaimed(self.protocol_wallet, protocol_fees_amount)
 
 
 @external
@@ -1013,6 +1024,7 @@ def _check_valid_listing(token_id: uint256, signed_listing: SignedListing, signa
 @internal
 def _is_within_duration_range(listing: Listing, duration: uint256) -> bool:
     return duration >= listing.min_duration and (listing.max_duration == 0 or duration <= listing.max_duration)
+
 
 @internal
 def _is_listing_signed_by_owner(signed_listing: SignedListing, owner: address) -> bool:
