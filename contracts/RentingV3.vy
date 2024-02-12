@@ -19,6 +19,13 @@ interface IVault:
 interface ERC721Receiver:
     def onERC721Received(_operator: address, _from: address, _tokenId: uint256, _data: Bytes[1024]) -> bytes4: view
 
+interface RentingERC721:
+    def initialise(): nonpayable
+    def mint(tokens: DynArray[TokenAndWallet, 32]): nonpayable
+    def burn(tokens: DynArray[TokenAndWallet, 32]): nonpayable
+    def ownerOf(tokenId: uint256) -> address: view
+
+
 # Structs
 
 struct TokenContext:
@@ -105,6 +112,9 @@ struct StakingLog:
     token_id: uint256
     amount: uint256
 
+struct TokenAndWallet:
+    token_id: uint256
+    wallet: address
 
 # Events
 
@@ -245,6 +255,7 @@ payment_token: public(immutable(IERC20))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
 staking_addr: public(immutable(address))
+renting_erc721: public(immutable(RentingERC721))
 max_protocol_fee: public(immutable(uint256))
 staking_pool_id: public(immutable(uint256))
 
@@ -260,13 +271,9 @@ rental_states: public(HashMap[uint256, bytes32]) # token_id -> hash(token_contex
 listing_revocations: public(HashMap[uint256, uint256]) # token_id -> timestamp
 
 id_to_owner: HashMap[uint256, address]
-id_to_approvals: HashMap[uint256, address]
-owner_to_operators: HashMap[address, HashMap[address, bool]]
-owner_to_nft_count: HashMap[address, uint256]
 
 # TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
 
-# TODO should be public?
 unclaimed_rewards: HashMap[address, uint256] # wallet -> amount
 protocol_fees_amount: uint256
 
@@ -279,6 +286,7 @@ def __init__(
     _payment_token_addr: address,
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
+    _renting_erc721: address,
     _staking_addr: address,
     _staking_pool_id: uint256,
     _max_protocol_fee: uint256,
@@ -290,6 +298,7 @@ def __init__(
     assert _payment_token_addr != empty(address), "payment token is the zero addr"
     assert _nft_contract_addr != empty(address), "nft contract is the zero addr"
     assert _delegation_registry_addr != empty(address), "deleg registry is the zero addr"
+    assert _renting_erc721 != empty(address), "renting_erc721 is the zero addr"
     # staking_addr can be empty, it's optional
     assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
     assert _protocol_fee <= _max_protocol_fee, "protocol fee > max fee"
@@ -303,6 +312,7 @@ def __init__(
     staking_addr = _staking_addr
     max_protocol_fee = _max_protocol_fee
     staking_pool_id = _staking_pool_id
+    renting_erc721 = RentingERC721(_renting_erc721)
 
     self.protocol_wallet = _protocol_wallet
     self.protocol_fee = _protocol_fee
@@ -317,6 +327,8 @@ def __init__(
             self
         )
     )
+
+    renting_erc721.initialise()
 
 
 @external
@@ -385,9 +397,8 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
         vault.deposit(token_id, msg.sender, delegate)
 
         self._store_token_state(token_id, msg.sender, empty(Rental))
-        self._mint_token_to(msg.sender, token_id)
 
-        log Transfer(empty(address), msg.sender, token_id)
+        # log Transfer(empty(address), msg.sender, token_id)
 
         vault_logs.append(VaultLog({
             vault: vault.address,
@@ -396,6 +407,22 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
     log NftsDeposited(msg.sender, nft_contract_addr, vault_logs, delegate)
 
+
+
+@external
+def mint(token_contexts: DynArray[TokenContext, 32]):
+
+    tokens: DynArray[TokenAndWallet, 32] = empty(DynArray[TokenAndWallet, 32])
+
+    for token_context in token_contexts:
+        assert self._is_context_valid(token_context), "invalid context"
+
+        tokens.append(TokenAndWallet({
+            token_id: token_context.token_id,
+            wallet: token_context.nft_owner
+        }))
+
+    renting_erc721.mint(tokens)
 
 
 @external
@@ -606,13 +633,13 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
 def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
+    tokens: DynArray[TokenAndWallet, 32] = empty(DynArray[TokenAndWallet, 32])
     total_rewards: uint256 = 0
     rewards: uint256 = 0
     protocol_fee_amount: uint256 = 0
 
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
-        assert self.id_to_owner[token_context.token_id] == msg.sender, "not owner"
         assert not self._is_rental_active(token_context.active_rental), "active rental"
 
         vault: IVault = self._get_vault(token_context.token_id)
@@ -621,8 +648,10 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
         self._clear_token_state(token_context.token_id)
 
-        self._burn_token_from(msg.sender, token_context.token_id)
-        log Transfer(msg.sender, empty(address), token_context.token_id)
+        tokens.append(TokenAndWallet({
+            token_id: token_context.token_id,
+            wallet: token_context.nft_owner
+        }))
 
         vault.withdraw(token_context.token_id, msg.sender)
         self.listing_revocations[token_context.token_id] = block.timestamp
@@ -634,6 +663,8 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
             protocol_fee_amount: protocol_fee_amount
         }))
         total_rewards += rewards
+
+    renting_erc721.burn(tokens)
 
     rewards_to_claim: uint256 = self.unclaimed_rewards[msg.sender]
     protocol_fee_to_claim: uint256 = self.protocol_fees_amount
@@ -817,78 +848,6 @@ def claim_ownership():
 def tokenid_to_vault(token_id: uint256) -> address:
     return self._tokenid_to_vault(token_id)
 
-
-# ERC721
-
-@pure
-@external
-def supportsInterface(interface_id: bytes4) -> bool:
-    return interface_id in SUPPORTED_INTERFACES
-
-@view
-@external
-def balanceOf(_owner: address) -> uint256:
-    assert _owner != empty(address)
-    return self.owner_to_nft_count[_owner]
-
-
-@view
-@external
-def ownerOf(_tokenId: uint256) -> address:
-    owner: address = self.id_to_owner[_tokenId]
-    assert owner != empty(address)
-    return owner
-
-
-@view
-@external
-def getApproved(_tokenId: uint256) -> address:
-    assert self.id_to_owner[_tokenId] != empty(address)
-    return self.id_to_approvals[_tokenId]
-
-
-@view
-@external
-def isApprovedForAll(_owner: address, _operator: address) -> bool:
-    return self.owner_to_operators[_owner][_operator]
-
-
-@external
-def transferFrom(_from: address, _to: address, _tokenId: uint256):
-    self._transfer_from(_from, _to, _tokenId, msg.sender)
-
-
-@external
-def safeTransferFrom(_from: address, _to: address, _tokenId: uint256, _data: Bytes[1024]=b""):
-    self._transfer_from(_from, _to, _tokenId, msg.sender)
-    if _to.is_contract:
-        returnValue: bytes4 = ERC721Receiver(_to).onERC721Received(msg.sender, _from, _tokenId, _data)
-        assert returnValue == convert(method_id("onERC721Received(address,address,uint256,bytes)", output_type=Bytes[4]), bytes4)
-
-
-@external
-def approve(_approved: address, _tokenId: uint256):
-    owner: address = self.id_to_owner[_tokenId]
-    assert owner != empty(address)
-    assert _approved != owner
-    assert (self.id_to_owner[_tokenId] == msg.sender or self.owner_to_operators[owner][msg.sender])
-    self.id_to_approvals[_tokenId] = _approved
-    log Approval(owner, _approved, _tokenId)
-
-
-@external
-def setApprovalForAll(_operator: address, _approved: bool):
-    assert _operator != msg.sender
-    self.owner_to_operators[msg.sender][_operator] = _approved
-    log ApprovalForAll(msg.sender, _operator, _approved)
-
-
-@view
-@external
-def tokenURI(tokenId: uint256) -> String[132]:
-    return ""
-
-
 @view
 @internal
 def _tokenid_to_vault(token_id: uint256) -> address:
@@ -923,13 +882,6 @@ def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes3
         )
     )
 
-@view
-@internal
-def _is_approved_or_owner(_spender: address, _token_id: uint256) -> bool:
-    owner: address = self.id_to_owner[_token_id]
-    return _spender == owner or _spender == self.id_to_approvals[_token_id] or self.owner_to_operators[owner][_spender]
-
-
 @pure
 @internal
 def _compute_address(salt: bytes32, bytecode_hash: bytes32, deployer: address) -> address:
@@ -952,6 +904,7 @@ def _is_rental_active(rental: Rental) -> bool:
 @view
 @internal
 def _is_context_valid(context: TokenContext) -> bool:
+    """ Check if the context is valid, also meaning that the token is deposited """
     return self.rental_states[context.token_id] == self._state_hash(context.token_id, context.nft_owner, context.active_rental)
 
 
@@ -963,47 +916,6 @@ def _store_token_state(token_id: uint256, nft_owner: address, rental: Rental):
 @internal
 def _clear_token_state(token_id: uint256):
     self.rental_states[token_id] = empty(bytes32)
-
-
-@internal
-def _mint_token_to(_to: address, _token_id: uint256):
-    self._add_token_to(_to, _token_id)
-
-
-@internal
-def _burn_token_from(_owner: address, _token_id: uint256):
-    self._remove_token_from(_owner, _token_id)
-
-
-@internal
-def _add_token_to(_to: address, _token_id: uint256):
-    self.id_to_owner[_token_id] = _to
-    self.owner_to_nft_count[_to] += 1
-
-
-@internal
-def _remove_token_from(_from: address, _token_id: uint256):
-    self.id_to_owner[_token_id] = empty(address)
-    self.owner_to_nft_count[_from] -= 1
-    self._clear_approval(_from, _token_id)
-
-
-@internal
-def _clear_approval(_owner: address, _token_id: uint256):
-    if self.id_to_approvals[_token_id] != empty(address):
-        self.id_to_approvals[_token_id] = empty(address)
-
-
-@internal
-def _transfer_from(_from: address, _to: address, _token_id: uint256, _sender: address):
-    assert self.id_to_owner[_token_id] == _from, "not owner"
-    assert self._is_approved_or_owner(_sender, _token_id), "not approved or owner"
-    assert _to != empty(address)
-    self._clear_approval(_from, _token_id)
-    self.id_to_owner[_token_id] = _to
-    self.owner_to_nft_count[_from] -= 1
-    self.owner_to_nft_count[_to] += 1
-    log Transfer(_from, _to, _token_id)
 
 
 @internal
