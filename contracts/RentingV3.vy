@@ -439,6 +439,12 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
 
     rental_logs: DynArray[RentalLog, 32] = []
     expiration: uint256 = block.timestamp + duration * 3600
+    rental_amounts: uint256 = 0
+
+    for context in token_contexts:
+        rental_amounts += self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
+
+    self._receive_payment_token(msg.sender, rental_amounts)
 
     for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
@@ -447,10 +453,6 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
         assert self._is_within_duration_range(context.signed_listing.listing, duration), "duration not respected"
         assert context.signed_listing.listing.price > 0, "listing not active"
         self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
-
-        rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
-        # TODO receive all upfront in one transfer
-        self._receive_payment_token(msg.sender, rental_amount)
 
         vault.delegate_to_wallet(delegate, expiration)
 
@@ -469,7 +471,7 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
             start: block.timestamp,
             min_expiration: block.timestamp + context.signed_listing.listing.min_duration * 3600,
             expiration: expiration,
-            amount: rental_amount,
+            amount: self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price),
             protocol_fee: self.protocol_fee,
         })
 
@@ -483,7 +485,7 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
             start: block.timestamp,
             min_expiration: new_rental.min_expiration,
             expiration: expiration,
-            amount: rental_amount,
+            amount: new_rental.amount,
             protocol_fee: new_rental.protocol_fee,
         }))
 
