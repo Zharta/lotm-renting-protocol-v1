@@ -12,14 +12,27 @@ def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_re
 
 
 @pytest.fixture(scope="module")
+def renting721_contract(renting_erc721_contract_def):
+    return renting_erc721_contract_def.deploy()
+
+
+@pytest.fixture(scope="module")
 def renting_contract(
-    renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet, owner
+    renting_contract_def,
+    vault_contract,
+    ape_contract,
+    nft_contract,
+    delegation_registry_warm_contract,
+    protocol_wallet,
+    owner,
+    renting721_contract,
 ):
     return renting_contract_def.deploy(
         vault_contract,
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
+        renting721_contract,
         ZERO_ADDRESS,
         0,
         PROTOCOL_FEE,

@@ -1,4 +1,5 @@
 import contextlib
+from collections import namedtuple
 from dataclasses import dataclass, field
 from functools import cached_property
 from textwrap import dedent
@@ -225,6 +226,9 @@ class TokenContext:
 
     def to_tuple(self):
         return (self.token_id, self.nft_owner, self.active_rental.to_tuple())
+
+
+TokenAndWallet = namedtuple("TokenAndWallet", ["token_id", "wallet"], defaults=[0, ZERO_ADDRESS])
 
 
 @dataclass

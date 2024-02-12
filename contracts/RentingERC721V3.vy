@@ -35,7 +35,6 @@ event ApprovalForAll:
 
 # Global Variables
 
-
 SUPPORTED_INTERFACES: constant(bytes4[2]) = [0x01ffc9a7, 0x80ac58cd] # ERC165, ERC721
 
 # TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
@@ -79,17 +78,9 @@ def burn(tokens: DynArray[TokenAndWallet, 32]):
     assert msg.sender == self.renting_addr, "not renting contract"
 
     for token in tokens:
-        token_owner: address = self.id_to_owner[token.token_id]
-        assert token_owner != empty(address), "invalid token"
-        if token_owner == token.wallet:
+        if self.id_to_owner[token.token_id] == token.wallet:
             self._burn_token_from(token.wallet, token.token_id)
-            log Transfer(token.wallet, empty(address), token.token_id)
 
-
-@pure
-@external
-def supportsInterface(interface_id: bytes4) -> bool:
-    return interface_id in SUPPORTED_INTERFACES
 
 @view
 @external
@@ -170,6 +161,7 @@ def _mint_token_to(_to: address, _token_id: uint256):
 @internal
 def _burn_token_from(_owner: address, _token_id: uint256):
     self._remove_token_from(_owner, _token_id)
+    log Transfer(_owner, empty(address), _token_id)
 
 
 @internal

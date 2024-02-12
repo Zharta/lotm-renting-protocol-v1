@@ -270,8 +270,6 @@ proposed_admin: public(address)
 rental_states: public(HashMap[uint256, bytes32]) # token_id -> hash(token_context)
 listing_revocations: public(HashMap[uint256, uint256]) # token_id -> timestamp
 
-id_to_owner: HashMap[uint256, address]
-
 # TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
 
 unclaimed_rewards: HashMap[address, uint256] # wallet -> amount
@@ -628,7 +626,6 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
 
     log RentalExtended(msg.sender, nft_contract_addr, rental_logs)
 
-
 @external
 def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
@@ -641,6 +638,11 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
         assert not self._is_rental_active(token_context.active_rental), "active rental"
+        token_owner: address = self._owner_of(token_context.token_id)
+        if token_owner != empty(address):
+            assert msg.sender == token_owner, "not owner"
+        else:
+            assert msg.sender == token_context.nft_owner, "not owner"
 
         vault: IVault = self._get_vault(token_context.token_id)
 
@@ -794,7 +796,7 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
-        assert self.id_to_owner[token_context.token_id] == msg.sender, "not owner"
+        assert renting_erc721.ownerOf(token_context.token_id) == msg.sender, "not owner"
         self._store_token_state(token_context.token_id, msg.sender, empty(Rental))
 
 
@@ -847,6 +849,13 @@ def claim_ownership():
 @external
 def tokenid_to_vault(token_id: uint256) -> address:
     return self._tokenid_to_vault(token_id)
+
+
+@pure
+@external
+def supportsInterface(interface_id: bytes4) -> bool:
+    return interface_id in SUPPORTED_INTERFACES
+
 
 @view
 @internal
@@ -1038,3 +1047,19 @@ def _is_listing_signed_by_admin(signed_listing: SignedListing, signature_timesta
         signed_listing.admin_signature.r,
         signed_listing.admin_signature.s
     ) == self.protocol_admin
+
+
+@internal
+def _owner_of(token_id: uint256) -> address:
+    success: bool = False
+    response: Bytes[32] = b""
+    success, response = raw_call(
+        renting_erc721.address,
+        _abi_encode(token_id, method_id=method_id("ownerOf(uint256)")),
+        max_outsize=32,
+        revert_on_failure=False
+        )
+    if success:
+        return convert(response, address)
+    else:
+        return empty(address)

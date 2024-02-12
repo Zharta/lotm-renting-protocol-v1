@@ -1,5 +1,5 @@
 import boa
-import pytest
+from eth_utils import decode_hex
 
 from ...conftest_base import ZERO_ADDRESS, deploy_reverts, get_last_event
 
@@ -7,39 +7,14 @@ FOREVER = 2**256 - 1
 PROTOCOL_FEE = 500
 
 
-@pytest.fixture(scope="module")
-def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_registry_warm_contract):
-    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract, ZERO_ADDRESS)
-
-
-@pytest.fixture(scope="module")
-def renting_contract(
-    renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet, owner
-):
-    return renting_contract_def.deploy(
-        vault_contract,
-        ape_contract,
-        nft_contract,
-        delegation_registry_warm_contract,
-        ZERO_ADDRESS,
-        0,
-        PROTOCOL_FEE,
-        PROTOCOL_FEE,
-        protocol_wallet,
-        owner,
-    )
-
-
-@pytest.fixture(autouse=True)
-def mint(nft_owner, owner, renter, nft_contract, ape_contract):
-    with boa.env.anchor():
-        nft_contract.mint(nft_owner, 1, sender=owner)
-        ape_contract.mint(renter, int(1000 * 1e18), sender=owner)
-        yield
-
-
 def test_deploy_validation(
-    renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet
+    renting_contract_def,
+    vault_contract,
+    ape_contract,
+    nft_contract,
+    delegation_registry_warm_contract,
+    protocol_wallet,
+    renting721_contract,
 ):
     with deploy_reverts():
         renting_contract_def.deploy(
@@ -47,6 +22,7 @@ def test_deploy_validation(
             ape_contract,
             nft_contract,
             delegation_registry_warm_contract,
+            renting721_contract,
             ZERO_ADDRESS,
             0,
             0,
@@ -61,6 +37,7 @@ def test_deploy_validation(
             ape_contract,
             nft_contract,
             delegation_registry_warm_contract,
+            renting721_contract,
             ZERO_ADDRESS,
             0,
             0,
@@ -74,6 +51,7 @@ def test_deploy_validation(
             ape_contract,
             nft_contract,
             delegation_registry_warm_contract,
+            renting721_contract,
             ZERO_ADDRESS,
             0,
             10001,
@@ -88,6 +66,7 @@ def test_deploy_validation(
             ape_contract,
             nft_contract,
             delegation_registry_warm_contract,
+            renting721_contract,
             ZERO_ADDRESS,
             0,
             0,
@@ -98,22 +77,45 @@ def test_deploy_validation(
 
     with deploy_reverts():
         renting_contract_def.deploy(
-            ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, 0, 0, 1, protocol_wallet, protocol_wallet
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            ZERO_ADDRESS,
+            0,
+            0,
+            1,
+            protocol_wallet,
+            protocol_wallet,
         )
 
 
 def test_initial_state(
-    vault_contract, renting_contract, nft_contract, ape_contract, delegation_registry_warm_contract, protocol_wallet, owner
+    vault_contract,
+    renting_contract,
+    nft_contract,
+    ape_contract,
+    delegation_registry_warm_contract,
+    protocol_wallet,
+    owner,
+    renting721_contract,
 ):
     assert renting_contract.vault_impl_addr() == vault_contract.address
     assert renting_contract.payment_token() == ape_contract.address
     assert renting_contract.nft_contract_addr() == nft_contract.address
     assert renting_contract.delegation_registry_addr() == delegation_registry_warm_contract.address
+    assert renting_contract.renting_erc721() == renting721_contract.address
     assert renting_contract.staking_addr() == ZERO_ADDRESS
     assert renting_contract.protocol_admin() == owner
     assert renting_contract.protocol_wallet() == protocol_wallet
     assert renting_contract.max_protocol_fee() == PROTOCOL_FEE
     assert renting_contract.protocol_fee() == PROTOCOL_FEE
+
+
+def test_supports_interface(renting_contract):
+    assert renting_contract.supportsInterface(decode_hex("0x80ac58cd"))
+    assert renting_contract.supportsInterface(decode_hex("0x01ffc9a7"))
 
 
 def test_change_protocol_fee_reverts_if_wrong_caller(renting_contract, renter):
