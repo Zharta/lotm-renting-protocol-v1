@@ -667,7 +667,7 @@ def test_staking_compound_apecoin(owner, nft_owner, vault_contract, renting_cont
     ape_contract.transfer(vault_contract.address, amount, sender=nft_owner)
     vault_contract.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
-    vault_contract.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+    vault_contract.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_ape(vault_contract.address) == int(amount * 1.01)
 
 
@@ -681,7 +681,7 @@ def test_staking_compound_apecoin_not_caller(
     vault_contract.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
     with boa.reverts("not caller"):
-        vault_contract.staking_compound(nft_owner, token_id, sender=nft_owner)
+        vault_contract.staking_compound(token_id, sender=nft_owner)
     assert ape_staking_contract.staked_ape(vault_contract.address) == amount
 
 
@@ -695,7 +695,7 @@ def test_staking_compound_apecoin_not_enough_staked(
     vault_contract.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
     with boa.reverts():
-        vault_contract.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+        vault_contract.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_ape(vault_contract.address) == amount
 
 
@@ -711,7 +711,7 @@ def test_staking_compound_bayc(
     ape_contract.transfer(vault_contract_pool_bayc.address, amount, sender=nft_owner)
     vault_contract_pool_bayc.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
-    vault_contract_pool_bayc.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+    vault_contract_pool_bayc.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_nfts(POOL_BAYC, token_id) == int(amount * 1.01)
 
 
@@ -730,7 +730,7 @@ def test_staking_compound_bayc_withdrawn(
     vault_contract_pool_bayc.withdraw(token_id, nft_owner, sender=renting_contract.address)
 
     with boa.reverts():
-        vault_contract_pool_bayc.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+        vault_contract_pool_bayc.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_nfts(POOL_BAYC, token_id) == amount
 
 
@@ -747,7 +747,7 @@ def test_staking_compound_bayc_not_caller(
     vault_contract_pool_bayc.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
     with boa.reverts("not caller"):
-        vault_contract_pool_bayc.staking_compound(nft_owner, token_id, sender=nft_owner)
+        vault_contract_pool_bayc.staking_compound(token_id, sender=nft_owner)
     assert ape_staking_contract.staked_nfts(POOL_BAYC, token_id) == amount
 
 
@@ -764,7 +764,7 @@ def test_staking_compound_bayc_not_enough_staked(
     vault_contract_pool_bayc.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
     with boa.reverts():
-        vault_contract_pool_bayc.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+        vault_contract_pool_bayc.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_nfts(POOL_BAYC, token_id) == amount
 
 
@@ -780,7 +780,7 @@ def test_staking_compound_mayc(
     ape_contract.transfer(vault_contract_pool_mayc.address, amount, sender=nft_owner)
     vault_contract_pool_mayc.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
-    vault_contract_pool_mayc.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+    vault_contract_pool_mayc.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_nfts(POOL_MAYC, token_id) == int(amount * 1.01)
 
 
@@ -799,7 +799,7 @@ def test_staking_compound_mayc_withdrawn(
     vault_contract_pool_mayc.withdraw(token_id, nft_owner, sender=renting_contract.address)
 
     with boa.reverts():
-        vault_contract_pool_mayc.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+        vault_contract_pool_mayc.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_nfts(POOL_MAYC, token_id) == amount
 
 
@@ -816,7 +816,7 @@ def test_staking_compound_mayc_not_caller(
     vault_contract_pool_mayc.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
     with boa.reverts("not caller"):
-        vault_contract_pool_mayc.staking_compound(nft_owner, token_id, sender=nft_owner)
+        vault_contract_pool_mayc.staking_compound(token_id, sender=nft_owner)
     assert ape_staking_contract.staked_nfts(POOL_MAYC, token_id) == amount
 
 
@@ -833,5 +833,5 @@ def test_staking_compound_mayc_not_enough_staked(
     vault_contract_pool_mayc.staking_deposit(nft_owner, amount, token_id, sender=renting_contract.address)
 
     with boa.reverts():
-        vault_contract_pool_mayc.staking_compound(nft_owner, token_id, sender=renting_contract.address)
+        vault_contract_pool_mayc.staking_compound(token_id, sender=renting_contract.address)
     assert ape_staking_contract.staked_nfts(POOL_MAYC, token_id) == amount
