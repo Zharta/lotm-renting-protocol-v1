@@ -126,6 +126,12 @@ event DelegatedToWallet:
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
 
+event RenterDelegatedToWallet:
+    renter: address
+    delegate: address
+    nft_contract: address
+    vaults: DynArray[VaultLog, 32]
+
 event ListingsRevoked:
     owner: address
     timestamp: uint256
@@ -260,6 +266,7 @@ owner_to_nft_count: HashMap[address, uint256]
 
 # TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
 
+# TODO should be public?
 unclaimed_rewards: HashMap[address, uint256] # wallet -> amount
 protocol_fees_amount: uint256
 
@@ -323,7 +330,7 @@ def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: add
         assert msg.sender == token_context.nft_owner, "not owner"
         vault: IVault = self._get_vault(token_context.token_id)
 
-        vault.delegate_to_wallet(delegate, 0)
+        vault.delegate_to_wallet(delegate, max_value(uint256))
 
         vault_logs.append(VaultLog({vault: vault.address, token_id: token_context.token_id}))
 
@@ -363,7 +370,7 @@ def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delega
 
         vault_logs.append(VaultLog({vault: vault.address, token_id: token_context.token_id}))
 
-    log DelegatedToWallet(msg.sender, delegate, nft_contract_addr, vault_logs)
+    log RenterDelegatedToWallet(msg.sender, delegate, nft_contract_addr, vault_logs)
 
 
 
@@ -412,9 +419,12 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
-        self._check_valid_listing(context.signed_listing, signature_timestamp, context.token_context.nft_owner)
+        assert self._is_within_duration_range(context.signed_listing.listing, duration), "duration not respected"
+        assert context.signed_listing.listing.price > 0, "listing not active"
+        self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
         rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
+        # TODO receive all upfront in one transfer
         self._receive_payment_token(msg.sender, rental_amount)
 
         vault.delegate_to_wallet(delegate, expiration)
@@ -442,7 +452,7 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
 
         rental_logs.append(RentalLog({
             id: rental_id,
-            vault: self._tokenid_to_vault(context.token_context.token_id),
+            vault: vault.address,
             owner: context.token_context.nft_owner,
             token_id: context.token_context.token_id,
             start: block.timestamp,
@@ -525,10 +535,12 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
     for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert self._is_context_valid(context.token_context), "invalid context"
-        assert not self._is_rental_active(context.token_context.active_rental), "active rental"
+        assert self._is_rental_active(context.token_context.active_rental), "no active rental"
         assert msg.sender == context.token_context.active_rental.renter, "not renter of active rental"
 
-        self._check_valid_listing(context.signed_listing, signature_timestamp, context.token_context.nft_owner)
+        assert self._is_within_duration_range(context.signed_listing.listing, duration), "duration not respected"
+        assert context.signed_listing.listing.price > 0, "listing not active"
+        self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
         real_expiration_adjusted: uint256 = block.timestamp
         if block.timestamp < context.token_context.active_rental.min_expiration:
@@ -761,6 +773,7 @@ def claim_fees():
     protocol_fees_amount: uint256 = self.protocol_fees_amount
     self.protocol_fees_amount = 0
     self._transfer_payment_token(self.protocol_wallet, protocol_fees_amount)
+    # TODO log event?
 
 
 @external
@@ -900,6 +913,7 @@ def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes3
             rental.id,
             convert(rental.owner, bytes32),
             convert(rental.renter, bytes32),
+            convert(rental.delegate, bytes32),  #should this be part of state?
             convert(rental.token_id, bytes32),
             convert(rental.start, bytes32),
             convert(rental.min_expiration, bytes32),
@@ -982,10 +996,13 @@ def _clear_approval(_owner: address, _token_id: uint256):
 
 @internal
 def _transfer_from(_from: address, _to: address, _token_id: uint256, _sender: address):
-    assert self._is_approved_or_owner(_sender, _token_id)
+    assert self.id_to_owner[_token_id] == _from, "not owner"
+    assert self._is_approved_or_owner(_sender, _token_id), "not approved or owner"
     assert _to != empty(address)
     self._clear_approval(_from, _token_id)
     self.id_to_owner[_token_id] = _to
+    self.owner_to_nft_count[_from] -= 1
+    self.owner_to_nft_count[_to] += 1
     log Transfer(_from, _to, _token_id)
 
 
@@ -1064,12 +1081,17 @@ def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Re
 
 
 @internal
-def _check_valid_listing(signed_listing: SignedListing, signature_timestamp:uint256, nft_owner: address):
+def _check_valid_listing(token_id: uint256, signed_listing: SignedListing, signature_timestamp:uint256, nft_owner: address):
+    assert token_id == signed_listing.listing.token_id, "invalid token_id"
     assert self._is_listing_signed_by_owner(signed_listing, nft_owner), "invalid owner signature"
     assert self._is_listing_signed_by_admin(signed_listing, signature_timestamp), "invalid admin signature"
     assert signature_timestamp + LISTINGS_SIGNATURE_VALID_PERIOD > block.timestamp, "listing expired"
     assert self.listing_revocations[signed_listing.listing.token_id] < signed_listing.listing.timestamp, "listing revoked"
 
+
+@internal
+def _is_within_duration_range(listing: Listing, duration: uint256) -> bool:
+    return duration >= listing.min_duration and (listing.max_duration == 0 or duration <= listing.max_duration)
 
 @internal
 def _is_listing_signed_by_owner(signed_listing: SignedListing, owner: address) -> bool:
