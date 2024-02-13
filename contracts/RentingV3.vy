@@ -208,6 +208,7 @@ event ApprovalForAll:
 event StakingDeposit:
     owner: address
     nft_contract: address
+    staked_rewards: uint256
     tokens: DynArray[StakingLog, 32]
 
 event StakingWithdraw:
@@ -684,19 +685,33 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     )
 
 @external
-def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
+def stake_deposit(staking_tokens: DynArray[TokenContextAndAmount, 32], rental_tokens: DynArray[TokenContext, 32], stake_rewards: bool):
     assert staking_addr != empty(address), "staking not supported"
+
+    for context in rental_tokens:
+        assert self._is_context_valid(context), "invalid context"
+        assert msg.sender == context.nft_owner, "not owner"
+        assert not self._is_rental_active(context.active_rental), "active rental"
+        self._consolidate_claims(context.token_id, context.nft_owner, context.active_rental)
 
     staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
     total_amount: uint256 = 0
-    for context in token_contexts:
+    rewards_to_stake: uint256 = 0
+
+    for context in staking_tokens:
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
         total_amount += context.amount
 
+    if stake_rewards:
+        rewards_to_stake = min(total_amount, self.unclaimed_rewards[msg.sender])
+        if rewards_to_stake > 0:
+            self.unclaimed_rewards[msg.sender] -= rewards_to_stake
+            total_amount -= rewards_to_stake
+
     assert payment_token.allowance(msg.sender, self) >= total_amount, "insufficient allowance"
 
-    for context in token_contexts:
+    for context in staking_tokens:
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert payment_token.transferFrom(msg.sender, vault.address, context.amount), "transferFrom failed"
         vault.staking_deposit(msg.sender, context.amount, context.token_context.token_id)
@@ -705,7 +720,7 @@ def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
             amount: context.amount
         }))
 
-    log StakingDeposit(msg.sender, nft_contract_addr, staking_log)
+    log StakingDeposit(msg.sender, nft_contract_addr, rewards_to_stake, staking_log)
 
 
 @external
