@@ -182,8 +182,6 @@ def test_withdraw_logs_nfts_withdrawn(renting_contract, nft_contract, nft_owner,
         withdrawal_log = WithdrawalLog(*withdrawal_log)
         assert withdrawal_log.vault == renting_contract.tokenid_to_vault(token_id)
         assert withdrawal_log.token_id == token_id
-        assert withdrawal_log.rewards == 0
-        assert withdrawal_log.protocol_fee_amount == 0
 
     assert event.owner == nft_owner
     assert event.nft_contract == nft_contract.address

@@ -101,8 +101,6 @@ struct RewardLog:
 struct WithdrawalLog:
     vault: address
     token_id: uint256
-    rewards: uint256
-    protocol_fee_amount: uint256
 
 struct VaultLog:
     vault: address
@@ -454,7 +452,7 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
         assert context.signed_listing.listing.price > 0, "listing not active"
         self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
-        vault.delegate_to_wallet(delegate, expiration)
+        vault.delegate_to_wallet(delegate if delegate != empty(address) else msg.sender, expiration)
 
         # store unclaimed rewards
         self._consolidate_claims(context.token_context.token_id, context.token_context.nft_owner, context.token_context.active_rental)
@@ -634,8 +632,6 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
     tokens: DynArray[TokenAndWallet, 32] = empty(DynArray[TokenAndWallet, 32])
     total_rewards: uint256 = 0
-    rewards: uint256 = 0
-    protocol_fee_amount: uint256 = 0
 
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
@@ -663,10 +659,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
         withdrawal_log.append(WithdrawalLog({
             vault: vault.address,
             token_id: token_context.token_id,
-            rewards: rewards,
-            protocol_fee_amount: protocol_fee_amount
         }))
-        total_rewards += rewards
 
     renting_erc721.burn(tokens)
 
@@ -686,7 +679,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     log NftsWithdrawn(
         msg.sender,
         nft_contract_addr,
-        total_rewards,
+        rewards_to_claim,
         withdrawal_log
     )
 

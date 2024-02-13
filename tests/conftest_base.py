@@ -203,10 +203,7 @@ class RentalExtensionLog:
 
 @dataclass
 class RewardLog:
-    # vault: str
     token_id: int
-    # amount: int
-    # protocol_fee_amount: int
     active_rental_amount: int
 
 
@@ -214,8 +211,6 @@ class RewardLog:
 class WithdrawalLog:
     vault: str
     token_id: int
-    rewards: int
-    protocol_fee_amount: int
 
 
 @dataclass

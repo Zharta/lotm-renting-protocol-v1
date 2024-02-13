@@ -2,6 +2,9 @@ from textwrap import dedent
 
 import boa
 import pytest
+from eth_account import Account
+
+from ..conftest_base import ZERO_ADDRESS
 
 
 @pytest.fixture(scope="session")
@@ -13,11 +16,21 @@ def accounts():
 
 
 @pytest.fixture(scope="session")
-def owner():
-    acc = boa.env.generate_address("owner")
-    boa.env.eoa = acc
-    boa.env.set_balance(acc, 10**21)
-    return acc
+def owner_account():
+    return Account.create()
+
+
+@pytest.fixture(scope="session")
+def owner(owner_account):
+    # acc = boa.env.generate_address("owner")
+    boa.env.eoa = owner_account.address
+    boa.env.set_balance(owner_account.address, 10**21)
+    return owner_account.address
+
+
+@pytest.fixture(scope="session")
+def owner_key(owner_account):
+    return owner_account.key
 
 
 @pytest.fixture(scope="session")
@@ -60,12 +73,22 @@ def delegation_registry_warm_contract():
 
 @pytest.fixture(scope="session")
 def vault_contract_def():
-    return boa.load_partial("contracts/Vault.vy")
+    return boa.load_partial("contracts/VaultV3.vy")
 
 
 @pytest.fixture(scope="session")
 def renting_contract_def():
-    return boa.load_partial("contracts/Renting.vy")
+    return boa.load_partial("contracts/RentingV3.vy")
+
+
+@pytest.fixture(scope="session")
+def renting_erc721_contract_def():
+    return boa.load_partial("contracts/RentingERC721V3.vy")
+
+
+@pytest.fixture(scope="session")
+def protocol_fee():
+    return 500
 
 
 @pytest.fixture(scope="session")
@@ -80,10 +103,37 @@ def empty_contract_def():
 
 
 @pytest.fixture(scope="module")
-def vault_contract(vault_contract_def, nft_contract, ape_contract, delegation_registry_warm_contract):
-    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract)
+def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_registry_warm_contract):
+    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract, ZERO_ADDRESS)
 
 
 @pytest.fixture(scope="module")
-def renting_contract(renting_contract_def, vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, protocol_wallet):
-    return renting_contract_def.deploy(vault_contract, ape_contract, nft_contract, delegation_registry_warm_contract, 0, 0, protocol_wallet, protocol_wallet)
+def renting_erc721_contract(renting_erc721_contract_def):
+    return renting_erc721_contract_def.deploy()
+
+
+@pytest.fixture(scope="module")
+def renting_contract(
+    renting_contract_def,
+    renting_erc721_contract,
+    vault_contract,
+    ape_contract,
+    nft_contract,
+    delegation_registry_warm_contract,
+    protocol_wallet,
+    owner,
+    protocol_fee,
+):
+    return renting_contract_def.deploy(
+        vault_contract,
+        ape_contract,
+        nft_contract,
+        delegation_registry_warm_contract,
+        renting_erc721_contract,
+        ZERO_ADDRESS,
+        0,
+        protocol_fee,
+        protocol_fee,
+        protocol_wallet,
+        owner,
+    )
