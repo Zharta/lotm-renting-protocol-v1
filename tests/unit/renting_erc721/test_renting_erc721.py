@@ -44,6 +44,7 @@ def renting_contract(
         delegation_registry_warm_contract,
         renting721_contract,
         ZERO_ADDRESS,
+        ZERO_ADDRESS,
         0,
         PROTOCOL_FEE,
         PROTOCOL_FEE,

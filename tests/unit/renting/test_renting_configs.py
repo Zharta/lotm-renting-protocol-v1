@@ -24,6 +24,7 @@ def test_deploy_validation(
             delegation_registry_warm_contract,
             renting721_contract,
             ZERO_ADDRESS,
+            ZERO_ADDRESS,
             0,
             0,
             0,
@@ -39,6 +40,7 @@ def test_deploy_validation(
             delegation_registry_warm_contract,
             renting721_contract,
             ZERO_ADDRESS,
+            ZERO_ADDRESS,
             0,
             0,
             0,
@@ -52,6 +54,7 @@ def test_deploy_validation(
             nft_contract,
             delegation_registry_warm_contract,
             renting721_contract,
+            ZERO_ADDRESS,
             ZERO_ADDRESS,
             0,
             10001,
@@ -68,6 +71,7 @@ def test_deploy_validation(
             delegation_registry_warm_contract,
             renting721_contract,
             ZERO_ADDRESS,
+            ZERO_ADDRESS,
             0,
             0,
             1,
@@ -77,6 +81,7 @@ def test_deploy_validation(
 
     with deploy_reverts():
         renting_contract_def.deploy(
+            ZERO_ADDRESS,
             ZERO_ADDRESS,
             ZERO_ADDRESS,
             ZERO_ADDRESS,

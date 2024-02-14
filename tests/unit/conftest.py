@@ -99,6 +99,11 @@ def renting_erc721_contract_def():
     return boa.load_partial("contracts/RentingERC721V3.vy")
 
 
+@pytest.fixture(scope="session")
+def renting_staking_contract_def():
+    return boa.load_partial("contracts/StakingV3.vy")
+
+
 @pytest.fixture(scope="module")
 def empty_contract_def():
     return boa.loads_partial(

@@ -25,6 +25,8 @@ interface RentingERC721:
     def burn(tokens: DynArray[TokenAndWallet, 32]): nonpayable
     def ownerOf(tokenId: uint256) -> address: view
 
+interface RentingStaking:
+    def initialise(): nonpayable
 
 # Structs
 
@@ -257,6 +259,7 @@ vault_impl_addr: public(immutable(address))
 payment_token: public(immutable(IERC20))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
+renting_staking_addr: public(immutable(address))
 staking_addr: public(immutable(address))
 renting_erc721: public(immutable(RentingERC721))
 max_protocol_fee: public(immutable(uint256))
@@ -284,6 +287,7 @@ def __init__(
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
     _renting_erc721: address,
+    _renting_staking_addr: address,
     _staking_addr: address,
     _staking_pool_id: uint256,
     _max_protocol_fee: uint256,
@@ -306,6 +310,7 @@ def __init__(
     payment_token = IERC20(_payment_token_addr)
     nft_contract_addr = _nft_contract_addr
     delegation_registry_addr = _delegation_registry_addr
+    renting_staking_addr = _renting_staking_addr
     staking_addr = _staking_addr
     max_protocol_fee = _max_protocol_fee
     staking_pool_id = _staking_pool_id
@@ -326,6 +331,9 @@ def __init__(
     )
 
     renting_erc721.initialise()
+
+    if _renting_staking_addr != empty(address):
+        RentingStaking(_renting_staking_addr).initialise()
 
 
 @external
@@ -395,12 +403,7 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
         self._store_token_state(token_id, msg.sender, empty(Rental))
 
-        # log Transfer(empty(address), msg.sender, token_id)
-
-        vault_logs.append(VaultLog({
-            vault: vault.address,
-            token_id: token_id
-        }))
+        vault_logs.append(VaultLog({vault: vault.address, token_id: token_id}))
 
     log NftsDeposited(msg.sender, nft_contract_addr, vault_logs, delegate)
 
@@ -673,9 +676,10 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
         self.unclaimed_rewards[msg.sender] = 0
 
     # transfer protocol fee to protocol wallet
-    if protocol_fee_to_claim > 0:
-        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
-        self.protocol_fees_amount = 0
+    self._transfer_fees(protocol_fee_to_claim)
+    #if protocol_fee_to_claim > 0:
+    #    self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
+    #    self.protocol_fees_amount = 0
 
     log NftsWithdrawn(
         msg.sender,
@@ -685,89 +689,27 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     )
 
 @external
-def stake_deposit(staking_tokens: DynArray[TokenContextAndAmount, 32], rental_tokens: DynArray[TokenContext, 32], stake_rewards: bool):
-    assert staking_addr != empty(address), "staking not supported"
-
-    for context in rental_tokens:
+def consolidate_claims_and_approve(nft_owner: address, max_amount: uint256, token_contexts: DynArray[TokenContext, 32]) -> uint256:
+    assert msg.sender == renting_staking_addr, "not staking contract"
+    for context in token_contexts:
         assert self._is_context_valid(context), "invalid context"
-        assert msg.sender == context.nft_owner, "not owner"
+        assert nft_owner == context.nft_owner, "not owner"
         assert not self._is_rental_active(context.active_rental), "active rental"
         self._consolidate_claims(context.token_id, context.nft_owner, context.active_rental)
-
-    staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
-    total_amount: uint256 = 0
-    rewards_to_stake: uint256 = 0
-
-    for context in staking_tokens:
-        assert msg.sender == context.token_context.nft_owner, "not owner"
-        assert self._is_context_valid(context.token_context), "invalid context"
-        total_amount += context.amount
-
-    if stake_rewards:
-        rewards_to_stake = min(total_amount, self.unclaimed_rewards[msg.sender])
-        if rewards_to_stake > 0:
-            self.unclaimed_rewards[msg.sender] -= rewards_to_stake
-            total_amount -= rewards_to_stake
-
-    assert payment_token.allowance(msg.sender, self) >= total_amount, "insufficient allowance"
-
-    for context in staking_tokens:
-        vault: IVault = self._get_vault(context.token_context.token_id)
-        assert payment_token.transferFrom(msg.sender, vault.address, context.amount), "transferFrom failed"
-        vault.staking_deposit(msg.sender, context.amount, context.token_context.token_id)
-        staking_log.append(StakingLog({
-            token_id: context.token_context.token_id,
-            amount: context.amount
-        }))
-
-    log StakingDeposit(msg.sender, nft_contract_addr, rewards_to_stake, staking_log)
-
+    # log ConsolidateClaims(nft_owner, token_contexts)
+    approved: uint256 = min(max_amount, self.unclaimed_rewards[nft_owner])
+    if approved > 0:
+        self.unclaimed_rewards[nft_owner] -= approved
+    return approved
 
 @external
-def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
-    assert staking_addr != empty(address), "staking not supported"
-
-    staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
-
-    for context in token_contexts:
-        assert msg.sender == context.token_context.nft_owner, "not owner"
-        assert self._is_context_valid(context.token_context), "invalid context"
-
-        self._get_vault(context.token_context.token_id).staking_withdraw(recipient, context.amount, context.token_context.token_id)
-        staking_log.append(StakingLog({
-            token_id: context.token_context.token_id,
-            amount: context.amount
-        }))
-
-    log StakingWithdraw(msg.sender, nft_contract_addr, recipient, staking_log)
-
-
-@external
-def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
-    assert staking_addr != empty(address), "staking not supported"
-    tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
-
-    for context in token_contexts:
-        assert msg.sender == context.token_context.nft_owner, "not owner"
-        assert self._is_context_valid(context.token_context), "invalid context"
-        self._get_vault(context.token_context.token_id).staking_claim(recipient, context.token_context.token_id)
-        tokens.append(context.token_context.token_id)
-
-    log StakingClaim(msg.sender, nft_contract_addr, recipient, tokens)
-
-@external
-def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
-    assert staking_addr != empty(address), "staking not supported"
-    tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
-
-    for context in token_contexts:
-        assert msg.sender == context.token_context.nft_owner, "not owner"
-        assert self._is_context_valid(context.token_context), "invalid context"
-
-        self._get_vault(context.token_context.token_id).staking_compound(context.token_context.token_id)
-        tokens.append(context.token_context.token_id)
-
-    log StakingCompound(msg.sender, nft_contract_addr, tokens)
+def get_vaults(nft_owner: address, token_contexts: DynArray[TokenContext, 32]) -> DynArray[address, 32]:
+    vaults: DynArray[address, 32] = empty(DynArray[address, 32])
+    for token_context in token_contexts:
+        assert nft_owner == token_context.nft_owner, "not owner"
+        assert self._is_context_valid(token_context), "invalid context"
+        vaults.append(self._get_vault(token_context.token_id).address)
+    return vaults
 
 
 @external
@@ -795,9 +737,10 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
     self.unclaimed_rewards[msg.sender] = 0
 
     # transfer protocol fee to protocol wallet
-    if protocol_fee_to_claim > 0:
-        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
-        self.protocol_fees_amount = 0
+    self._transfer_fees(protocol_fee_to_claim)
+    #if protocol_fee_to_claim > 0:
+    #    self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
+    #    self.protocol_fees_amount = 0
 
     log RewardsClaimed(msg.sender, rewards_to_claim, protocol_fee_to_claim, reward_logs)
 
@@ -825,8 +768,9 @@ def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
 def claim_fees():
     assert msg.sender == self.protocol_admin, "not admin"
     protocol_fees_amount: uint256 = self.protocol_fees_amount
-    self.protocol_fees_amount = 0
-    self._transfer_payment_token(self.protocol_wallet, protocol_fees_amount)
+    self._transfer_fees(self.protocol_fees_amount)
+    # self.protocol_fees_amount = 0
+    # self._transfer_payment_token(self.protocol_wallet, protocol_fees_amount)
     log FeesClaimed(self.protocol_wallet, protocol_fees_amount)
 
 
@@ -899,16 +843,17 @@ def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes3
         concat(
             convert(token_id, bytes32),
             convert(nft_owner, bytes32),
-            rental.id,
-            convert(rental.owner, bytes32),
-            convert(rental.renter, bytes32),
-            convert(rental.delegate, bytes32),  #should this be part of state?
-            convert(rental.token_id, bytes32),
-            convert(rental.start, bytes32),
-            convert(rental.min_expiration, bytes32),
-            convert(rental.expiration, bytes32),
-            convert(rental.amount, bytes32),
-            convert(rental.protocol_fee, bytes32),
+            _abi_encode(rental)
+            # rental.id,
+            # convert(rental.owner, bytes32),
+            # convert(rental.renter, bytes32),
+            # convert(rental.delegate, bytes32),  #should this be part of state?
+            # convert(rental.token_id, bytes32),
+            # convert(rental.start, bytes32),
+            # convert(rental.min_expiration, bytes32),
+            # convert(rental.expiration, bytes32),
+            # convert(rental.amount, bytes32),
+            # convert(rental.protocol_fee, bytes32),
         )
     )
 
@@ -967,8 +912,14 @@ def _create_vault(token_id: uint256) -> IVault:
 
 
 @internal
+def _transfer_fees(_amount: uint256):
+    if _amount > 0:
+        self.protocol_fees_amount = 0
+        self._transfer_payment_token(self.protocol_wallet, _amount)
+
+@internal
 def _transfer_payment_token(_to: address, _amount: uint256):
-    assert payment_token.transfer(_to, _amount), "transferFrom failed"
+    assert payment_token.transfer(_to, _amount), "transfer failed"
 
 
 @internal
