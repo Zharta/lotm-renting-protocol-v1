@@ -68,7 +68,6 @@ def mint(tokens: DynArray[TokenAndWallet, 32]):
 
     for token in tokens:
         assert self.id_to_owner[token.token_id] == empty(address), "token already minted"
-        # TODO check if deposited
         self._mint_token_to(token.wallet, token.token_id)
         log Transfer(empty(address), token.wallet, token.token_id)
 

@@ -31,7 +31,7 @@ struct SingleNft:
 
 # Global Variables
 
-MAX_STAKE_POOL_ID: constant(uint256) = 2
+VALID_STAKE_POOL_IDS: constant(uint256[2]) = [1, 2]
 
 STAKING_DEPOSIT_METHOD: constant(bytes4[3]) = [0xbd5023a9, 0x46583a05, 0x8ecbffa7]
 # depositApeCoin(uint256,address), depositBAYC((uint32,uint224)[]), depositMAYC((uint32,uint224)[])
@@ -73,7 +73,9 @@ def __init__(
 @external
 def initialise(staking_pool_id: uint256):
     assert self.caller == empty(address), "already initialised"
-    assert staking_pool_id <= MAX_STAKE_POOL_ID, "invalid staking pool id"
+
+    if staking_addr != empty(address):
+        assert staking_pool_id in VALID_STAKE_POOL_IDS, "invalid staking pool id"
 
     self.caller = msg.sender
     self.staking_pool_id = staking_pool_id
@@ -145,53 +147,22 @@ def _delegate_to_wallet(delegate: address, expiration: uint256):
 def _staking_deposit(wallet: address, amount: uint256, token_id: uint256):
     payment_token.approve(staking_addr, amount)
 
-    if self.staking_pool_id == 0:
-        raw_call(
-            staking_addr,
-            concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id], _abi_encode(amount, self))
-        )
-    else:
-        nfts: DynArray[SingleNft, 1] = [
-            SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})
-        ]
+    nfts: DynArray[SingleNft, 1] = [SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})]
 
-        raw_call(
-            staking_addr,
-            concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id], _abi_encode(nfts))
-        )
+    raw_call(staking_addr, concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id], _abi_encode(nfts)))
 
 
 @internal
 def _staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
     payment_token.approve(staking_addr, amount)
 
-    if self.staking_pool_id == 0:
-        raw_call(
-            staking_addr,
-            concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id], _abi_encode(amount, wallet))
-        )
-    else:
-        nfts: DynArray[SingleNft, 1] = [
-            SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})
-        ]
+    nfts: DynArray[SingleNft, 1] = [SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})]
 
-        raw_call(
-            staking_addr,
-            concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet))
-        )
+    raw_call(staking_addr, concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet)))
 
 
 @internal
 def _staking_claim(wallet: address, token_id: uint256):
 
-    if self.staking_pool_id == 0:
-        raw_call(
-            staking_addr,
-            concat(STAKING_CLAIM_METHOD[self.staking_pool_id], _abi_encode(wallet))
-        )
-    else:
-        nfts: DynArray[uint256, 1] = [token_id]
-        raw_call(
-            staking_addr,
-            concat(STAKING_CLAIM_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet))
-        )
+    nfts: DynArray[uint256, 1] = [token_id]
+    raw_call(staking_addr, concat(STAKING_CLAIM_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet)))
