@@ -225,6 +225,8 @@ class TokenContext:
 
 TokenAndWallet = namedtuple("TokenAndWallet", ["token_id", "wallet"], defaults=[0, ZERO_ADDRESS])
 
+StakingLog = namedtuple("StakingLog", ["token_id", "amount"], defaults=[0, 0])
+
 
 @dataclass
 class VaultState:
@@ -253,6 +255,15 @@ class SignedListing:
 
     def to_tuple(self):
         return (self.listing.to_tuple(), self.owner_signature.to_tuple(), self.admin_signature.to_tuple())
+
+
+@dataclass
+class TokenContextAndAmount:
+    token_context: TokenContext
+    amount: int
+
+    def to_tuple(self):
+        return (self.token_context.to_tuple(), self.amount)
 
 
 @dataclass
