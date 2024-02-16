@@ -661,17 +661,11 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
     renting_erc721.burn(tokens)
 
     rewards_to_claim: uint256 = self.unclaimed_rewards[msg.sender]
-    protocol_fee_to_claim: uint256 = self.protocol_fees_amount
 
     # transfer reward to nft owner
     if rewards_to_claim > 0:
         self._transfer_payment_token(msg.sender, rewards_to_claim)
         self.unclaimed_rewards[msg.sender] = 0
-
-    # transfer protocol fee to protocol wallet
-    if protocol_fee_to_claim > 0:
-        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
-        self.protocol_fees_amount = 0
 
     log NftsWithdrawn(
         msg.sender,
@@ -687,15 +681,11 @@ def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
     assert staking_addr != empty(address), "staking not supported"
 
     staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
-    total_amount: uint256 = 0
+
     for context in token_contexts:
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
-        total_amount += context.amount
 
-    assert payment_token.allowance(msg.sender, self) >= total_amount, "insufficient allowance"
-
-    for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert payment_token.transferFrom(msg.sender, vault.address, context.amount), "transferFrom failed"
         vault.staking_deposit(msg.sender, context.amount, context.token_context.token_id)
@@ -773,19 +763,13 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
         }))
 
     rewards_to_claim: uint256 = self.unclaimed_rewards[msg.sender]
-    protocol_fee_to_claim: uint256 = self.protocol_fees_amount
 
     # transfer reward to nft owner
     assert rewards_to_claim > 0, "no rewards to claim"
     assert payment_token.transfer(msg.sender, rewards_to_claim), "transfer failed"
     self.unclaimed_rewards[msg.sender] = 0
 
-    # transfer protocol fee to protocol wallet
-    if protocol_fee_to_claim > 0:
-        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
-        self.protocol_fees_amount = 0
-
-    log RewardsClaimed(msg.sender, rewards_to_claim, protocol_fee_to_claim, reward_logs)
+    log RewardsClaimed(msg.sender, rewards_to_claim, self.protocol_fees_amount, reward_logs)
 
 
 @view
@@ -967,7 +951,6 @@ def _transfer_payment_token(_to: address, _amount: uint256):
 
 @internal
 def _receive_payment_token(_from: address, _amount: uint256):
-    assert payment_token.allowance(_from, self) >= _amount, "insufficient allowance"
     assert payment_token.transferFrom(_from, self, _amount), "transferFrom failed"
 
 

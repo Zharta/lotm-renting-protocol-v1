@@ -65,15 +65,13 @@ def test_claim(
     total_fees = rental_amount * token_id_qty * PROTOCOL_FEE // 10000
     total_rewards = rental_amount * token_id_qty - total_fees
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
-    protocol_wallet_balance = ape_contract.balanceOf(protocol_wallet)
 
     renting_contract.claim([c.to_tuple() for c in token_contexts], sender=nft_owner)
 
     assert renting_contract.eval(f"self.unclaimed_rewards[{nft_owner}]") == 0
-    assert renting_contract.eval("self.protocol_fees_amount") == 0
+    assert renting_contract.eval("self.protocol_fees_amount") == total_fees
 
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance + total_rewards
-    assert ape_contract.balanceOf(protocol_wallet) == protocol_wallet_balance + total_fees
 
 
 def test_claim_logs_rewards_claimed(
@@ -143,7 +141,6 @@ def test_claim_pays_unclaimed_rewards(renting_contract, nft_owner, renter, nft_c
     unclaimed_rewards = 100
     protocol_fees_amount = 50
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
-    protocol_wallet_balance = ape_contract.balanceOf(protocol_wallet)
 
     ape_contract.mint(renting_contract, unclaimed_rewards + protocol_fees_amount, sender=owner)
     renting_contract.eval(f"self.unclaimed_rewards[{nft_owner}] = {unclaimed_rewards}")
@@ -152,10 +149,8 @@ def test_claim_pays_unclaimed_rewards(renting_contract, nft_owner, renter, nft_c
     renting_contract.claim([], sender=nft_owner)
 
     assert renting_contract.eval(f"self.unclaimed_rewards[{nft_owner}]") == 0
-    assert renting_contract.eval("self.protocol_fees_amount") == 0
-
+    assert renting_contract.eval("self.protocol_fees_amount") == protocol_fees_amount
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance + unclaimed_rewards
-    assert ape_contract.balanceOf(protocol_wallet) == protocol_wallet_balance + protocol_fees_amount
 
 
 def test_claim_reverts_if_invalid_context(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):

@@ -33,14 +33,14 @@ struct SingleNft:
 
 VALID_STAKE_POOL_IDS: constant(uint256[2]) = [1, 2]
 
-STAKING_DEPOSIT_METHOD: constant(bytes4[3]) = [0xbd5023a9, 0x46583a05, 0x8ecbffa7]
-# depositApeCoin(uint256,address), depositBAYC((uint32,uint224)[]), depositMAYC((uint32,uint224)[])
+STAKING_DEPOSIT_METHOD: constant(bytes4[2]) = [0x46583a05, 0x8ecbffa7]
+# depositBAYC((uint32,uint224)[]), depositMAYC((uint32,uint224)[])
 
-STAKING_WITHDRAW_METHOD: constant(bytes4[3]) = [0xe4e81847, 0xaceb3629, 0xed23c906]
-# withdrawApeCoin(uint256,address), withdrawBAYC((uint32,uint224)[],address), withdrawMAYC((uint32,uint224)[],address)
+STAKING_WITHDRAW_METHOD: constant(bytes4[2]) = [0xaceb3629, 0xed23c906]
+# withdrawBAYC((uint32,uint224)[],address), withdrawMAYC((uint32,uint224)[],address)
 
-STAKING_CLAIM_METHOD: constant(bytes4[3]) = [0x2ee2de66, 0xb682e859, 0x57a26300]
-# claimApeCoin(address), claimBAYC(uint256[],address), claimMAYC(uint256[],address)
+STAKING_CLAIM_METHOD: constant(bytes4[2]) = [0xb682e859, 0x57a26300]
+# claimBAYC(uint256[],address), claimMAYC(uint256[],address)
 
 caller: public(address)
 payment_token: public(immutable(IERC20))
@@ -148,7 +148,7 @@ def _staking_deposit(wallet: address, amount: uint256, token_id: uint256):
 
     nfts: DynArray[SingleNft, 1] = [SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})]
 
-    raw_call(staking_addr, concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id], _abi_encode(nfts)))
+    raw_call(staking_addr, concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id - 1], _abi_encode(nfts)))
 
 
 @internal
@@ -157,11 +157,11 @@ def _staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
 
     nfts: DynArray[SingleNft, 1] = [SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})]
 
-    raw_call(staking_addr, concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet)))
+    raw_call(staking_addr, concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id - 1], _abi_encode(nfts, wallet)))
 
 
 @internal
 def _staking_claim(wallet: address, token_id: uint256):
 
     nfts: DynArray[uint256, 1] = [token_id]
-    raw_call(staking_addr, concat(STAKING_CLAIM_METHOD[self.staking_pool_id], _abi_encode(nfts, wallet)))
+    raw_call(staking_addr, concat(STAKING_CLAIM_METHOD[self.staking_pool_id - 1], _abi_encode(nfts, wallet)))

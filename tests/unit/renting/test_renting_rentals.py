@@ -1939,7 +1939,7 @@ def test_extend_rentals_reverts_if_insufficient_allowance(
     ape_contract.approve(renting_contract, extension_amount - 1, sender=renter)
     signed_listing = sign_listing(listing, nft_owner_key, owner_key, extend_timestamp, renting_contract.address)
 
-    with boa.reverts("insufficient allowance"):
+    with boa.reverts():
         renting_contract.extend_rentals(
             [TokenContextAndListing(token_context, signed_listing).to_tuple()],
             duration,

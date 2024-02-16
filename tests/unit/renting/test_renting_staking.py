@@ -256,7 +256,7 @@ def test_stake_deposit_reverts_if_insufficient_allowance(
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
     ape_contract.approve(renting_contract, amount - 1, sender=nft_owner)
 
-    with boa.reverts("insufficient allowance"):
+    with boa.reverts():
         renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
 
 
