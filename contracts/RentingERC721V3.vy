@@ -98,6 +98,12 @@ def ownerOf(_tokenId: uint256) -> address:
 
 @view
 @external
+def owner_of(_tokenId: uint256) -> address:
+    return self.id_to_owner[_tokenId]
+
+
+@view
+@external
 def getApproved(_tokenId: uint256) -> address:
     assert self.id_to_owner[_tokenId] != empty(address)
     return self.id_to_approvals[_tokenId]

@@ -124,6 +124,27 @@ def test_deposit_after_withdraw(renting_contract, nft_contract, nft_owner, deleg
     assert vault_log.token_id == token_id
 
 
+def test_deposit_reverts_if_contract_paused(renting_contract, nft_contract, nft_owner, delegation_registry_warm_contract):
+    token_id = 1
+    delegate = boa.env.generate_address("delegate")
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    renting_contract.set_paused(True, sender=renting_contract.protocol_admin())
+
+    with boa.reverts("paused"):
+        renting_contract.deposit([token_id], delegate, sender=nft_owner)
+
+
+def test_deposit_reverts_if_not_approved(renting_contract, nft_contract, nft_owner, delegation_registry_warm_contract):
+    token_id = 1
+    delegate = boa.env.generate_address("delegate")
+
+    with boa.reverts():
+        renting_contract.deposit([token_id], delegate, sender=nft_owner)
+
+
 def test_withdraw(
     renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):

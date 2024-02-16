@@ -333,6 +333,48 @@ def test_starts_rentals_creates_delegation(
     assert delegation_registry_warm_contract.getHotWallet(vault_addr) == renter_delegate
 
 
+def test_start_rentals_reverts_if_contract_paused(
+    renting_contract,
+    nft_contract,
+    ape_contract,
+    nft_owner,
+    nft_owner_key,
+    renter,
+    vault_contract_def,
+    owner,
+    owner_key,
+    protocol_wallet,
+):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+    start_time = boa.eval("block.timestamp")
+    duration = 10
+    rental_amount = duration * price
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    ape_contract.approve(renting_contract, rental_amount, sender=renter)
+    renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
+
+    listing = Listing(token_id, price, min_duration, max_duration, start_time)
+    signed_listing = sign_listing(listing, nft_owner_key, owner_key, start_time, renting_contract.address)
+    token_context = TokenContext(token_id, nft_owner, Rental())
+
+    renting_contract.set_paused(True, sender=owner)
+
+    with boa.reverts("paused"):
+        renting_contract.start_rentals(
+            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
+            duration,
+            ZERO_ADDRESS,
+            start_time,
+            sender=renter,
+        )
+
+
 def test_start_rentals_reverts_if_invalid_signature(
     renting_contract,
     nft_contract,

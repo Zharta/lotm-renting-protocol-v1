@@ -186,6 +186,25 @@ def test_staking_deposit_logs_staking_deposit(
         assert staking_log.amount == amount
 
 
+def test_staking_deposit_reverts_if_contract_paused(
+    renting_contract, nft_owner, renter, nft_contract, ape_contract, owner, vault_contract_def
+):
+    token_id = 1
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+    token_context = TokenContext(token_id, nft_owner, Rental())
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
+
+    renting_contract.set_paused(True, sender=owner)
+
+    amount = int(1e18)
+    ape_contract.approve(renting_contract, amount, sender=nft_owner)
+
+    with boa.reverts("paused"):
+        renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+
+
 def test_stake_deposit_reverts_if_invalid_context(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
@@ -704,6 +723,24 @@ def test_staking_compound_logs_staking_compound(
 
     for token_id, staking_log_token_id in zip(token_ids, compound_event.tokens):
         assert staking_log_token_id == token_id
+
+
+def test_stake_compound_reverts_if_contract_paused(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
+    token_id = 1
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+    token_context = TokenContext(token_id, nft_owner, Rental())
+    amount = int(100e18)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
+
+    ape_contract.approve(renting_contract, amount, sender=nft_owner)
+    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+
+    renting_contract.set_paused(True, sender=owner)
+
+    with boa.reverts("paused"):
+        renting_contract.stake_compound([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
 
 
 def test_stake_compound_reverts_if_invalid_context(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
