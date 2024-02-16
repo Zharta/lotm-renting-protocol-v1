@@ -37,7 +37,6 @@ event ApprovalForAll:
 
 SUPPORTED_INTERFACES: constant(bytes4[2]) = [0x01ffc9a7, 0x80ac58cd] # ERC165, ERC721
 
-# TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
 name: constant(String[10]) = ""
 symbol: constant(String[4]) = ""
 

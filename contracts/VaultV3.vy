@@ -50,7 +50,6 @@ staking_addr: public(immutable(address))
 staking_pool_id: public(uint256)
 
 
-
 ##### EXTERNAL METHODS - WRITE #####
 
 @payable

@@ -250,8 +250,6 @@ SUPPORTED_INTERFACES: constant(bytes4[2]) = [0x01ffc9a7, 0x80ac58cd] # ERC165, E
 
 LISTINGS_SIGNATURE_VALID_PERIOD: constant(uint256) = 120
 
-name: constant(String[10]) = ""
-symbol: constant(String[4]) = ""
 listing_sig_domain_separator: immutable(bytes32)
 vault_impl_addr: public(immutable(address))
 payment_token: public(immutable(IERC20))
@@ -267,7 +265,6 @@ protocol_fee: public(uint256)
 protocol_admin: public(address)
 proposed_admin: public(address)
 
-# TODO could this be more efficient using merkle proofs?
 rental_states: public(HashMap[uint256, bytes32]) # token_id -> hash(token_context)
 listing_revocations: public(HashMap[uint256, uint256]) # token_id -> timestamp
 
@@ -384,7 +381,6 @@ def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delega
     log RenterDelegatedToWallet(msg.sender, delegate, nft_contract_addr, vault_logs)
 
 
-
 @external
 def deposit(token_ids: DynArray[uint256, 32], delegate: address):
     self._check_not_paused()
@@ -397,15 +393,12 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 
         self._store_token_state(token_id, msg.sender, empty(Rental))
 
-        # log Transfer(empty(address), msg.sender, token_id)
-
         vault_logs.append(VaultLog({
             vault: vault.address,
             token_id: token_id
         }))
 
     log NftsDeposited(msg.sender, nft_contract_addr, vault_logs, delegate)
-
 
 
 @external
@@ -492,7 +485,6 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
         }))
 
     log RentalStarted(msg.sender, delegate, nft_contract_addr, rental_logs)
-
 
 
 @external
@@ -630,6 +622,7 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
 
     log RentalExtended(msg.sender, nft_contract_addr, rental_logs)
 
+
 @external
 def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
@@ -686,6 +679,7 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
         rewards_to_claim,
         withdrawal_log
     )
+
 
 @external
 def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
@@ -745,6 +739,7 @@ def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: 
 
     log StakingClaim(msg.sender, nft_contract_addr, recipient, tokens)
 
+
 @external
 def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
     self._check_not_paused()
@@ -803,6 +798,7 @@ def claimable_rewards(nft_owner: address, token_contexts: DynArray[TokenContext,
         if context.active_rental.expiration < block.timestamp:
             rewards += context.active_rental.amount * (10000 - context.active_rental.protocol_fee) / 10000
     return rewards
+
 
 @external
 def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
@@ -888,6 +884,7 @@ def _tokenid_to_vault(token_id: uint256) -> address:
         self
     )
 
+
 @pure
 @internal
 def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes32:
@@ -907,6 +904,7 @@ def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes3
             convert(rental.protocol_fee, bytes32),
         )
     )
+
 
 @pure
 @internal
