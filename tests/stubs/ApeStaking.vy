@@ -8,36 +8,36 @@ struct SingleNft:
     amount: uint224
 
 event Deposit:
-    user: address
+    user: indexed(address)
     amount: uint256
     recipient: address
 
 event DepositNft:
-    user: address
-    poolId: uint256
+    user: indexed(address)
+    poolId: indexed(uint256)
     amount: uint256
     tokenId: uint256
 
 event Withdraw:
-    user: address
+    user: indexed(address)
     amount: uint256
     recipient: address
 
 event WithdrawNft:
-    user: address
-    poolId: uint256
+    user: indexed(address)
+    poolId: indexed(uint256)
     amount: uint256
     recipient: address
     tokenId: uint256
 
 event ClaimRewards:
-    user: address
+    user: indexed(address)
     amount: uint256
     recipient: address
 
 event ClaimRewardsNft:
-    user: address
-    poolId: uint256
+    user: indexed(address)
+    poolId: indexed(uint256)
     amount: uint256
     tokenId: uint256
 
@@ -138,3 +138,11 @@ def claimMAYC(nfts: DynArray[uint256,1], recipient: address):
     amount: uint256 = self.staked_nfts[MAYC_POOL][nfts[0]] / 100
     ape_coin.transfer(recipient, amount)
     log ClaimRewardsNft(msg.sender, MAYC_POOL, amount, nfts[0])
+
+@external
+def nftPosition(poolId: uint256, tokenId: uint256) -> (uint256, int256):
+    return self.staked_nfts[poolId][tokenId], convert(self.staked_nfts[poolId][tokenId] / 100, int256)
+
+@external
+def pendingRewards(pool_id: uint256, wallet: address, token_id: uint256) -> uint256:
+    return self.staked_nfts[pool_id][token_id] / 100
