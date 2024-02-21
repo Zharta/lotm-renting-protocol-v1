@@ -65,7 +65,7 @@
         },
         "vault_impl_koda_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
-            "address": "0xA62A2a84d19CFE2b99e29F49f0591C7ABe8f6768",
+            "address": "0xe95b387cEe5BCC750D9e58Fc7a49B0aAFeFE26DF",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -96,7 +96,7 @@
         },
         "vault_impl_mara_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
-            "address": "0xa6a1D93eAB387Ccf805cec49902524b1B50456D4",
+            "address": "0x3Bbb07dAc04d7B07a9c1274C9Bb083B8c4aA60A1",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -112,7 +112,7 @@
         },
         "vault_impl_otherdeed_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
-            "address": "0x203cC6d267AeAeb36349055b9ed312fA0631EFb4",
+            "address": "0x3df34a0892867d26eC06fFB48D3dD9085ae5cC4f",
             "contract": "VaultImplContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -175,7 +175,7 @@
         },
         "koda_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
-            "address": "0x1bD83F81EB786E669a8d1D66ed3A99Cec63b01c6",
+            "address": "0xe95D5EBa55506A78B4FA61713B17998cb591FE7D",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -191,7 +191,7 @@
                 "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
                 "nft_contract": "0x4Dc251DC5d8dBc96305bD4B73C3f8Cfe485BBceF",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
-                "vault_impl": "0xA62A2a84d19CFE2b99e29F49f0591C7ABe8f6768"
+                "vault_impl": "0xe95b387cEe5BCC750D9e58Fc7a49B0aAFeFE26DF"
             },
             "version": "2"
         },
@@ -215,7 +215,7 @@
         },
         "mara_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
-            "address": "0x9807C1df1aF04A566Dd9144a2151169B581aEA47",
+            "address": "0xFd933340eE23a69069B5BE60d84258fBcE4913D8",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -231,13 +231,13 @@
                 "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
                 "nft_contract": "0xF81fbAba11370b308c29Aa208A860010F4e72b17",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
-                "vault_impl": "0xa6a1D93eAB387Ccf805cec49902524b1B50456D4"
+                "vault_impl": "0x3Bbb07dAc04d7B07a9c1274C9Bb083B8c4aA60A1"
             },
             "version": "2"
         },
         "otherdeed_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
-            "address": "0xDb376e9b9FdD901C75a7408Bd4A44316025d2b34",
+            "address": "0x4AE6B0ab2F1C3F7AdED1a9206c46c6982b80c62f",
             "contract": "RentingContract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -253,7 +253,7 @@
                 "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
                 "nft_contract": "0xFe396dee00E7cfd8659Ea68e3B0910E1363e09e0",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
-                "vault_impl": "0x203cC6d267AeAeb36349055b9ed312fA0631EFb4"
+                "vault_impl": "0x3df34a0892867d26eC06fFB48D3dD9085ae5cC4f"
             },
             "version": "2"
         }
