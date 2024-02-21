@@ -4,7 +4,7 @@ import warnings
 
 import click
 from ape import convert
-from ape.cli import NetworkBoundCommand, network_option
+from ape.cli import ConnectedProviderCommand, network_option
 
 from ._helpers.deployment import DeploymentManager, Environment
 
@@ -19,7 +19,7 @@ def gas_cost(context):
     return {"gas_price": convert("10 gwei", int)}
 
 
-@click.command(cls=NetworkBoundCommand)
+@click.command(cls=ConnectedProviderCommand)
 @network_option()
 def cli(network):
     print(f"Connected to {network}")

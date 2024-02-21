@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from typing import Any
 
 from ape import project
 
-from .basetypes import ContractConfig, DeploymentContext
+from .basetypes import ContractConfig
 
 
 @dataclass
@@ -54,16 +53,10 @@ class ERC20Contract(ContractConfig):
             version=version,
             abi_key=abi_key,
             container_name="ERC20",
+            deployment_args=[name, symbol, int(decimals), int(supply)],
         )
         if address:
             self.load_contract(address)
-        self._name = name
-        self._symbol = symbol
-        self._decimals = decimals
-        self._supply = supply
-
-    def deployment_args(self, context: DeploymentContext) -> list[Any]:
-        return [self._name, self._symbol, int(self._decimals), int(self._supply)]
 
 
 @dataclass
