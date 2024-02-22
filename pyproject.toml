@@ -11,7 +11,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "titanoboa @ git+https://github.com/cfcfs/titanoboa@fix/coverage-recursion-error#[forking-recommended]",
+    "titanoboa @ git+https://github.com/vyperlang/titanoboa#[forking-recommended]",
     "black",
     "boto3",
     "click",
