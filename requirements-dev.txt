@@ -8,8 +8,6 @@ aiohttp==3.9.3
     # via web3
 aiosignal==1.3.1
     # via aiohttp
-annotated-types==0.6.0
-    # via pydantic
 asttokens==2.4.1
     # via
     #   stack-data
@@ -17,8 +15,10 @@ asttokens==2.4.1
 attrs==23.2.0
     # via
     #   aiohttp
+    #   cattrs
     #   hypothesis
     #   jsonschema
+    #   lsprotocol
     #   referencing
 base58==1.0.3
     # via
@@ -26,11 +26,11 @@ base58==1.0.3
     #   py-multihash
 bitarray==2.9.2
     # via eth-account
-black==24.1.1
+black==24.2.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
-boto3==1.34.32
+boto3==1.34.47
     # via lotm-renting-protocol-v1 (pyproject.toml)
-botocore==1.34.32
+botocore==1.34.47
     # via
     #   boto3
     #   s3transfer
@@ -38,9 +38,13 @@ cached-property==1.5.2
     # via
     #   py-ecc
     #   py-evm
-cbor2==5.6.0
+cattrs==23.2.3
+    # via
+    #   lsprotocol
+    #   pygls
+cbor2==5.6.2
     # via vyper
-certifi==2023.11.17
+certifi==2024.2.2
     # via requests
 cffi==1.16.0
     # via
@@ -55,9 +59,13 @@ click==8.1.7
     #   black
     #   eth-ape
     #   lotm-renting-protocol-v1 (pyproject.toml)
-coverage==7.4.1
-    # via lotm-renting-protocol-v1 (pyproject.toml)
-cryptography==42.0.2
+commonmark==0.9.1
+    # via rich
+coverage[toml]==7.4.2
+    # via
+    #   lotm-renting-protocol-v1 (pyproject.toml)
+    #   pytest-cov
+cryptography==42.0.4
     # via pyjwt
 cytoolz==0.12.3
     # via eth-utils
@@ -69,9 +77,9 @@ deprecated==1.2.14
     # via pygithub
 distlib==0.3.8
     # via virtualenv
-docstring-to-markdown==0.13
+docstring-to-markdown==0.15
     # via python-lsp-server
-eip712==0.2.3
+eip712==0.2.2
     # via eth-ape
 eth-abi==4.2.1
     # via
@@ -81,14 +89,14 @@ eth-abi==4.2.1
     #   eth-tester
     #   titanoboa
     #   web3
-eth-account==0.10.0
+eth-account==0.8.0
     # via
     #   eip712
     #   eth-ape
     #   eth-tester
     #   titanoboa
     #   web3
-eth-ape==0.7.7
+eth-ape==0.6.27
     # via lotm-renting-protocol-v1 (pyproject.toml)
 eth-bloom==3.0.0
     # via py-evm
@@ -96,12 +104,11 @@ eth-hash[pycryptodome,pysha3]==0.6.0
     # via
     #   eip712
     #   eth-bloom
-    #   eth-pydantic-types
     #   eth-tester
     #   eth-utils
     #   trie
     #   web3
-eth-keyfile==0.7.0
+eth-keyfile==0.6.1
     # via eth-account
 eth-keys==0.4.0
     # via
@@ -109,26 +116,18 @@ eth-keys==0.4.0
     #   eth-keyfile
     #   eth-tester
     #   py-evm
-eth-pydantic-types==0.1.0a5
-    # via
-    #   eth-ape
-    #   ethpm-types
-    #   evm-trace
-eth-rlp==1.0.1
+eth-rlp==0.3.0
     # via eth-account
 eth-stdlib==0.2.7
     # via titanoboa
-eth-tester[py-evm]==0.9.1b1
-    # via
-    #   eth-tester
-    #   web3
+eth-tester[py-evm]==0.9.1b2
+    # via web3
 eth-typing==3.5.2
     # via
     #   eip712
     #   eth-abi
     #   eth-ape
     #   eth-keys
-    #   eth-pydantic-types
     #   eth-utils
     #   py-ecc
     #   py-evm
@@ -142,7 +141,6 @@ eth-utils==2.3.1
     #   eth-ape
     #   eth-keyfile
     #   eth-keys
-    #   eth-pydantic-types
     #   eth-rlp
     #   eth-tester
     #   ethpm-types
@@ -152,11 +150,11 @@ eth-utils==2.3.1
     #   rlp
     #   trie
     #   web3
-ethpm-types==0.6.7
-    # via eth-ape
-evm-trace==0.1.2
-    # via eth-ape
-evmchains==0.0.2
+ethpm-types==0.5.11
+    # via
+    #   eth-ape
+    #   evm-trace
+evm-trace==0.1.0a25
     # via eth-ape
 execnet==2.0.2
     # via pytest-xdist
@@ -174,15 +172,16 @@ hexbytes==0.3.1
     # via
     #   eip712
     #   eth-account
-    #   eth-pydantic-types
+    #   eth-ape
     #   eth-rlp
+    #   ethpm-types
     #   trie
     #   web3
-hypothesis==6.97.4
+hypothesis==6.98.9
     # via
     #   lotm-renting-protocol-v1 (pyproject.toml)
     #   titanoboa
-identify==2.5.33
+identify==2.5.35
     # via pre-commit
 idna==3.6
     # via
@@ -212,20 +211,24 @@ jsonschema==4.21.1
     # via web3
 jsonschema-specifications==2023.12.1
     # via jsonschema
+lark==1.1.9
+    # via vyper-lsp
 lazyasd==0.1.4
     # via eth-ape
+loguru==0.6.0
+    # via vyper-lsp
 lru-dict==1.2.0
     # via
     #   py-evm
     #   web3
-markdown-it-py==3.0.0
-    # via rich
+lsprotocol==2023.0.1
+    # via
+    #   pygls
+    #   vyper-lsp
 matplotlib-inline==0.1.6
     # via ipython
 mccabe==0.7.0
     # via flake8
-mdurl==0.1.2
-    # via markdown-it-py
 morphys==1.0
     # via
     #   py-cid
@@ -234,7 +237,7 @@ morphys==1.0
     #   py-multihash
 msgspec==0.18.6
     # via evm-trace
-multidict==6.0.4
+multidict==6.0.5
     # via
     #   aiohttp
     #   yarl
@@ -248,7 +251,7 @@ mypy-extensions==1.0.0
     #   py-evm
 nodeenv==1.8.0
     # via pre-commit
-numpy==1.26.3
+numpy==1.26.4
     # via pandas
 packaging==23.2
     # via
@@ -256,7 +259,9 @@ packaging==23.2
     #   eth-ape
     #   pytest
     #   pytoolconfig
+    #   vvm
     #   vyper
+    #   vyper-lsp
 pandas==1.5.3
     # via eth-ape
 parsimonious==0.9.0
@@ -277,11 +282,11 @@ pluggy==1.4.0
     #   eth-ape
     #   pytest
     #   python-lsp-server
-pre-commit==3.6.0
+pre-commit==3.6.2
     # via lotm-renting-protocol-v1 (pyproject.toml)
 prompt-toolkit==3.0.43
     # via ipython
-protobuf==4.25.2
+protobuf==4.25.3
     # via web3
 ptyprocess==0.7.0
     # via pexpect
@@ -296,7 +301,7 @@ py-evm==0.7.0a4
     #   eth-tester
     #   evm-trace
     #   titanoboa
-py-geth==4.2.0
+py-geth==3.14.0
     # via
     #   eth-ape
     #   web3
@@ -316,40 +321,37 @@ pycryptodome==3.20.0
     #   eth-keyfile
     #   eth-stdlib
     #   vyper
-pydantic==2.5.3
+pydantic==1.10.14
     # via
     #   eth-ape
-    #   eth-pydantic-types
     #   ethpm-types
     #   evm-trace
-    #   evmchains
-    #   pydantic-settings
-pydantic-core==2.14.6
-    # via pydantic
-pydantic-settings==2.1.0
-    # via eth-ape
+    #   vyper-lsp
 pyethash==0.1.27
     # via py-evm
 pyflakes==3.2.0
     # via flake8
 pygithub==1.59.1
     # via eth-ape
+pygls==1.3.0
+    # via vyper-lsp
 pygments==2.17.2
     # via
     #   ipython
     #   rich
 pyjwt[crypto]==2.8.0
-    # via
-    #   pygithub
-    #   pyjwt
+    # via pygithub
 pynacl==1.5.0
     # via pygithub
 pytest==7.4.4
     # via
     #   eth-ape
     #   lotm-renting-protocol-v1 (pyproject.toml)
+    #   pytest-cov
     #   pytest-xdist
     #   titanoboa
+pytest-cov==4.1.0
+    # via titanoboa
 pytest-xdist==3.5.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
 python-baseconv==1.2.2
@@ -359,17 +361,13 @@ python-dateutil==2.8.2
     #   botocore
     #   eth-ape
     #   pandas
-python-dotenv==1.0.1
-    # via pydantic-settings
 python-lsp-jsonrpc==1.1.2
     # via python-lsp-server
 python-lsp-server[flake8]==1.10.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
 pytoolconfig[global]==1.3.1
-    # via
-    #   pytoolconfig
-    #   rope
-pytz==2023.4
+    # via rope
+pytz==2024.1
     # via pandas
 pyunormalize==15.1.0
     # via web3
@@ -389,8 +387,9 @@ requests==2.31.0
     #   ethpm-types
     #   pygithub
     #   titanoboa
+    #   vvm
     #   web3
-rich==13.7.0
+rich==12.6.0
     # via
     #   eth-ape
     #   titanoboa
@@ -403,7 +402,7 @@ rlp==3.0.0
     #   trie
 rope==1.12.0
     # via lotm-renting-protocol-v1 (pyproject.toml)
-rpds-py==0.17.1
+rpds-py==0.18.0
     # via
     #   jsonschema
     #   referencing
@@ -426,34 +425,30 @@ sortedcontainers==2.4.0
     # via
     #   hypothesis
     #   trie
-sqlalchemy==2.0.25
+sqlalchemy==2.0.27
     # via eth-ape
 stack-data==0.6.3
     # via ipython
-titanoboa[forking-recommended] @ git+https://github.com/vyperlang/titanoboa
-    # via
-    #   lotm-renting-protocol-v1 (pyproject.toml)
-    #   titanoboa
+titanoboa[forking-recommended] @ git+https://github.com/cfcfs/titanoboa@fix/coverage-recursion-error
+    # via lotm-renting-protocol-v1 (pyproject.toml)
 toolz==0.12.1
     # via cytoolz
-tqdm==4.66.1
+tqdm==4.66.2
     # via eth-ape
 traitlets==5.14.1
     # via
     #   eth-ape
     #   ipython
     #   matplotlib-inline
+tree-sitter==0.20.4
+    # via vyper-lsp
 trie==2.2.0
     # via py-evm
 typing-extensions==4.9.0
     # via
-    #   eth-pydantic-types
-    #   eth-rlp
     #   eth-typing
-    #   ethpm-types
     #   mypy
     #   pydantic
-    #   pydantic-core
     #   sqlalchemy
     #   web3
 ujson==5.9.0
@@ -461,7 +456,7 @@ ujson==5.9.0
     #   python-lsp-jsonrpc
     #   python-lsp-server
     #   titanoboa
-urllib3==2.0.7
+urllib3==1.26.18
     # via
     #   botocore
     #   eth-ape
@@ -472,18 +467,21 @@ varint==1.0.2
     #   py-multihash
 virtualenv==20.25.0
     # via pre-commit
+vvm==0.2.0
+    # via vyper-lsp
 vyper==0.3.10
     # via
     #   lotm-renting-protocol-v1 (pyproject.toml)
     #   titanoboa
+    #   vyper-lsp
+vyper-lsp==0.0.9
+    # via lotm-renting-protocol-v1 (pyproject.toml)
 watchdog==3.0.0
     # via eth-ape
 wcwidth==0.2.13
     # via prompt-toolkit
-web3[tester]==6.15.0
-    # via
-    #   eth-ape
-    #   web3
+web3[tester]==6.15.1
+    # via eth-ape
 websockets==12.0
     # via web3
 wheel==0.42.0
