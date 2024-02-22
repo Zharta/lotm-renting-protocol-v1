@@ -111,6 +111,15 @@ def test_initial_state(
     assert renting_contract.protocol_wallet() == protocol_wallet
     assert renting_contract.max_protocol_fee() == PROTOCOL_FEE
     assert renting_contract.protocol_fee() == PROTOCOL_FEE
+    assert not renting_contract.paused()
+
+
+def test_renting_erc721_initialization(renting_erc721_contract_def, renting_contract_def):
+    dummy = boa.env.generate_address("dummy")
+    renting721 = renting_erc721_contract_def.deploy()
+    renting = renting_contract_def.deploy(dummy, dummy, dummy, dummy, renting721, dummy, 0, 0, 0, dummy, dummy)
+    assert renting721.renting_addr() == renting.address
+    assert renting.renting_erc721() == renting721.address
 
 
 def test_supports_interface(renting_contract):
@@ -200,3 +209,11 @@ def test_claim_ownership(renting_contract, owner, nft_owner):
 
     assert event.old_admin == owner
     assert event.new_admin == nft_owner
+
+
+def test_set_paused(renting_contract, owner):
+    renting_contract.set_paused(True, sender=owner)
+    assert renting_contract.paused()
+
+    renting_contract.set_paused(False, sender=owner)
+    assert not renting_contract.paused()

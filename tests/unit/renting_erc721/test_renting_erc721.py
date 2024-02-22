@@ -60,6 +60,25 @@ def mint(nft_owner, owner, renter, nft_contract, ape_contract):
         yield
 
 
+def test_initial_state(renting721_contract, renting_contract, vault_contract, nft_contract, ape_contract, nft_owner):
+    assert renting721_contract.renting_addr() == renting_contract.address
+    # assert renting721_contract.name() == ""
+    # assert renting721_contract.symbol() == ""
+    assert renting721_contract.tokenURI(0) == ""
+
+
+def test_initialise(renting_erc721_contract_def):
+    renting = boa.env.generate_address("renting")
+    renting721 = renting_erc721_contract_def.deploy()
+    renting721.initialise(sender=renting)
+    assert renting721.renting_addr() == renting
+
+
+def test_initialise_reverts_if_initialised(renting721_contract, renting_contract):
+    with boa.reverts("already initialised"):
+        renting721_contract.initialise(sender=renting_contract.address)
+
+
 def test_balance_of(renting721_contract, renting_contract, nft_owner, owner):
     assert renting721_contract.balanceOf(nft_owner) == 0
 

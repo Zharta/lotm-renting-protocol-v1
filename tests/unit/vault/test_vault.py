@@ -96,11 +96,20 @@ def erc20_not_reverting():
     )
 
 
-def test_initial_state(vault_contract, nft_owner, renting_contract, nft_contract, ape_contract, ape_staking_contract):
+def test_initial_state(
+    vault_contract,
+    nft_owner,
+    renting_contract,
+    nft_contract,
+    ape_contract,
+    ape_staking_contract,
+    delegation_registry_warm_contract,
+):
     assert vault_contract.caller() == renting_contract.address
     assert vault_contract.nft_contract() == nft_contract.address
     assert vault_contract.payment_token() == ape_contract.address
     assert vault_contract.staking_addr() == ape_staking_contract.address
+    assert vault_contract.delegation_registry() == delegation_registry_warm_contract.address
 
 
 def test_initialise(vault_contract_def, renting_contract, ape_contract, nft_contract, delegation_registry_warm_contract):
