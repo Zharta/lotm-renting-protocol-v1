@@ -249,7 +249,7 @@ The Vault is the implementation contract for each vault, which is deployed as a 
 ### Testing
 
 There are three types of tests implemented, running on py-evm using titanoboa:
-1. Unit tests focus on individual functions for each contract, mocking external dependencies (ERC20, ERC721, warm.xyz HotWallet)
+1. Unit tests focus on individual functions for each contract, mocking external dependencies (ERC20, ERC721, and warm.xyz HotWallet)
 2. Integration tests run on a forked chain, testing the integration between the contracts in the protocol and real implementations of the external dependencies
 3. Fuzz tests implement stateful testing, validating that invariants are kept over multiple interactions with the protocol
 
