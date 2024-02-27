@@ -19,6 +19,14 @@ interface IVault:
 interface ERC721Receiver:
     def onERC721Received(_operator: address, _from: address, _tokenId: uint256, _data: Bytes[1024]) -> bytes4: view
 
+interface RentingERC721:
+    def initialise(): nonpayable
+    def mint(tokens: DynArray[TokenAndWallet, 32]): nonpayable
+    def burn(tokens: DynArray[TokenAndWallet, 32]): nonpayable
+    def ownerOf(tokenId: uint256) -> address: view
+    def owner_of(tokenId: uint256) -> address: view
+
+
 # Structs
 
 struct TokenContext:
@@ -52,7 +60,8 @@ struct Signature:
 
 struct SignedListing:
     listing: Listing
-    signature: Signature
+    owner_signature: Signature
+    admin_signature: Signature
 
 struct TokenContextAndListing:
     token_context: TokenContext
@@ -93,8 +102,6 @@ struct RewardLog:
 struct WithdrawalLog:
     vault: address
     token_id: uint256
-    rewards: uint256
-    protocol_fee_amount: uint256
 
 struct VaultLog:
     vault: address
@@ -104,6 +111,9 @@ struct StakingLog:
     token_id: uint256
     amount: uint256
 
+struct TokenAndWallet:
+    token_id: uint256
+    wallet: address
 
 # Events
 
@@ -121,6 +131,12 @@ event NftsWithdrawn:
 
 event DelegatedToWallet:
     owner: address
+    delegate: address
+    nft_contract: address
+    vaults: DynArray[VaultLog, 32]
+
+event RenterDelegatedToWallet:
+    renter: address
     delegate: address
     nft_contract: address
     vaults: DynArray[VaultLog, 32]
@@ -212,6 +228,10 @@ event StakingCompound:
     nft_contract: address
     tokens: DynArray[uint256, 32]
 
+event FeesClaimed:
+    fee_wallet: address
+    amount: uint256
+
 
 # Global Variables
 
@@ -230,14 +250,13 @@ SUPPORTED_INTERFACES: constant(bytes4[2]) = [0x01ffc9a7, 0x80ac58cd] # ERC165, E
 
 LISTINGS_SIGNATURE_VALID_PERIOD: constant(uint256) = 120
 
-name: constant(String[10]) = ""
-symbol: constant(String[4]) = ""
 listing_sig_domain_separator: immutable(bytes32)
 vault_impl_addr: public(immutable(address))
 payment_token: public(immutable(IERC20))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
 staking_addr: public(immutable(address))
+renting_erc721: public(immutable(RentingERC721))
 max_protocol_fee: public(immutable(uint256))
 staking_pool_id: public(immutable(uint256))
 
@@ -246,24 +265,12 @@ protocol_fee: public(uint256)
 protocol_admin: public(address)
 proposed_admin: public(address)
 
-# active_vaults: public(HashMap[uint256, address]) # token_id -> vault
-
-# TODO could this be more efficient using merkle proofs?
 rental_states: public(HashMap[uint256, bytes32]) # token_id -> hash(token_context)
 listing_revocations: public(HashMap[uint256, uint256]) # token_id -> timestamp
 
-id_to_owner: HashMap[uint256, address]
-id_to_approvals: HashMap[uint256, address]
-owner_to_operators: HashMap[address, HashMap[address, bool]]
-owner_to_nft_count: HashMap[address, uint256]
-
-# TODO: should we add name, symbol and tokenURI? can be useful if we want to create a proper NFT
-
-unclaimed_rewards: HashMap[address, uint256] # wallet -> amount
-protocol_fees_amount: uint256
-
-# TODO is this needed? it's not in the standard and would save gas
-totalSupply: public(uint256)
+unclaimed_rewards: public(HashMap[address, uint256]) # wallet -> amount
+protocol_fees_amount: public(uint256)
+paused: public(bool)
 
 ##### EXTERNAL METHODS - WRITE #####
 
@@ -274,6 +281,7 @@ def __init__(
     _payment_token_addr: address,
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
+    _renting_erc721: address,
     _staking_addr: address,
     _staking_pool_id: uint256,
     _max_protocol_fee: uint256,
@@ -285,6 +293,7 @@ def __init__(
     assert _payment_token_addr != empty(address), "payment token is the zero addr"
     assert _nft_contract_addr != empty(address), "nft contract is the zero addr"
     assert _delegation_registry_addr != empty(address), "deleg registry is the zero addr"
+    assert _renting_erc721 != empty(address), "renting_erc721 is the zero addr"
     # staking_addr can be empty, it's optional
     assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
     assert _protocol_fee <= _max_protocol_fee, "protocol fee > max fee"
@@ -298,10 +307,12 @@ def __init__(
     staking_addr = _staking_addr
     max_protocol_fee = _max_protocol_fee
     staking_pool_id = _staking_pool_id
+    renting_erc721 = RentingERC721(_renting_erc721)
 
     self.protocol_wallet = _protocol_wallet
     self.protocol_fee = _protocol_fee
     self.protocol_admin = _protocol_admin
+    self.paused = False
 
     listing_sig_domain_separator = keccak256(
         _abi_encode(
@@ -313,8 +324,7 @@ def __init__(
         )
     )
 
-
-# TODO: method to claim ownership of the NFT given the vault ownership
+    renting_erc721.initialise()
 
 
 @external
@@ -328,7 +338,7 @@ def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: add
         assert msg.sender == token_context.nft_owner, "not owner"
         vault: IVault = self._get_vault(token_context.token_id)
 
-        vault.delegate_to_wallet(delegate, 0)
+        vault.delegate_to_wallet(delegate, max_value(uint256))
 
         vault_logs.append(VaultLog({vault: vault.address, token_id: token_context.token_id}))
 
@@ -368,13 +378,12 @@ def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delega
 
         vault_logs.append(VaultLog({vault: vault.address, token_id: token_context.token_id}))
 
-    log DelegatedToWallet(msg.sender, delegate, nft_contract_addr, vault_logs)
-
+    log RenterDelegatedToWallet(msg.sender, delegate, nft_contract_addr, vault_logs)
 
 
 @external
 def deposit(token_ids: DynArray[uint256, 32], delegate: address):
-
+    self._check_not_paused()
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_id in token_ids:
@@ -383,9 +392,6 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
         vault.deposit(token_id, msg.sender, delegate)
 
         self._store_token_state(token_id, msg.sender, empty(Rental))
-        self._mint_token_to(msg.sender, token_id)
-
-        log Transfer(empty(address), msg.sender, token_id)
 
         vault_logs.append(VaultLog({
             vault: vault.address,
@@ -395,47 +401,55 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
     log NftsDeposited(msg.sender, nft_contract_addr, vault_logs, delegate)
 
 
+@external
+def mint(token_contexts: DynArray[TokenContext, 32]):
+
+    tokens: DynArray[TokenAndWallet, 32] = empty(DynArray[TokenAndWallet, 32])
+
+    for token_context in token_contexts:
+        assert self._is_context_valid(token_context), "invalid context"
+
+        tokens.append(TokenAndWallet({
+            token_id: token_context.token_id,
+            wallet: token_context.nft_owner
+        }))
+
+    renting_erc721.mint(tokens)
+
 
 @external
-def revoke_listing(token_ids: DynArray[uint256, 32]):
-    for token_id in token_ids:
-        assert self.id_to_owner[token_id] == msg.sender, "not owner"
-    self._revoke_listings(token_ids)
+def revoke_listing(token_contexts: DynArray[TokenContext, 32]):
+    token_ids: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
+    for token_context in token_contexts:
+        assert self._is_context_valid(token_context), "invalid context"
+        assert token_context.nft_owner == msg.sender, "not owner"
+        self.listing_revocations[token_context.token_id] = block.timestamp
+        token_ids.append(token_context.token_id)
     log ListingsRevoked(msg.sender, block.timestamp, token_ids)
 
 
 @external
-def start_rentals(
-    token_contexts: DynArray[TokenContextAndListing, 32],
-    duration: uint256,
-    delegate: address,
-    signature: Signature,
-    signature_timestamp: uint256
-):
-
-    # TODO: should we have each listing signed individually?
-    #       for batch actions, this would avoid one loop just to verify
-    #       and the other for the actions themselves
-    #       meaning that it would cost less gas
-    signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
-    for context in token_contexts:
-        signed_listings.append(context.signed_listing)
-    assert self._are_listings_signed_by(signed_listings, signature, signature_timestamp, self.protocol_admin), "invalid signature"
+def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, delegate: address, signature_timestamp: uint256):
+    self._check_not_paused()
 
     rental_logs: DynArray[RentalLog, 32] = []
     expiration: uint256 = block.timestamp + duration * 3600
+    rental_amounts: uint256 = 0
+
+    for context in token_contexts:
+        rental_amounts += self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
+
+    self._receive_payment_token(msg.sender, rental_amounts)
 
     for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
-        assert self._is_listing_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
-        assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
+        assert self._is_within_duration_range(context.signed_listing.listing, duration), "duration not respected"
+        assert context.signed_listing.listing.price > 0, "listing not active"
+        self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
-        rental_amount: uint256 = self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
-        self._transfer_erc20(msg.sender, self, rental_amount)
-
-        vault.delegate_to_wallet(delegate, expiration)
+        vault.delegate_to_wallet(delegate if delegate != empty(address) else msg.sender, expiration)
 
         # store unclaimed rewards
         self._consolidate_claims(context.token_context.token_id, context.token_context.nft_owner, context.token_context.active_rental)
@@ -452,7 +466,7 @@ def start_rentals(
             start: block.timestamp,
             min_expiration: block.timestamp + context.signed_listing.listing.min_duration * 3600,
             expiration: expiration,
-            amount: rental_amount,
+            amount: self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price),
             protocol_fee: self.protocol_fee,
         })
 
@@ -460,25 +474,24 @@ def start_rentals(
 
         rental_logs.append(RentalLog({
             id: rental_id,
-            vault: self._tokenid_to_vault(context.token_context.token_id),
+            vault: vault.address,
             owner: context.token_context.nft_owner,
             token_id: context.token_context.token_id,
             start: block.timestamp,
             min_expiration: new_rental.min_expiration,
             expiration: expiration,
-            amount: rental_amount,
+            amount: new_rental.amount,
             protocol_fee: new_rental.protocol_fee,
         }))
 
     log RentalStarted(msg.sender, delegate, nft_contract_addr, rental_logs)
 
 
-
 @external
 def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
     rental_logs: DynArray[RentalLog, 32] = []
-    protocol_fees_amount: uint256 = self.protocol_fees_amount
+    protocol_fees_amount: uint256 = 0
     payback_amounts: uint256 = 0
 
     for token_context in token_contexts:
@@ -525,24 +538,17 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
     assert payment_token.transfer(msg.sender, payback_amounts), "transfer failed"
 
-    # TODO: only accrue, don't transfer
     if protocol_fees_amount > 0:
-        self.protocol_fees_amount = 0
-        assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+        self.protocol_fees_amount += protocol_fees_amount
 
     log RentalClosed(msg.sender, nft_contract_addr, rental_logs)
 
 
 @external
-def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature: Signature, signature_timestamp: uint256):
-
-    signed_listings: DynArray[SignedListing, 32] = empty(DynArray[SignedListing, 32])
-    for context in token_contexts:
-        signed_listings.append(context.signed_listing)
-    assert self._are_listings_signed_by(signed_listings, signature, signature_timestamp, self.protocol_admin), "invalid signature"
+def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature_timestamp: uint256):
 
     rental_logs: DynArray[RentalExtensionLog, 32] = []
-    protocol_fees_amount: uint256 = self.protocol_fees_amount
+    protocol_fees_amount: uint256 = 0
     payback_amounts: uint256 = 0
     extension_amounts: uint256 = 0
     expiration: uint256 = block.timestamp + duration * 3600
@@ -550,13 +556,12 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
     for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert self._is_context_valid(context.token_context), "invalid context"
-        assert not self._is_rental_active(context.token_context.active_rental), "active rental"
+        assert self._is_rental_active(context.token_context.active_rental), "no active rental"
         assert msg.sender == context.token_context.active_rental.renter, "not renter of active rental"
-        assert self._is_listing_signed_by(context.signed_listing, context.token_context.nft_owner), "invalid signature"
-        assert context.signed_listing.listing.timestamp > self.listing_revocations[context.token_context.token_id], "listing revoked"
-        assert context.token_context.active_rental.min_expiration <= block.timestamp, "min expiration not reached"
 
-        # TODO: allow for extension of rentals with the min duration
+        assert self._is_within_duration_range(context.signed_listing.listing, duration), "duration not respected"
+        assert context.signed_listing.listing.price > 0, "listing not active"
+        self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
         real_expiration_adjusted: uint256 = block.timestamp
         if block.timestamp < context.token_context.active_rental.min_expiration:
@@ -576,14 +581,23 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         protocol_fee_amount: uint256 = pro_rata_rental_amount * context.token_context.active_rental.protocol_fee / 10000
         protocol_fees_amount += protocol_fee_amount
 
+        new_rental: Rental = Rental({
+            id: context.token_context.active_rental.id,
+            owner: context.token_context.nft_owner,
+            renter: msg.sender,
+            delegate: context.token_context.active_rental.delegate,
+            token_id: context.token_context.token_id,
+            start: block.timestamp,
+            min_expiration: block.timestamp + context.signed_listing.listing.min_duration * 3600,
+            expiration: expiration,
+            amount: new_rental_amount,
+            protocol_fee: self.protocol_fee,
+        })
         # clear active rental
-        self._store_token_state(context.token_context.token_id, context.token_context.nft_owner, empty(Rental))
+        self._store_token_state(context.token_context.token_id, context.token_context.nft_owner, new_rental)
 
         # set unclaimed rewards
         self.unclaimed_rewards[context.token_context.nft_owner] += pro_rata_rental_amount - protocol_fee_amount
-
-        # revoke delegation
-        vault.delegate_to_wallet(empty(address), 0)
 
         rental_logs.append(RentalExtensionLog({
             id: context.token_context.active_rental.id,
@@ -599,14 +613,12 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         }))
 
     if payback_amounts > extension_amounts:
-        assert payment_token.transfer(msg.sender, payback_amounts - extension_amounts), "transfer failed"
+        self._transfer_payment_token(msg.sender, payback_amounts - extension_amounts)
     elif payback_amounts < extension_amounts:
-        self._transfer_erc20(msg.sender, self, extension_amounts - payback_amounts)
+        self._receive_payment_token(msg.sender, extension_amounts - payback_amounts)
 
-    # TODO: only accrue, don't transfer
     if protocol_fees_amount > 0:
-        self.protocol_fees_amount = 0
-        assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+        self.protocol_fees_amount += protocol_fees_amount
 
     log RentalExtended(msg.sender, nft_contract_addr, rental_logs)
 
@@ -615,57 +627,63 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
 def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
+    tokens: DynArray[TokenAndWallet, 32] = empty(DynArray[TokenAndWallet, 32])
     total_rewards: uint256 = 0
-    rewards: uint256 = 0
-    protocol_fee_amount: uint256 = 0
 
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
-        assert self.id_to_owner[token_context.token_id] == msg.sender, "not owner"
         assert not self._is_rental_active(token_context.active_rental), "active rental"
+        token_owner: address = renting_erc721.owner_of(token_context.token_id)
+        if token_owner != empty(address):
+            assert msg.sender == token_owner, "not owner"
+        else:
+            assert msg.sender == token_context.nft_owner, "not owner"
 
         vault: IVault = self._get_vault(token_context.token_id)
 
-        rental: Rental = self._consolidate_claims(token_context.token_id, token_context.nft_owner, token_context.active_rental, False)
+        self._consolidate_claims(token_context.token_id, token_context.nft_owner, token_context.active_rental, False)
 
         self._clear_token_state(token_context.token_id)
 
-        self._burn_token_from(msg.sender, token_context.token_id)
-        log Transfer(msg.sender, empty(address), token_context.token_id)
+        tokens.append(TokenAndWallet({
+            token_id: token_context.token_id,
+            wallet: token_context.nft_owner
+        }))
 
         vault.withdraw(token_context.token_id, msg.sender)
-        self._revoke_listings([token_context.token_id])
+        self.listing_revocations[token_context.token_id] = block.timestamp
 
         withdrawal_log.append(WithdrawalLog({
             vault: vault.address,
             token_id: token_context.token_id,
-            rewards: rewards,
-            protocol_fee_amount: protocol_fee_amount
         }))
-        total_rewards += rewards
+
+    renting_erc721.burn(tokens)
 
     rewards_to_claim: uint256 = self.unclaimed_rewards[msg.sender]
     protocol_fee_to_claim: uint256 = self.protocol_fees_amount
 
     # transfer reward to nft owner
     if rewards_to_claim > 0:
-        assert payment_token.transfer(msg.sender, rewards_to_claim), "transfer failed"
+        self._transfer_payment_token(msg.sender, rewards_to_claim)
         self.unclaimed_rewards[msg.sender] = 0
 
     # transfer protocol fee to protocol wallet
     if protocol_fee_to_claim > 0:
-        assert payment_token.transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
+        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
         self.protocol_fees_amount = 0
 
     log NftsWithdrawn(
         msg.sender,
         nft_contract_addr,
-        total_rewards,
+        rewards_to_claim,
         withdrawal_log
     )
 
+
 @external
 def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
+    self._check_not_paused()
     assert staking_addr != empty(address), "staking not supported"
 
     staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
@@ -721,8 +739,10 @@ def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: 
 
     log StakingClaim(msg.sender, nft_contract_addr, recipient, tokens)
 
+
 @external
 def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
+    self._check_not_paused()
     assert staking_addr != empty(address), "staking not supported"
     tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
 
@@ -762,10 +782,30 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 
     # transfer protocol fee to protocol wallet
     if protocol_fee_to_claim > 0:
-        assert payment_token.transfer(self.protocol_wallet, protocol_fee_to_claim), "transfer failed"
+        self._transfer_payment_token(self.protocol_wallet, protocol_fee_to_claim)
         self.protocol_fees_amount = 0
 
     log RewardsClaimed(msg.sender, rewards_to_claim, protocol_fee_to_claim, reward_logs)
+
+
+@view
+@external
+def claimable_rewards(nft_owner: address, token_contexts: DynArray[TokenContext, 32]) -> uint256:
+    rewards: uint256 = self.unclaimed_rewards[nft_owner]
+    for context in token_contexts:
+        assert self._is_context_valid(context), "invalid context"
+        assert context.nft_owner == nft_owner, "not owner"
+        if context.active_rental.expiration < block.timestamp:
+            rewards += context.active_rental.amount * (10000 - context.active_rental.protocol_fee) / 10000
+    return rewards
+
+
+@external
+def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
+    for token_context in token_contexts:
+        assert self._is_context_valid(token_context), "invalid context"
+        assert renting_erc721.ownerOf(token_context.token_id) == msg.sender, "not owner"
+        self._store_token_state(token_context.token_id, msg.sender, empty(Rental))
 
 
 @external
@@ -773,7 +813,8 @@ def claim_fees():
     assert msg.sender == self.protocol_admin, "not admin"
     protocol_fees_amount: uint256 = self.protocol_fees_amount
     self.protocol_fees_amount = 0
-    assert payment_token.transfer(self.protocol_wallet, protocol_fees_amount), "transfer failed"
+    self._transfer_payment_token(self.protocol_wallet, protocol_fees_amount)
+    log FeesClaimed(self.protocol_wallet, protocol_fees_amount)
 
 
 @external
@@ -781,8 +822,8 @@ def set_protocol_fee(protocol_fee: uint256):
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
 
-    self.protocol_fee = protocol_fee
     log ProtocolFeeSet(self.protocol_fee, protocol_fee, self.protocol_wallet)
+    self.protocol_fee = protocol_fee
 
 
 @external
@@ -790,8 +831,13 @@ def change_protocol_wallet(new_protocol_wallet: address):
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert new_protocol_wallet != empty(address), "wallet is the zero address"
 
-    self.protocol_wallet = new_protocol_wallet
     log ProtocolWalletChanged(self.protocol_wallet, new_protocol_wallet)
+    self.protocol_wallet = new_protocol_wallet
+
+@external
+def set_paused(paused: bool):
+    assert msg.sender == self.protocol_admin, "not protocol admin"
+    self.paused = paused
 
 
 @external
@@ -799,16 +845,17 @@ def propose_admin(_address: address):
     assert msg.sender == self.protocol_admin, "not the admin"
     assert _address != empty(address), "_address is the zero address"
 
-    self.proposed_admin = _address
     log AdminProposed(self.protocol_admin, _address)
+    self.proposed_admin = _address
 
 
 @external
 def claim_ownership():
     assert msg.sender == self.proposed_admin, "not the proposed"
+
+    log OwnershipTransferred(self.protocol_admin, self.proposed_admin)
     self.protocol_admin = self.proposed_admin
     self.proposed_admin = empty(address)
-    log OwnershipTransferred(self.protocol_admin, self.proposed_admin)
 
 
 @view
@@ -817,75 +864,10 @@ def tokenid_to_vault(token_id: uint256) -> address:
     return self._tokenid_to_vault(token_id)
 
 
-# ERC721
-
 @pure
 @external
 def supportsInterface(interface_id: bytes4) -> bool:
     return interface_id in SUPPORTED_INTERFACES
-
-@view
-@external
-def balanceOf(_owner: address) -> uint256:
-    assert _owner != empty(address)
-    return self.owner_to_nft_count[_owner]
-
-
-@view
-@external
-def ownerOf(_tokenId: uint256) -> address:
-    owner: address = self.id_to_owner[_tokenId]
-    assert owner != empty(address)
-    return owner
-
-
-@view
-@external
-def getApproved(_tokenId: uint256) -> address:
-    assert self.id_to_owner[_tokenId] != empty(address)
-    return self.id_to_approvals[_tokenId]
-
-
-@view
-@external
-def isApprovedForAll(_owner: address, _operator: address) -> bool:
-    return self.owner_to_operators[_owner][_operator]
-
-
-@external
-def transferFrom(_from: address, _to: address, _tokenId: uint256):
-    self._transfer_from(_from, _to, _tokenId, msg.sender)
-
-
-@external
-def safeTransferFrom(_from: address, _to: address, _tokenId: uint256, _data: Bytes[1024]=b""):
-    self._transfer_from(_from, _to, _tokenId, msg.sender)
-    if _to.is_contract:
-        returnValue: bytes4 = ERC721Receiver(_to).onERC721Received(msg.sender, _from, _tokenId, _data)
-        assert returnValue == convert(method_id("onERC721Received(address,address,uint256,bytes)", output_type=Bytes[4]), bytes4)
-
-
-@external
-def approve(_approved: address, _tokenId: uint256):
-    owner: address = self.id_to_owner[_tokenId]
-    assert owner != empty(address)
-    assert _approved != owner
-    assert (self.id_to_owner[_tokenId] == msg.sender or self.owner_to_operators[owner][msg.sender])
-    self.id_to_approvals[_tokenId] = _approved
-    log Approval(owner, _approved, _tokenId)
-
-
-@external
-def setApprovalForAll(_operator: address, _approved: bool):
-    assert _operator != msg.sender
-    self.owner_to_operators[msg.sender][_operator] = _approved
-    log ApprovalForAll(msg.sender, _operator, _approved)
-
-
-@view
-@external
-def tokenURI(tokenId: uint256) -> String[132]:
-    return ""
 
 
 @view
@@ -902,6 +884,7 @@ def _tokenid_to_vault(token_id: uint256) -> address:
         self
     )
 
+
 @pure
 @internal
 def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes32:
@@ -912,6 +895,7 @@ def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes3
             rental.id,
             convert(rental.owner, bytes32),
             convert(rental.renter, bytes32),
+            convert(rental.delegate, bytes32),  #should this be part of state?
             convert(rental.token_id, bytes32),
             convert(rental.start, bytes32),
             convert(rental.min_expiration, bytes32),
@@ -920,12 +904,6 @@ def _state_hash(token_id: uint256, nft_owner: address, rental: Rental) -> bytes3
             convert(rental.protocol_fee, bytes32),
         )
     )
-
-@view
-@internal
-def _is_approved_or_owner(_spender: address, _token_id: uint256) -> bool:
-    owner: address = self.id_to_owner[_token_id]
-    return _spender == owner or _spender == self.id_to_approvals[_token_id] or self.owner_to_operators[owner][_spender]
 
 
 @pure
@@ -950,6 +928,7 @@ def _is_rental_active(rental: Rental) -> bool:
 @view
 @internal
 def _is_context_valid(context: TokenContext) -> bool:
+    """ Check if the context is valid, also meaning that the token is deposited """
     return self.rental_states[context.token_id] == self._state_hash(context.token_id, context.nft_owner, context.active_rental)
 
 
@@ -961,55 +940,6 @@ def _store_token_state(token_id: uint256, nft_owner: address, rental: Rental):
 @internal
 def _clear_token_state(token_id: uint256):
     self.rental_states[token_id] = empty(bytes32)
-
-
-@internal
-def _mint_token_to(_to: address, _token_id: uint256):
-    self._add_token_to(_to, _token_id)
-    self._increase_total_supply()
-
-
-@internal
-def _burn_token_from(_owner: address, _token_id: uint256):
-    self._remove_token_from(_owner, _token_id)
-    self._decrease_total_supply()
-
-
-@internal
-def _add_token_to(_to: address, _token_id: uint256):
-    self.id_to_owner[_token_id] = _to
-    self.owner_to_nft_count[_to] += 1
-
-
-@internal
-def _remove_token_from(_from: address, _token_id: uint256):
-    self.id_to_owner[_token_id] = empty(address)
-    self.owner_to_nft_count[_from] -= 1
-    self._clear_approval(_from, _token_id)
-
-
-@internal
-def _clear_approval(_owner: address, _token_id: uint256):
-    if self.id_to_approvals[_token_id] != empty(address):
-        self.id_to_approvals[_token_id] = empty(address)
-
-
-@internal
-def _transfer_from(_from: address, _to: address, _token_id: uint256, _sender: address):
-    assert self._is_approved_or_owner(_sender, _token_id)
-    assert _to != empty(address)
-    self._clear_approval(_from, _token_id)
-    self.id_to_owner[_token_id] = _to
-    log Transfer(_from, _to, _token_id)
-
-
-@internal
-def _increase_total_supply():
-    self.totalSupply += 1
-
-@internal
-def _decrease_total_supply():
-    self.totalSupply -= 1
 
 
 @internal
@@ -1031,15 +961,14 @@ def _create_vault(token_id: uint256) -> IVault:
 
 
 @internal
-def _transfer_erc20(_from: address, _to: address, _amount: uint256):
-    assert payment_token.allowance(_from, self) >= _amount, "insufficient allowance"
-    assert payment_token.transferFrom(_from, _to, _amount), "transferFrom failed"
+def _transfer_payment_token(_to: address, _amount: uint256):
+    assert payment_token.transfer(_to, _amount), "transferFrom failed"
 
 
 @internal
-def _revoke_listings(token_ids: DynArray[uint256, 32]):
-    for token_id in token_ids:
-        self.listing_revocations[token_id] = block.timestamp
+def _receive_payment_token(_from: address, _amount: uint256):
+    assert payment_token.allowance(_from, self) >= _amount, "insufficient allowance"
+    assert payment_token.transferFrom(_from, self, _amount), "transferFrom failed"
 
 
 @pure
@@ -1058,6 +987,12 @@ def _compute_rental_amount(start: uint256, expiration: uint256, price: uint256) 
 def _compute_real_rental_amount(duration: uint256, real_duration: uint256, rental_amount: uint256) -> uint256:
     return rental_amount * real_duration / duration
 
+
+@internal
+def _check_not_paused():
+    assert not self.paused, "paused"
+
+
 @internal
 def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Rental, store_state: bool = True) -> Rental:
     if active_rental.amount == 0 or active_rental.expiration >= block.timestamp:
@@ -1065,7 +1000,7 @@ def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Re
     else:
         protocol_fee_amount: uint256 = active_rental.amount * active_rental.protocol_fee / 10000
 
-        self.unclaimed_rewards[active_rental.renter] += active_rental.amount - protocol_fee_amount
+        self.unclaimed_rewards[active_rental.owner] += active_rental.amount - protocol_fee_amount
         self.protocol_fees_amount += protocol_fee_amount
 
         new_rental: Rental = Rental({
@@ -1087,9 +1022,22 @@ def _consolidate_claims(token_id: uint256, nft_owner: address, active_rental: Re
         return new_rental
 
 
+@internal
+def _check_valid_listing(token_id: uint256, signed_listing: SignedListing, signature_timestamp:uint256, nft_owner: address):
+    assert token_id == signed_listing.listing.token_id, "invalid token_id"
+    assert self._is_listing_signed_by_owner(signed_listing, nft_owner), "invalid owner signature"
+    assert self._is_listing_signed_by_admin(signed_listing, signature_timestamp), "invalid admin signature"
+    assert signature_timestamp + LISTINGS_SIGNATURE_VALID_PERIOD > block.timestamp, "listing expired"
+    assert self.listing_revocations[signed_listing.listing.token_id] < signed_listing.listing.timestamp, "listing revoked"
+
 
 @internal
-def _is_listing_signed_by(signed_listing: SignedListing, signer: address) -> bool:
+def _is_within_duration_range(listing: Listing, duration: uint256) -> bool:
+    return duration >= listing.min_duration and (listing.max_duration == 0 or duration <= listing.max_duration)
+
+
+@internal
+def _is_listing_signed_by_owner(signed_listing: SignedListing, owner: address) -> bool:
     return ecrecover(
         keccak256(
             concat(
@@ -1100,27 +1048,24 @@ def _is_listing_signed_by(signed_listing: SignedListing, signer: address) -> boo
                 )
             )
         ),
-        signed_listing.signature.v,
-        signed_listing.signature.r,
-        signed_listing.signature.s
-    ) == signer
+        signed_listing.owner_signature.v,
+        signed_listing.owner_signature.r,
+        signed_listing.owner_signature.s
+    ) == owner
 
 
 @internal
-def _are_listings_signed_by(signed_listings: DynArray[SignedListing, 32], signature: Signature, signature_timestamp: uint256, signer: address) -> bool:
-    if signature_timestamp + LISTINGS_SIGNATURE_VALID_PERIOD < block.timestamp:
-        return False
-
+def _is_listing_signed_by_admin(signed_listing: SignedListing, signature_timestamp: uint256) -> bool:
     return ecrecover(
         keccak256(
             concat(
                 convert("\x19\x00", Bytes[2]),
                 convert(self, bytes20),
-                keccak256(_abi_encode(signed_listings)),
+                keccak256(_abi_encode(signed_listing.owner_signature)),
                 convert(signature_timestamp, bytes32)
             )
         ),
-        signature.v,
-        signature.r,
-        signature.s
-    ) == signer
+        signed_listing.admin_signature.v,
+        signed_listing.admin_signature.r,
+        signed_listing.admin_signature.s
+    ) == self.protocol_admin

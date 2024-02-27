@@ -1,4 +1,5 @@
 import contextlib
+from collections import namedtuple
 from dataclasses import dataclass, field
 from functools import cached_property
 from textwrap import dedent
@@ -7,7 +8,6 @@ import boa
 import vyper
 from boa.contracts.vyper.event import Event
 from boa.contracts.vyper.vyper_contract import VyperContract
-from boa.environment import register_raw_precompile
 from eth.exceptions import Revert
 from eth_abi import encode
 from eth_account import Account
@@ -158,12 +158,12 @@ class RentalLog:
     amount: int
     protocol_fee: int = 0
 
-    def to_rental(self, renter: str = ZERO_ADDRESS):
+    def to_rental(self, renter: str = ZERO_ADDRESS, delegate: str = ZERO_ADDRESS):
         return Rental(
             self.id,
             self.owner,
             renter,
-            ZERO_ADDRESS,
+            delegate,
             self.token_id,
             self.start,
             self.min_expiration,
@@ -174,11 +174,36 @@ class RentalLog:
 
 
 @dataclass
-class RewardLog:
+class RentalExtensionLog:
+    id: bytes
     vault: str
+    owner: str
     token_id: int
-    amount: int
-    protocol_fee_amount: int
+    start: int
+    min_expiration: int
+    expiration: int
+    amount_settled: int
+    extension_amount: int
+    protocol_fee: int = 0
+
+    def to_rental(self, renter: str = ZERO_ADDRESS, delegate: str = ZERO_ADDRESS):
+        return Rental(
+            self.id,
+            self.owner,
+            renter,
+            delegate,
+            self.token_id,
+            self.start,
+            self.min_expiration,
+            self.expiration,
+            self.extension_amount,
+            self.protocol_fee,
+        )
+
+
+@dataclass
+class RewardLog:
+    token_id: int
     active_rental_amount: int
 
 
@@ -186,8 +211,6 @@ class RewardLog:
 class WithdrawalLog:
     vault: str
     token_id: int
-    rewards: int
-    protocol_fee_amount: int
 
 
 @dataclass
@@ -198,6 +221,11 @@ class TokenContext:
 
     def to_tuple(self):
         return (self.token_id, self.nft_owner, self.active_rental.to_tuple())
+
+
+TokenAndWallet = namedtuple("TokenAndWallet", ["token_id", "wallet"], defaults=[0, ZERO_ADDRESS])
+
+StakingLog = namedtuple("StakingLog", ["token_id", "amount"], defaults=[0, 0])
 
 
 @dataclass
@@ -222,10 +250,20 @@ class Signature:
 @dataclass
 class SignedListing:
     listing: Listing
-    signature: Signature
+    owner_signature: Signature
+    admin_signature: Signature
 
     def to_tuple(self):
-        return (self.listing.to_tuple(), self.signature.to_tuple())
+        return (self.listing.to_tuple(), self.owner_signature.to_tuple(), self.admin_signature.to_tuple())
+
+
+@dataclass
+class TokenContextAndAmount:
+    token_context: TokenContext
+    amount: int
+
+    def to_tuple(self):
+        return (self.token_context.to_tuple(), self.amount)
 
 
 @dataclass
@@ -247,6 +285,7 @@ def compute_state_hash(token_id: int, nft_owner: str, rental: Rental):
                 {rental.id},
                 convert({rental.owner}, bytes32),
                 convert({rental.renter}, bytes32),
+                convert({rental.delegate}, bytes32),
                 convert({rental.token_id}, bytes32),
                 convert({rental.start}, bytes32),
                 convert({rental.min_expiration}, bytes32),
@@ -258,7 +297,7 @@ def compute_state_hash(token_id: int, nft_owner: str, rental: Rental):
     )
 
 
-def sign_listing(listing: Listing, key: str, verifying_contract: str) -> SignedListing:
+def sign_listing(listing: Listing, owner_key: str, admin_key: str, timestamp: int, verifying_contract: str) -> SignedListing:
     typed_data = {
         "types": {
             "EIP712Domain": [
@@ -285,24 +324,15 @@ def sign_listing(listing: Listing, key: str, verifying_contract: str) -> SignedL
         "message": vars(listing),
     }
     signable_msg = encode_structured_data(typed_data)
-    signed_msg = Account.from_key(key).sign_message(signable_msg)
-    return SignedListing(listing, Signature(signed_msg.v, signed_msg.r, signed_msg.s))
+    signed_msg = Account.from_key(owner_key).sign_message(signable_msg)
+    owner_signature = Signature(signed_msg.v, signed_msg.r, signed_msg.s)
 
-
-@boa.precompile("def debug_bytes32(data: bytes32)")
-def debug_bytes32(data: bytes):
-    print(f"DEBUG: {data.hex()}")
-
-
-def sign_listings(signed_listings, timestamp, key, verifying_contract) -> Signature:
-    encoded_listings = encode(
-        ("((uint256,uint256,uint256,uint256,uint256),(uint256,uint256,uint256))[]",),
-        ([listing.to_tuple() for listing in signed_listings],),
-    )
+    encoded_owner_sig = encode(("(uint256,uint256,uint256)",), (owner_signature.to_tuple(),))
     encoded_timestamp = encode(("uint256",), (timestamp,))
-    hash = keccak(primitive=encoded_listings)
-    # register_raw_precompile("0x00000000000000000000000000000000000000ff", debug_bytes32)
+    hash = keccak(primitive=encoded_owner_sig)
 
     signable_msg = encode_intended_validator(verifying_contract, hexstr=encode_hex(hash + encoded_timestamp))
-    signed_msg = Account.from_key(key).sign_message(signable_msg)
-    return Signature(signed_msg.v, signed_msg.r, signed_msg.s)
+    signed_msg = Account.from_key(admin_key).sign_message(signable_msg)
+    admin_signature = Signature(signed_msg.v, signed_msg.r, signed_msg.s)
+
+    return SignedListing(listing, owner_signature, admin_signature)
