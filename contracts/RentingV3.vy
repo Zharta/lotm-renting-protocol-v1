@@ -1,5 +1,16 @@
 # @version 0.3.10
 
+"""
+@title LOTM Renting Protocol Contract
+@author [Zharta](https://zharta.io/)
+@notice This contract manages the renting process for NFTs in the LOTM Renting Protocol.
+@dev This contract is the single user-facing contract for each Renting Market. It does not hold any NFTs, although it holds the rentals values and the protocol fees (payment tokens). It also manages the creation of vaults (as minimal proxies to the vault implementation) and implements the rental logic. The delegation and staking functionality are implemented in the vaults.
+The information regarding listings and rentals was externalized in order to reduce the gas costs while using the protocol. That requires the state to be passed as an argument to each function and validated by matching its hash against the one stored in the contract. Conversly, changes to the state are hashed and stored, and the resulting state variables are either published as events or returned directly to the user.
+The information that hold the state (`TokenContext`) consist of the token id, the owner of the NFT and the active rental (`Rental`), which are required to keep the integrity of the contract.
+The listings (`SignedListing`) are required arguments for the relevant functions and must be signed by both the owner (EIP-712 type 3) and the protocol admin (EIP-712 type 0). The signature is validated by the contract and requires the signature timestamp to be within 2 minutes of the current timestamp
+"""
+
+
 # Interfaces
 
 from vyper.interfaces import ERC20 as IERC20
@@ -289,6 +300,20 @@ def __init__(
     _protocol_wallet: address,
     _protocol_admin: address
 ):
+    """
+    @notice Initialize the renting contract with necessary parameters and addresses.
+    @dev Sets up the contract by initializing various addresses and fees.
+    @param _vault_impl_addr The address of the vault implementation.
+    @param _payment_token_addr The address of the payment token.
+    @param _nft_contract_addr The address of the NFT contract.
+    @param _delegation_registry_addr The address of the delegation registry.
+    @param _renting_erc721 The address of the renting ERC721 contract.
+    @param _max_protocol_fee The maximum protocol fee that can be set.
+    @param _protocol_fee The initial protocol fee.
+    @param _protocol_wallet The wallet to receive protocol fees.
+    @param _protocol_admin The administrator of the protocol.
+    """
+
     assert _vault_impl_addr != empty(address), "vault impl is the zero addr"
     assert _payment_token_addr != empty(address), "payment token is the zero addr"
     assert _nft_contract_addr != empty(address), "nft contract is the zero addr"
@@ -330,6 +355,13 @@ def __init__(
 @external
 def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
 
+    """
+    @notice Delegates multiple NFTs to a wallet while not rented
+    @dev Iterates over token contexts to delegate NFTs to a wallet
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    @param delegate The address to delegate the NFTs to.
+    """
+
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
     for token_context in token_contexts:
@@ -348,6 +380,13 @@ def delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: add
 
 @external
 def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delegate: address):
+
+    """
+    @notice Delegates multiple NFTs to a wallet while rented
+    @dev Iterates over token contexts to delegate NFTs to a wallet
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    @param delegate The address to delegate the NFTs to.
+    """
 
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
@@ -383,6 +422,14 @@ def renter_delegate_to_wallet(token_contexts: DynArray[TokenContext, 32], delega
 
 @external
 def deposit(token_ids: DynArray[uint256, 32], delegate: address):
+
+    """
+    @notice Deposits a set of NFTs in vaults (creating them if needed) and sets up delegations
+    @dev Iterates over a list of token ids, creating vaults if not needed, transfering the NFTs to the vaults and setting the delegations
+    @param token_ids An array of NFT token ids to deposit.
+    @param delegate Address to delegate the NFT to while listed.
+    """
+
     self._check_not_paused()
     vault_logs: DynArray[VaultLog, 32] = empty(DynArray[VaultLog, 32])
 
@@ -404,6 +451,12 @@ def deposit(token_ids: DynArray[uint256, 32], delegate: address):
 @external
 def mint(token_contexts: DynArray[TokenContext, 32]):
 
+    """
+    @notice Mints ERC721 renting tokens for a set of NFTs
+    @dev Iterates over a list of token contexts, creating ERC721 renting tokens with matching ids for each NFT
+    @param token_contexts An array of token contexts, each containing the rental state for an NFT.
+    """
+
     tokens: DynArray[TokenAndWallet, 32] = empty(DynArray[TokenAndWallet, 32])
 
     for token_context in token_contexts:
@@ -419,6 +472,13 @@ def mint(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def revoke_listing(token_contexts: DynArray[TokenContext, 32]):
+
+    """
+    @notice Revokes any existing listings for a set of NFTs
+    @dev Iterates over a list of token contexts, revoking listings for each NFT created before the current block timestamp
+    @param token_contexts An array of token contexts, each containing the rental state for an NFT.
+    """
+
     token_ids: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
@@ -430,6 +490,16 @@ def revoke_listing(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, delegate: address, signature_timestamp: uint256):
+
+    """
+    @notice Start rentals for multiple NFTs for the specified duration and delegate them to a wallet
+    @dev Iterates over token contexts to begin rentals for each NFT. The rental conditions are evaluated against the matching listing, signed by the owner and the protocol admin. The rental amount is computed and transferred to the protocol wallet and the delegation is created for the given wallet.
+    @param token_contexts An array of token contexts, each containing the rental state and signed listing for an NFT.
+    @param duration The duration of the rentals in hours.
+    @param delegate The address to delegate the NFT to during the rental period.
+    @param signature_timestamp The timestamp of the protocol admin signature.
+    """
+
     self._check_not_paused()
 
     rental_logs: DynArray[RentalLog, 32] = []
@@ -490,6 +560,12 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
 @external
 def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
+    """
+    @notice Close rentals for multiple NFTs and claim rewards
+    @dev Iterates over token contexts to close rentals for each NFT. The new rental amount is computed pro-rata (considering the minimum duration) and any payback amount transferred to the renter. The protocol fee is computed and accrued and the delegation is revoked.
+    @param token_contexts An array of token contexts, each containing the rental state for an NFT.
+    """
+
     rental_logs: DynArray[RentalLog, 32] = []
     protocol_fees_amount: uint256 = 0
     payback_amounts: uint256 = 0
@@ -546,6 +622,14 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature_timestamp: uint256):
+
+    """
+    @notice Extend rentals for multiple NFTs for the specified duration
+    @dev Iterates over token contexts to extend rentals for each NFT. The rental amount is computed pro-rata (considering the minimum duration) and the new rental amount is computed. The difference between the new rental amount and the payback amount is transferred from / to the renter and the new rental protocol fee is computed and accrued.
+    @param token_contexts An array of token contexts, each containing the rental state and signed listing for an NFT.
+    @param duration The duration of the rentals in hours.
+    @param signature_timestamp The timestamp of the protocol admin signature.
+    """
 
     rental_logs: DynArray[RentalExtensionLog, 32] = []
     protocol_fees_amount: uint256 = 0
@@ -626,6 +710,13 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
 @external
 def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
+    """
+    @notice Withdraw multiple NFTs and claim rewards
+    @dev Iterates over token contexts to withdraw NFTs from their vaults and claim any unclaimed rewards, while also burning the matching ERC721 renting token.
+    @param token_contexts An array of token contexts, each containing the vault state for an NFT.
+    """
+
+
     withdrawal_log: DynArray[WithdrawalLog, 32] = empty(DynArray[WithdrawalLog, 32])
     tokens: DynArray[TokenAndWallet, 32] = empty(DynArray[TokenAndWallet, 32])
     total_rewards: uint256 = 0
@@ -677,6 +768,13 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
+
+    """
+    @notice Deposit the given amounts for multiple NFTs in the configured staking pool
+    @dev Iterates over token contexts to deposit the given amounts for each NFT in the staking pool
+    @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
+    """
+
     self._check_not_paused()
     assert staking_addr != empty(address), "staking not supported"
 
@@ -699,6 +797,14 @@ def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
 
 @external
 def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
+
+    """
+    @notice Withdraw the given amounts for multiple NFTs from the configured staking pool
+    @dev Iterates over token contexts to withdraw the given amounts for each NFT from the staking pool
+    @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
+    @param recipient The address to receive the withdrawn amounts.
+    """
+
     assert staking_addr != empty(address), "staking not supported"
 
     staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
@@ -718,6 +824,14 @@ def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipien
 
 @external
 def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
+
+    """
+    @notice Claim the rewards for multiple NFTs from the configured staking pool
+    @dev Iterates over token contexts to claim the rewards for each NFT from the staking pool
+    @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
+    @param recipient The address to receive the claimed rewards.
+    """
+
     assert staking_addr != empty(address), "staking not supported"
     tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
 
@@ -732,6 +846,13 @@ def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: 
 
 @external
 def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
+
+    """
+    @notice Compound the rewards for multiple NFTs in the configured staking pool
+    @dev Iterates over token contexts to compound the rewards for each NFT in the staking pool
+    @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
+    """
+
     self._check_not_paused()
     assert staking_addr != empty(address), "staking not supported"
     tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
@@ -748,6 +869,12 @@ def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
 
 @external
 def claim(token_contexts: DynArray[TokenContext, 32]):
+
+    """
+    @notice Claim the rental rewards for multiple NFTs
+    @dev Iterates over token contexts to claim rewards for each expired rental. The rental rewards and any previous unclaimed rewards are transferred to the NFT owner and the protocol fees are accrued.
+    @param token_contexts An array of token contexts, each containing the rental state for an NFT.
+    """
 
     reward_logs: DynArray[RewardLog, 32] = []
 
@@ -775,6 +902,15 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
 @view
 @external
 def claimable_rewards(nft_owner: address, token_contexts: DynArray[TokenContext, 32]) -> uint256:
+
+    """
+    @notice Compute the claimable rewards for a given NFT owner
+    @dev Iterates over token contexts to compute the claimable rewards for each expired rental, wich are then summed up to any previous unclaimed rewards.
+    @param nft_owner The address of the NFT owner.
+    @param token_contexts An array of token contexts, each containing the rental state for an NFT.
+    @return The claimable rewards for the given NFT owner.
+    """
+
     rewards: uint256 = self.unclaimed_rewards[nft_owner]
     for context in token_contexts:
         assert self._is_context_valid(context), "invalid context"
@@ -786,6 +922,13 @@ def claimable_rewards(nft_owner: address, token_contexts: DynArray[TokenContext,
 
 @external
 def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
+
+    """
+    @notice Allow the owner of rental ERC721 tokens to claim the ownership of the underlying NFTs
+    @dev Iterates over token contexts to claim the ownership of each NFT. The ownership is transferred to the NFT owner and the rental state is cleared.
+    @param token_contexts An array of token contexts, each containing the rental state for an NFT.
+    """
+
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
         assert renting_erc721.ownerOf(token_context.token_id) == msg.sender, "not owner"
@@ -794,6 +937,12 @@ def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
 
 @external
 def claim_fees():
+
+    """
+    @notice Claim the accrued protocol fees
+    @dev Transfers the accrued protocol fees to the protocol wallet and logs the event.
+    """
+
     assert msg.sender == self.protocol_admin, "not admin"
     protocol_fees_amount: uint256 = self.protocol_fees_amount
     self.protocol_fees_amount = 0
@@ -803,6 +952,13 @@ def claim_fees():
 
 @external
 def set_protocol_fee(protocol_fee: uint256):
+
+    """
+    @notice Set the protocol fee
+    @dev Sets the protocol fee to the given value and logs the event. Admin function.
+    @param protocol_fee The new protocol fee.
+    """
+
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert protocol_fee <= max_protocol_fee, "protocol fee > max fee"
 
@@ -812,6 +968,13 @@ def set_protocol_fee(protocol_fee: uint256):
 
 @external
 def change_protocol_wallet(new_protocol_wallet: address):
+
+    """
+    @notice Change the protocol wallet
+    @dev Changes the protocol wallet to the given address and logs the event. Admin function.
+    @param new_protocol_wallet The new protocol wallet.
+    """
+
     assert msg.sender == self.protocol_admin, "not protocol admin"
     assert new_protocol_wallet != empty(address), "wallet is the zero address"
 
@@ -820,12 +983,26 @@ def change_protocol_wallet(new_protocol_wallet: address):
 
 @external
 def set_paused(paused: bool):
+
+    """
+    @notice Pause or unpause the contract
+    @dev Pauses or unpauses the contract and logs the event. Admin function.
+    @param paused The new paused state.
+    """
+
     assert msg.sender == self.protocol_admin, "not protocol admin"
     self.paused = paused
 
 
 @external
 def propose_admin(_address: address):
+
+    """
+    @notice Propose a new admin
+    @dev Proposes a new admin and logs the event. Admin function.
+    @param _address The address of the proposed admin.
+    """
+
     assert msg.sender == self.protocol_admin, "not the admin"
     assert _address != empty(address), "_address is the zero address"
 
@@ -835,6 +1012,12 @@ def propose_admin(_address: address):
 
 @external
 def claim_ownership():
+
+    """
+    @notice Claim the ownership of the contract
+    @dev Claims the ownership of the contract and logs the event. Requires the caller to be the proposed admin.
+    """
+
     assert msg.sender == self.proposed_admin, "not the proposed"
 
     log OwnershipTransferred(self.protocol_admin, self.proposed_admin)
@@ -845,12 +1028,26 @@ def claim_ownership():
 @view
 @external
 def tokenid_to_vault(token_id: uint256) -> address:
+
+    """
+    @notice Get the vault address for a given token id
+    @dev Computes the vault address for the given token id and returns it.
+    @param token_id The token id.
+    @return The vault address for the given token id.
+    """
+
     return self._tokenid_to_vault(token_id)
 
 
 @pure
 @external
 def supportsInterface(interface_id: bytes4) -> bool:
+    """
+    @notice Check if the contract supports the given interface, as defined in ERC-165
+    @dev Checks if the contract supports the given interface and returns true if it does.
+    @param interface_id The interface id.
+    @return True if the contract supports the given interface.
+    """
     return interface_id in SUPPORTED_INTERFACES
 
 
