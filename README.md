@@ -27,7 +27,7 @@ The renting of an NFT in the context of this protocol means that:
 3. the vault where the NFT asset is escrowed delegates it to a renter's specified wallet for a specific duration
 4. once the duration of the rental is reached, the rental finishes
 
-In addition, the vaults are represented as NFTs which can be exchanged between users, either directly or through a marketplace.
+In addition, the vaults can be represented as NFTs which can be exchanged between users, either directly or through a marketplace. This also means the vaults can be used by other NFT-FI protocols as collateral.
 
 
 ## General considerations
@@ -50,19 +50,20 @@ Below are the smart contract audits performed for the protocol so far:
 | Hacken      	| V2    	    | Done    	    | [Audit_Hacken_v2.pdf](audits/Audit_Hacken_v2.pdf)  	|
 | Hacken      	| V3    	    | Pending    	|   	|
 
+
 ## Architecture
 
 As previously stated, there are two domains of the protocol:
-* the vaults implemented in [`Vault.vy`](https://github.com/Zharta/lotm-renting-protocol-v1/blob/main/contracts/Vault.vy)
-* the renting logic implemented in [`Renting.vy`](https://github.com/Zharta/lotm-renting-protocol-v1/blob/main/contracts/Renting.vy)
+* the vaults implemented in [`VaultV3.vy`](https://github.com/Zharta/lotm-renting-protocol-v1/blob/main/contracts/VaultV3.vy)
+* the renting logic implemented in [`RentingV3.vy`](https://github.com/Zharta/lotm-renting-protocol-v1/blob/main/contracts/RentingV3.vy)
+* the ERC721 interface of the vaults is implemented in [`RentingERC721V3.vy`](https://github.com/Zharta/lotm-renting-protocol-v1/blob/main/contracts/RentingERC721V3.vy)
 
-Users and other protocols should always interact with the [`Renting.vy`](https://github.com/Zharta/lotm-renting-protocol-v1/blob/main/contracts/Renting.vy) contract. The `Renting.vy` contract is the entry point of the protocol and it is responsible for:
+Users and other protocols should always interact with the [`RentingV3.vy`](https://github.com/Zharta/lotm-renting-protocol-v1/blob/main/contracts/RentingV3.vy) contract. The `RentingV3.vy` contract is the entry point of the protocol and it is responsible for:
 * NFT owners depositing NFTs in the protocol, which means the protocol creates a vault for each NFT
-* NFT owners defining the terms of the rentals: price and minimum/maximum rental duration
 * renters starting rentals
 * renters extending rentals
 * renters closing rentals before the due date
-* NFT owners claiming unclaimed fees
+* NFT owners claiming rental fees
 * NFT owners withdrawing NFTs from the protocol
 * NFT owners can stake their APE tokens in the official APE Staking protocol to earn rewards
 * NFT owners can exchange and trade their vaults
@@ -77,27 +78,32 @@ The protocol creates the vaults using minimal proxies and the `CREATE2` opcode. 
 
 ### Listing conditions
 
-When an NFT is deposited in the protocol, the NFT owner can set the listing conditions for the NFT. The listing conditions are the price per hour and the minimum and maximum rental duration. The listing conditions are set offchain by having the owner signing them. Zharta's infrastructure signs the owner-signed listing conditions whenever there is a protocol interaction that requires them:
-* `start_rentals`
-* `close_rentals`
-* `extend_rentals`
-* `withdraw`
-* `claim`
+The listing conditions are signed by the NFT owner and stored offchain. The listing conditions are composed by the price per hour and the minimum and maximum rental duration. Whenever there is a protocol interaction that requires them, Zharta's infrastructure signs the owner-signed listing conditions:
+* `RentingV3.start_rentals`
+* `RentingV3.close_rentals`
+* `RentingV3.extend_rentals`
+* `RentingV3.withdraw`
+* `RentingV3.claim`
 
-In order to help owners secure their assets, there is an addition methd `revoke_listing` that allows the owner to set a timestamp after which listings set before it are no longer valid.
+In order to help owners secure their assets, there is an addition method `RentingV3.revoke_listing` that allows the owner to set a timestamp after which listings set before it are no longer valid.
 
 ### Rentals
 
-Whenever a rental starts, the renter pays the full amount of the rental upfront. This amount is locked in the NFT vault until the end of the rental. Once the rental finishes, the rental amount is released to the NFT owner for claiming. Since the protocol is using [warm.xyz](https://warm.xyz) which supports setting a specific timestamp for the end of the delegation, the protocol computes the amount of fees that are claimable taking this into consideration. Unclaimed fees are only set explicitly for certain actions:
-1. `claim`: the NFT owner claims unclaimed fees
-2. `withdraw`: the NFT owner withdraws the NFT from the vault, along with any unclaimed fees
-3. `start_rentals`: a renter starts the rental and the previous rental fees, if not claimed, are set explicitly as unclaimed
-4. `close_rentals`: a renter may finish a rental before its due date and pays only for the time used, and unclaimed fees are explicitly set
-5. `extend_rentals`: a renter may extend an ongoing rental and has to pay the rental fees for the extension upfront, and unclaimed fees are explicitly set
+Whenever a rental starts, the renter pays the full amount of the rental upfront. This amount is locked in the `RentingV3.vy` contract until the end of the rental. Once the rental finishes, the rental amount is released to the NFT owner for claiming. Since the protocol is using [warm.xyz](https://warm.xyz) which supports setting a specific timestamp for the end of the delegation, the protocol computes the amount of fees that are claimable taking this into consideration. Unclaimed fees are only set explicitly for certain actions:
+1. `RentingV3.claim`: the NFT owner claims unclaimed fees
+2. `RentingV3.withdraw`: the NFT owner withdraws the NFT from the vault, along with any unclaimed fees
+3. `RentingV3.start_rentals`: a renter starts the rental and the previous rental fees, if not claimed, are set explicitly as unclaimed
+4. `RentingV3.close_rentals`: a renter may finish a rental before its due date and pays only for the time used, and unclaimed fees are explicitly set
+5. `RentingV3.extend_rentals`: a renter may extend an ongoing rental and has to pay the rental fees for the extension upfront, and unclaimed fees are explicitly set
 
 ### Roles
 
-The protocol does supports an admin role, with exclusive purpose of setting the protocol fees parameter. The only roles are the following:
+The protocol does supports an **admin role** with the following purposes:
+* enabling/disabling the protocol fee and its
+* setting the protocol wallet that receives the protocol fee
+* validating the signature passed in the `RentingV3.start_rentals` method
+
+The roles are the following:
 * `Renting.vy`:
     * `admin`: the protocol admin with permissions limited to set the value of protocol fees (up to a fixed limit) and the protocol wallet that receives those fees. The `admin` value can be changed via the `propose_admin` and `claim_ownership` functions.
     * `owner`: the owner of the NFT that is escrowed in vault, which means that only this address can perform certain actions against the vault
@@ -107,31 +113,32 @@ The protocol does supports an admin role, with exclusive purpose of setting the 
 
 The protocol uses [warm.xyz](https://warm.xyz) to perform wallet level delegation of the vaults. At any moment, at most one delegation can be active, meaning that setting a new hot wallet cancels any ongoing delegation. The usage of delegation happens as following:
 * Renter:
-    * `start_rentals`: when initiating a rental, the renter specifies a `delegate` which will be used as the vault hot wallet for the specified rental duration.
-    * `close_rentals`: if the renter cancels the rental, the delegation is also removed.
-    * `renter_delegate_to_wallet`: at any time that a renter has an ongoing rental is not ongoing, the renter can specify a different wallet for the delegation.
+    * `RentingV3.start_rentals`: when initiating a rental, the renter specifies a `delegate` which will be used as the vault hot wallet for the specified rental duration.
+    * `RentingV3.close_rentals`: if the renter cancels the rental, the delegation is also removed.
+    * `RentingV3.extend_rentals`: if the renter extends the rental, the delegation is also extended.
+    * `RentingV3.renter_delegate_to_wallet`: at any time that a renter has an ongoing rental is not ongoing, the renter can specify a different wallet for the delegation.
 * NFT Owner:
-    * `deposit`: as part of this operation, an optional `delegate` can be set. If not empty, it is set as the vault hot wallet without expiration period.
-    * `delegate_to_wallet`: at any time that a rental is not ongoing, the vault owner can use this function to set a new delegate as the vault hot wallet without expiration period.
+    * `RentingV3.deposit`: as part of this operation, an optional `delegate` can be set. If not empty, it is set as the vault hot wallet without expiration period.
+    * `RentingV3.delegate_to_wallet`: at any time that a rental is not ongoing, the vault owner can use this function to set a new delegate as the vault hot wallet without expiration period.
 
 
 ### Protocol fees
 
 The protocol supports the definition of a fee to be applied over the rental's amount. It works as following:
 
-* The `Renting.vy` contract stores the `protocol_fee` and `protocol_wallet` values, which are used as parameters when a new rental is created (`Vault.start_rental`).
+* The `RentingV3.vy` contract stores the `protocol_fee` and `protocol_wallet` values, which are used as parameters when a new rental is created (`RentingV3.start_rental`).
 * For each rental, the `protocol_fee` and `protocol_wallet` initially defined are not changed, meaning the conditions defined during rental creation are valid for the full life of the rental.
 * The `admin` role can change both the `protocol_fee` and `protocol_wallet`, which become valid for every new rental thereafter.
-* At deployment time a `max_protocol_fee` is set, which limits the max possible `protocol_fee` value that the `admin` can set. This value can't be changed.
-* Protocol fees follow a simliar process to rental rewards, meaning that they can be acumulated and transfered on specific actions: `withdraw`, `claim` and `close_rental`
-* In case of early rental cancelation (`close_rental`) the fees are applied over the pro-rata rental amount, similary to the rewards.
+* At deployment time, a `max_protocol_fee` is set, which limits the max possible `protocol_fee` value that the `admin` can set. This value can't be changed.
+* Protocol fees follow a simliar process to rental rewards, meaning that they can be acumulated and transfered on specific actions: `RentingV3.withdraw`, `RentingV3.claim`, `RentingV3.close_rental`, and `RentingV3.extend_rental`.
+* In case of early rental cancelation (`RentingV3.close_rental`) the fees are applied over the pro-rata rental amount, similary to the rewards.
 
 
 ## Development
 
 ### Implementation
 
-#### Renting contract (`Renting.vy`)
+#### Renting contract (`RentingV3.vy`)
 
 The renting contract is the single user-facing contract for each Renting Market. This contract does not hold any assets, it manages the creation of vaults (as minimal proxies to the vault implementation) and delegates the calls to the vaults, with the exception of the admin functions.
 
