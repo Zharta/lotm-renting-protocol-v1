@@ -127,7 +127,6 @@ def delegation_registry_warm_contract(forked_env):
 @pytest.fixture
 def ape_staking_contract(nft_contract, ape_contract):
     return boa.load_partial("tests/stubs/ApeStaking.vy").at(APE_STAKING_ADDRESS)
-    # return boa.load_abi("tests/stubs/ApeStaking_abi.json").at(APE_STAKING_ADDRESS)
 
 
 @pytest.fixture
