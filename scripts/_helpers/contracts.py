@@ -1,12 +1,41 @@
+import json
 from dataclasses import dataclass
 
 from ape import project
+from ape.contracts.base import ContractContainer, ContractType
+from hexbytes import HexBytes
 
 from .basetypes import ContractConfig
 
+ZERO_ADDRESS = "0x" + "00" * 20
+
 
 @dataclass
-class VaultImplContract(ContractConfig):
+class VaultImplV1Contract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        address: str | None = None,
+    ):
+        super().__init__(
+            key,
+            None,
+            project.VaultV1,
+            version=version,
+            abi_key=abi_key,
+            container_name="VaultV1",
+            deployment_deps=[],
+            deployment_args=[],
+        )
+        if address:
+            self.load_contract(address)
+
+
+@dataclass
+class VaultImplV2Contract(ContractConfig):
     def __init__(
         self,
         *,
@@ -21,12 +50,41 @@ class VaultImplContract(ContractConfig):
         super().__init__(
             key,
             None,
-            project.Vault,
+            project.VaultV2,
             version=version,
             abi_key=abi_key,
-            container_name="Vault",
+            container_name="VaultV2",
             deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key],
             deployment_args=[payment_token_key, nft_contract_key, delegation_registry_key],
+        )
+        if address:
+            self.load_contract(address)
+
+
+@dataclass
+class VaultImplV3Contract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        payment_token_key: str,
+        nft_contract_key: str,
+        delegation_registry_key: str,
+        staking_contract_key: str = ZERO_ADDRESS,
+        address: str | None = None,
+    ):
+        staking_deps = [staking_contract_key] if staking_contract_key != ZERO_ADDRESS else []
+        super().__init__(
+            key,
+            None,
+            project.VaultV3,
+            version=version,
+            abi_key=abi_key,
+            container_name="VaultV3",
+            deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key] + staking_deps,
+            deployment_args=[payment_token_key, nft_contract_key, delegation_registry_key, staking_contract_key],
         )
         if address:
             self.load_contract(address)
@@ -76,7 +134,35 @@ class WarmDelegationContract(ContractConfig):
 
 
 @dataclass
-class RentingContract(ContractConfig):
+class RentingV1Contract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        vault_impl_key: str,
+        payment_token_key: str,
+        nft_contract_key: str,
+        delegation_registry_key: str,
+        address: str | None = None,
+    ):
+        super().__init__(
+            key,
+            None,
+            project.RentingV1,
+            version=version,
+            abi_key=abi_key,
+            container_name="RentingV1",
+            deployment_deps=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_args=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
+        )
+        if address:
+            self.load_contract(address)
+
+
+@dataclass
+class RentingV2Contract(ContractConfig):
     def __init__(
         self,
         *,
@@ -96,10 +182,10 @@ class RentingContract(ContractConfig):
         super().__init__(
             key,
             None,
-            project.Renting,
+            project.RentingV2,
             version=version,
             abi_key=abi_key,
-            container_name="Renting",
+            container_name="RentingV2",
             deployment_deps=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
             deployment_args=[
                 vault_impl_key,
@@ -116,13 +202,144 @@ class RentingContract(ContractConfig):
             self.load_contract(address)
 
 
+@dataclass
+class RentingV3Contract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        vault_impl_key: str,
+        payment_token_key: str,
+        nft_contract_key: str,
+        delegation_registry_key: str,
+        renting_erc721_contract_key: str,
+        staking_contract_key: str = ZERO_ADDRESS,
+        staking_pool_id: int = 0,
+        max_protocol_fee: int | None = None,
+        protocol_fee: int | None = None,
+        protocol_wallet: str | None = None,
+        protocol_admin: str | None = None,
+        address: str | None = None,
+    ):
+        staking_deps = [staking_contract_key] if staking_contract_key != ZERO_ADDRESS else []
+        super().__init__(
+            key,
+            None,
+            project.RentingV3,
+            version=version,
+            abi_key=abi_key,
+            container_name="RentingV3",
+            deployment_deps=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+                renting_erc721_contract_key,
+            ]
+            + staking_deps,
+            deployment_args=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+                renting_erc721_contract_key,
+                staking_contract_key,
+                staking_pool_id,
+                max_protocol_fee,
+                protocol_fee,
+                protocol_wallet,
+                protocol_admin,
+            ],
+        )
+        if address:
+            self.load_contract(address)
+
+
+@dataclass
+class RentingERC721V3Contract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        address: str | None = None,
+    ):
+        super().__init__(
+            key,
+            None,
+            project.RentingERC721V3,
+            version=version,
+            abi_key=abi_key,
+            container_name="RentingERC721V3",
+            deployment_deps=[],
+            deployment_args=[],
+        )
+        if address:
+            self.load_contract(address)
+
+
+@dataclass
+class StakingContract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        apecoin_contract_key: str,
+        bayc_contract_key: str,
+        mayc_contract_key: str,
+        bakc_contract_key: str,
+        address: str | None = None,
+    ):
+        container = StakingContractContainer()
+        super().__init__(
+            key,
+            None,
+            container,
+            version=version,
+            abi_key=abi_key,
+            container_name="Staking",
+            deployment_deps=[apecoin_contract_key, bayc_contract_key, mayc_contract_key, bakc_contract_key],
+            deployment_args=[apecoin_contract_key, bayc_contract_key, mayc_contract_key, bakc_contract_key],
+        )
+        if address:
+            self.load_contract(address)
+
+
+class StakingContractContainer(ContractContainer):
+    def __init__(self):
+        with open("contracts/auxiliary/ApeCoinStaking_abi.json", "r") as f:
+            abi = json.load(f)
+        with open("contracts/auxiliary/ApeCoinStaking_deployment.hex", "r") as f:
+            deployment_bytecode = HexBytes(f.read().strip())
+        with open("contracts/auxiliary/ApeCoinStaking_runtime.hex", "r") as f:
+            runtime_bytecode = HexBytes(f.read().strip())
+        contract = ContractType(
+            contractName="Staking",
+            abi=abi,
+            deploymentBytecode=deployment_bytecode,
+            runtimeBytecode=runtime_bytecode,
+        )
+        super().__init__(contract)
+
+
 contract_map = {
     k.__name__: k
     for k in [
         ERC20Contract,
         ERC721Contract,
-        RentingContract,
-        VaultImplContract,
+        RentingERC721V3Contract,
+        RentingV1Contract,
+        RentingV2Contract,
+        RentingV3Contract,
+        StakingContract,
+        VaultImplV1Contract,
+        VaultImplV2Contract,
+        VaultImplV3Contract,
         WarmDelegationContract,
     ]
 }
