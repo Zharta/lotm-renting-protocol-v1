@@ -46,7 +46,7 @@ class EventWrapper:
 
     @cached_property
     def args_dict(self):
-        print(f"{self.event=} {self.event.event_type.arguments=}")
+        # print(f"{self.event=} {self.event.event_type.arguments=}")
         args = self.event.event_type.arguments.keys()
         indexed = self.event.event_type.indexed
         topic_values = (v for v in self.event.topics)
@@ -56,13 +56,16 @@ class EventWrapper:
         return {k: self._format_value(v, self.event.event_type.arguments[k]) for k, v in _args}
 
     def _format_value(self, v, _type):
-        print(f"_format_value {v=} {_type=} {type(v).__name__=} {type(_type)=}")
+        # print(f"_format_value {v=} {_type=} {type(v).__name__=} {type(_type)=}")
         if isinstance(_type, vyper.semantics.types.primitives.AddressT):
             return Web3.to_checksum_address(v)
         # elif isinstance(_type, vyper.semantics.types.value.bytes_fixed.Bytes32Definition):
         elif isinstance(_type, vyper.semantics.types.primitives.BytesT):
             return f"0x{v.hex()}"
         return v
+
+    def __repr__(self):
+        return f"<EventWrapper {self.event_name} {self.args_dict}>"
 
 
 # TODO: find a better way to do this. also would be useful to get structs attrs by name
