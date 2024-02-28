@@ -209,6 +209,36 @@ def test_withdraw_logs_nfts_withdrawn(renting_contract, nft_contract, nft_owner,
     assert event.total_rewards == 0
 
 
+def test_withdraw_pays_unclaimed_rewards(renting_contract, nft_contract, nft_owner, ape_contract, owner):
+    token_id = 10
+    unclaimed_rewards = 1000
+    nft_owner_initial_balance = ape_contract.balanceOf(nft_owner)
+
+    nft_contract.mint(nft_owner, token_id, sender=owner)
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+
+    renting_contract.eval(f"self.unclaimed_rewards[{nft_owner}] = {unclaimed_rewards}")
+    ape_contract.mint(renting_contract, unclaimed_rewards, sender=owner)
+
+    renting_contract.deposit([token_id], ZERO_ADDRESS, sender=nft_owner)
+
+    token_context = TokenContext(token_id, nft_owner, Rental())
+    renting_contract.withdraw([token_context.to_tuple()], sender=nft_owner)
+    event = get_last_event(renting_contract, "NftsWithdrawn")
+
+    withdrawal_log = WithdrawalLog(*event.withdrawals[0])
+    assert withdrawal_log.vault == renting_contract.tokenid_to_vault(token_id)
+    assert withdrawal_log.token_id == token_id
+
+    assert event.owner == nft_owner
+    assert event.nft_contract == nft_contract.address
+    assert event.total_rewards == unclaimed_rewards
+
+    assert ape_contract.balanceOf(nft_owner) - nft_owner_initial_balance == unclaimed_rewards
+    assert renting_contract.unclaimed_rewards(nft_owner) == 0
+
+
 def test_withdraw_removes_delegation(
     renting_contract, nft_contract, nft_owner, vault_contract_def, protocol_wallet, delegation_registry_warm_contract
 ):
