@@ -1,7 +1,7 @@
 # @version 0.3.10
 
 """
-@title LOTM Renting Protocol Contract
+@title Zharta Renting Contract
 @author [Zharta](https://zharta.io/)
 @notice This contract manages the renting process for NFTs in the LOTM Renting Protocol.
 @dev This contract is the single user-facing contract for each Renting Market. It does not hold any NFTs, although it holds the rentals values and the protocol fees (payment tokens). It also manages the creation of vaults (as minimal proxies to the vault implementation) and implements the rental logic. The delegation and staking functionality are implemented in the vaults.

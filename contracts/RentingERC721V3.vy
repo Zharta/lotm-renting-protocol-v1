@@ -1,7 +1,7 @@
 # @version 0.3.10
 
 """
-@title LOTM Renting ERC721 Protocol Contract
+@title Zharta RentingERC721 Contract
 @author [Zharta](https://zharta.io/)
 @notice This contract wraps renting vaults with deposited NFTs, exposing them as ERC721 tokens.
 @dev This contract is a ERC721 implementation representing the NFTs deposited in the renting vaults. Tokens are minted and burned by the renting contract, and can be transferred by the owner or approved operators. The contract can be used with any ERC721 compatible wallet or marketplace.

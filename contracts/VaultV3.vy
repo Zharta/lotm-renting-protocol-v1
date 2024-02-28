@@ -1,7 +1,7 @@
 # @version 0.3.10
 
 """
-@title LOTM Renting Protocol Vault Contract
+@title Zharta Renting Vault Contract
 @author [Zharta](https://zharta.io/)
 @notice This contract is the vault implementation for the LOTM Renting Protocol.
 @dev This is the implementation contract for each vault, which is deployed as a minimal proxy (ERC1167) by `RentingV3.vy` and accepts only calls from it. This contract holds the assets (NFTs) ) but does not store any information regarding the token, so pre-conditions must be validated by the caller (`RentingV3.vy`). It implement the functions required for token delegation and staking.
