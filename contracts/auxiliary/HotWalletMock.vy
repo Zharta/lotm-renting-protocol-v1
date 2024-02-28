@@ -8,6 +8,9 @@
 
 ## TODO add the remaining functions
 
+struct WalletLink:
+    walletAddress: address
+    expirationTimestamp: uint256
 
 event HotWalletChanged:
     coldWallet: address
@@ -34,3 +37,8 @@ def setExpirationTimestamp(expiration_timestamp: uint256):
 @external
 def getHotWallet(cold_wallet: address) -> address:
     return self.hot[cold_wallet] if self.exp[cold_wallet] > block.timestamp else empty(address)
+
+@view
+@external
+def getColdWalletLinks(hot_wallet: address) -> DynArray[WalletLink, 128]:
+    return []
