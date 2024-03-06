@@ -213,7 +213,14 @@ def test_claim_ownership(renting_contract, owner, nft_owner):
 
 def test_set_paused(renting_contract, owner):
     renting_contract.set_paused(True, sender=owner)
+    event = get_last_event(renting_contract, "PauseStateSet")
+    assert event.new_value is True
+
     assert renting_contract.paused()
 
     renting_contract.set_paused(False, sender=owner)
+    event = get_last_event(renting_contract, "PauseStateSet")
+    assert event.old_value is True
+    assert event.new_value is False
+
     assert not renting_contract.paused()

@@ -229,6 +229,11 @@ event FeesClaimed:
     amount: uint256
 
 
+event PauseStateSet:
+    old_value: bool
+    new_value: bool
+
+
 # Global Variables
 
 ZHARTA_DOMAIN_NAME: constant(String[6]) = "Zharta"
@@ -971,6 +976,7 @@ def change_protocol_wallet(new_protocol_wallet: address):
     log ProtocolWalletChanged(self.protocol_wallet, new_protocol_wallet)
     self.protocol_wallet = new_protocol_wallet
 
+
 @external
 def set_paused(paused: bool):
 
@@ -981,6 +987,9 @@ def set_paused(paused: bool):
     """
 
     assert msg.sender == self.protocol_admin, "not protocol admin"
+
+    log PauseStateSet(self.paused, paused)
+
     self.paused = paused
 
 
