@@ -755,8 +755,8 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     # transfer reward to nft owner
     if rewards_to_claim > 0:
-        self._transfer_payment_token(msg.sender, rewards_to_claim)
         self.unclaimed_rewards[msg.sender] = 0
+        self._transfer_payment_token(msg.sender, rewards_to_claim)
 
     log NftsWithdrawn(
         msg.sender,
