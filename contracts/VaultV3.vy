@@ -74,8 +74,12 @@ def __init__(
     @param _payment_token_addr The address of the payment token contract.
     @param _nft_contract_addr The address of the NFT contract.
     @param _delegation_registry_addr The address of the delegation registry contract.
-    @param _staking_addr The address of the staking contract.
+    @param _staking_addr The address of the staking contract. It may be empty if the nft contract is not supported by the staking contract.
     """
+
+    assert _payment_token_addr != empty(address), "payment token addr not set"
+    assert _nft_contract_addr != empty(address), "nft contract addr not set"
+    assert _delegation_registry_addr != empty(address), "delegation addr not set"
 
     payment_token = IERC20(_payment_token_addr)
     nft_contract = IERC721(_nft_contract_addr)
