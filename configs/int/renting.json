@@ -34,7 +34,7 @@
         "vault_impl_hound_ape_v2": {
             "abi_key": "18df6fa54e99afcaa2a9cb50d769a8c56941e6d9",
             "address": "0x1Af0F851FC816e3ca6A9A22e3340672984488f6e",
-            "contract": "VaultImplContract",
+            "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.hound",
@@ -50,7 +50,7 @@
         "vault_impl_koda_ape": {
             "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
             "address": "0xf0477507C1F8f19A6236bd2a8389a301c3833a28",
-            "contract": "VaultImplContract",
+            "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.koda",
@@ -66,7 +66,7 @@
         "vault_impl_koda_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
             "address": "0xe95b387cEe5BCC750D9e58Fc7a49B0aAFeFE26DF",
-            "contract": "VaultImplContract",
+            "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.koda",
@@ -82,7 +82,7 @@
         "vault_impl_mara_ape": {
             "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
             "address": "0xabf197E026A431dD4C9Ef604c2Fb4fCf1CFD782B",
-            "contract": "VaultImplContract",
+            "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.mara",
@@ -97,7 +97,7 @@
         "vault_impl_mara_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
             "address": "0x3Bbb07dAc04d7B07a9c1274C9Bb083B8c4aA60A1",
-            "contract": "VaultImplContract",
+            "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.mara",
@@ -113,7 +113,7 @@
         "vault_impl_otherdeed_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
             "address": "0x3df34a0892867d26eC06fFB48D3dD9085ae5cC4f",
-            "contract": "VaultImplContract",
+            "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.otherdeed",
@@ -136,7 +136,7 @@
         "hound_v2": {
             "abi_key": "30b3e4ad1ed1fd986fd83e3675d45f02a43ccdc9",
             "address": "0x2b25a030D079E9800EC842A12A026F23561E15E7",
-            "contract": "RentingContract",
+            "contract": "RentingV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,
@@ -158,7 +158,7 @@
         "koda": {
             "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
             "address": "0xE44Bf31cD8EFdD9ec67046EE3a5D398207E49632",
-            "contract": "RentingContract",
+            "contract": "RentingV1Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.koda",
@@ -176,7 +176,7 @@
         "koda_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
             "address": "0xe95D5EBa55506A78B4FA61713B17998cb591FE7D",
-            "contract": "RentingContract",
+            "contract": "RentingV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,
@@ -198,7 +198,7 @@
         "mara": {
             "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
             "address": "0x83D90158F20C5468d7cD9A841a052dc10f914E4C",
-            "contract": "RentingContract",
+            "contract": "RentingV1Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "nft_contract_key": "common.mara",
@@ -216,7 +216,7 @@
         "mara_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
             "address": "0xFd933340eE23a69069B5BE60d84258fBcE4913D8",
-            "contract": "RentingContract",
+            "contract": "RentingV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,
@@ -238,7 +238,7 @@
         "otherdeed_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
             "address": "0x4AE6B0ab2F1C3F7AdED1a9206c46c6982b80c62f",
-            "contract": "RentingContract",
+            "contract": "RentingV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,

@@ -163,12 +163,6 @@ event RentalStarted:
     nft_contract: address
     rentals: DynArray[RentalLog, 32]
 
-event RentalChanged:
-    renter: address
-    delegate: address
-    nft_contract: address
-    rentals: DynArray[RentalLog, 32]
-
 event RentalClosed:
     renter: address
     nft_contract: address
@@ -181,9 +175,15 @@ event RentalExtended:
 
 event RewardsClaimed:
     owner: address
+    nft_contract: address
     amount: uint256
     protocol_fee_amount: uint256
     rewards: DynArray[RewardLog, 32]
+
+event TokenOwnershipChanged:
+    new_owner: address
+    nft_contract: address
+    tokens: DynArray[uint256, 32]
 
 event ProtocolFeeSet:
     old_fee: uint256
@@ -201,21 +201,6 @@ event AdminProposed:
 event OwnershipTransferred:
     old_admin: address
     new_admin: address
-
-event Transfer:
-    sender: indexed(address)
-    receiver: indexed(address)
-    tokenId: indexed(uint256)
-
-event Approval:
-    owner: indexed(address)
-    approved: indexed(address)
-    tokenId: indexed(uint256)
-
-event ApprovalForAll:
-    owner: indexed(address)
-    operator: indexed(address)
-    approved: bool
 
 event StakingDeposit:
     owner: address
@@ -896,7 +881,7 @@ def claim(token_contexts: DynArray[TokenContext, 32]):
     assert payment_token.transfer(msg.sender, rewards_to_claim), "transfer failed"
     self.unclaimed_rewards[msg.sender] = 0
 
-    log RewardsClaimed(msg.sender, rewards_to_claim, self.protocol_fees_amount, reward_logs)
+    log RewardsClaimed(msg.sender, nft_contract_addr, rewards_to_claim, self.protocol_fees_amount, reward_logs)
 
 
 @view
@@ -929,10 +914,15 @@ def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
     @param token_contexts An array of token contexts, each containing the rental state for an NFT.
     """
 
+    tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
+
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
         assert renting_erc721.ownerOf(token_context.token_id) == msg.sender, "not owner"
         self._store_token_state(token_context.token_id, msg.sender, empty(Rental))
+        tokens.append(token_context.token_id)
+
+    log TokenOwnershipChanged(msg.sender, nft_contract_addr, tokens)
 
 
 @external
