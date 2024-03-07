@@ -131,23 +131,17 @@ def ape_staking_contract(nft_contract, ape_contract):
 
 @pytest.fixture
 def vault_contract(forked_env, nft_contract, ape_contract, delegation_registry_warm_contract, ape_staking_contract):
-    return boa.load(
-        "contracts/VaultV3.vy", ape_contract, nft_contract, delegation_registry_warm_contract, ape_staking_contract
-    )
+    return boa.load("contracts/VaultV3.vy", ape_contract, nft_contract, delegation_registry_warm_contract)
 
 
 @pytest.fixture
 def vault_contract_bayc(forked_env, bayc_contract, ape_contract, delegation_registry_warm_contract, ape_staking_contract):
-    return boa.load(
-        "contracts/VaultV3.vy", ape_contract, bayc_contract, delegation_registry_warm_contract, ape_staking_contract
-    )
+    return boa.load("contracts/VaultV3.vy", ape_contract, bayc_contract, delegation_registry_warm_contract)
 
 
 @pytest.fixture
 def vault_contract_mayc(forked_env, mayc_contract, ape_contract, delegation_registry_warm_contract, ape_staking_contract):
-    return boa.load(
-        "contracts/VaultV3.vy", ape_contract, mayc_contract, delegation_registry_warm_contract, ape_staking_contract
-    )
+    return boa.load("contracts/VaultV3.vy", ape_contract, mayc_contract, delegation_registry_warm_contract)
 
 
 @pytest.fixture
@@ -180,7 +174,6 @@ def renting_contract(
         delegation_registry_warm_contract,
         renting_erc721_contract,
         ape_staking_contract,
-        1,
         protocol_fee,
         protocol_fee,
         protocol_wallet,
@@ -208,7 +201,6 @@ def renting_contract_bayc(
         delegation_registry_warm_contract,
         renting_erc721_contract,
         ape_staking_contract,
-        1,
         protocol_fee,
         protocol_fee,
         protocol_wallet,
@@ -236,7 +228,6 @@ def renting_contract_mayc(
         delegation_registry_warm_contract,
         renting_erc721_contract,
         ape_staking_contract,
-        1,
         protocol_fee,
         protocol_fee,
         protocol_wallet,
@@ -262,7 +253,6 @@ def renting_contract_no_fee(
         delegation_registry_warm_contract,
         renting_erc721_contract,
         ape_staking_contract,
-        1,
         0,
         protocol_wallet,
         protocol_wallet,
