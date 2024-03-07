@@ -18,7 +18,7 @@ PROTOCOL_FEE = 500
 
 @pytest.fixture(scope="module")
 def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_registry_warm_contract):
-    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract, ZERO_ADDRESS)
+    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract)
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +44,6 @@ def renting_contract(
         delegation_registry_warm_contract,
         renting721_contract,
         ZERO_ADDRESS,
-        0,
         PROTOCOL_FEE,
         PROTOCOL_FEE,
         protocol_wallet,

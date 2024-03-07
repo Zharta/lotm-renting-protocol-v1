@@ -2,6 +2,7 @@ from dataclasses import replace
 
 import boa
 import pytest
+from eth_utils import decode_hex
 
 from ...conftest_base import (
     ZERO_ADDRESS,
@@ -15,6 +16,15 @@ from ...conftest_base import (
 FOREVER = 2**256 - 1
 PROTOCOL_FEE = 500
 
+STAKING_DEPOSIT_BAYC = decode_hex("0x46583a05")
+STAKING_DEPOSIT_MAYC = decode_hex("0x8ecbffa7")
+STAKING_WITHDRAW_BAYC = decode_hex("0xaceb3629")
+STAKING_WITHDRAW_MAYC = decode_hex("0xed23c906")
+STAKING_CLAIM_BAYC = decode_hex("0xb682e859")
+STAKING_CLAIM_MAYC = decode_hex("0x57a26300")
+
+BAYC_POOL_ID = 1
+
 
 @pytest.fixture(scope="module")
 def ape_staking_contract(ape_staking_contract_def, nft_contract, ape_contract):
@@ -23,7 +33,7 @@ def ape_staking_contract(ape_staking_contract_def, nft_contract, ape_contract):
 
 @pytest.fixture(scope="module")
 def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_registry_warm_contract, ape_staking_contract):
-    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract, ape_staking_contract)
+    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract)
 
 
 @pytest.fixture(scope="module")
@@ -45,7 +55,6 @@ def renting_contract(
         delegation_registry_warm_contract,
         renting721_contract,
         ape_staking_contract,
-        1,
         PROTOCOL_FEE,
         PROTOCOL_FEE,
         protocol_wallet,
@@ -65,13 +74,12 @@ def renting_contract_no_staking(
     owner,
 ):
     return renting_contract_def.deploy(
-        vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract, ZERO_ADDRESS),
+        vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract),
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
         renting_erc721_contract_def.deploy(),
         ZERO_ADDRESS,
-        0,
         PROTOCOL_FEE,
         PROTOCOL_FEE,
         protocol_wallet,
@@ -98,7 +106,6 @@ def test_stake_deposit(
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
     token_context = TokenContext(token_id, nft_owner, Rental())
-    pool_id = renting_contract.staking_pool_id()
 
     nft_contract.approve(vault_addr, token_id, sender=nft_owner)
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
@@ -106,11 +113,11 @@ def test_stake_deposit(
     amount = int(1e18)
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
 
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
-    assert vault_contract_def.at(vault_addr).staking_pool_id() == pool_id
-    assert vault_contract_def.at(vault_addr).staking_addr() == ape_staking_contract.address
-    assert ape_staking_contract.staked_nfts(pool_id, token_id) == amount
+    assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == amount
     assert ape_contract.balanceOf(ape_staking_contract) == amount
     assert ape_contract.balanceOf(vault_addr) == 0
     assert nft_contract.ownerOf(token_id) == vault_addr
@@ -123,7 +130,6 @@ def test_stake_deposit_batch(
     token_id_qty = 32
     token_ids = [token_id_base + i for i in range(token_id_qty)]
     vault_addrs = [renting_contract.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract.staking_pool_id()
 
     for token_id in token_ids:
         nft_contract.mint(nft_owner, token_id, sender=owner)
@@ -139,13 +145,12 @@ def test_stake_deposit_batch(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
     for token_id, amount, vault_addr in zip(token_ids, amounts, vault_addrs):
-        assert vault_contract_def.at(vault_addr).staking_pool_id() == pool_id
-        assert vault_contract_def.at(vault_addr).staking_addr() == ape_staking_contract.address
-        assert ape_staking_contract.staked_nfts(pool_id, token_id) == amount
+        assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == amount
         assert ape_contract.balanceOf(vault_addr) == 0
         assert nft_contract.ownerOf(token_id) == vault_addr
     assert ape_contract.balanceOf(ape_staking_contract) == sum(amounts)
@@ -172,6 +177,7 @@ def test_staking_deposit_logs_staking_deposit(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -202,7 +208,9 @@ def test_staking_deposit_reverts_if_contract_paused(
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
 
     with boa.reverts("paused"):
-        renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+        renting_contract.stake_deposit(
+            [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+        )
 
 
 def test_stake_deposit_reverts_if_invalid_context(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
@@ -229,7 +237,9 @@ def test_stake_deposit_reverts_if_invalid_context(renting_contract, nft_owner, r
     for invalid_context in invalid_contexts:
         print(f"invalid_context: {invalid_context}")
         with boa.reverts("invalid context"):
-            renting_contract.stake_deposit([TokenContextAndAmount(invalid_context, 1).to_tuple()], sender=nft_owner)
+            renting_contract.stake_deposit(
+                [TokenContextAndAmount(invalid_context, 1).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+            )
 
 
 def test_stake_deposit_reverts_if_not_owner(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
@@ -241,7 +251,9 @@ def test_stake_deposit_reverts_if_not_owner(renting_contract, nft_owner, renter,
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     with boa.reverts("not owner"):
-        renting_contract.stake_deposit([TokenContextAndAmount(token_context, 1).to_tuple()], sender=nft_owner)
+        renting_contract.stake_deposit(
+            [TokenContextAndAmount(token_context, 1).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+        )
 
 
 def test_stake_deposit_reverts_if_insufficient_allowance(
@@ -257,7 +269,9 @@ def test_stake_deposit_reverts_if_insufficient_allowance(
     ape_contract.approve(renting_contract, amount - 1, sender=nft_owner)
 
     with boa.reverts():
-        renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+        renting_contract.stake_deposit(
+            [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+        )
 
 
 def test_staking_deposit_reverts_if_staking_disabled(
@@ -271,7 +285,9 @@ def test_staking_deposit_reverts_if_staking_disabled(
     renting_contract_no_staking.deposit([token_id], nft_owner, sender=nft_owner)
 
     with boa.reverts("staking not supported"):
-        renting_contract_no_staking.stake_deposit([TokenContextAndAmount(token_context, 1).to_tuple()], sender=nft_owner)
+        renting_contract_no_staking.stake_deposit(
+            [TokenContextAndAmount(token_context, 1).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+        )
 
 
 def test_stake_withdraw(
@@ -280,7 +296,6 @@ def test_stake_withdraw(
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
     token_context = TokenContext(token_id, nft_owner, Rental())
-    pool_id = renting_contract.staking_pool_id()
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     amount = int(1e18)
 
@@ -288,11 +303,15 @@ def test_stake_withdraw(
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
-    renting_contract.stake_withdraw([TokenContextAndAmount(token_context, amount).to_tuple()], nft_owner, sender=nft_owner)
+    renting_contract.stake_withdraw(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], nft_owner, STAKING_WITHDRAW_BAYC, sender=nft_owner
+    )
 
-    assert ape_staking_contract.staked_nfts(pool_id, token_id) == 0
+    assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == 0
     assert ape_contract.balanceOf(ape_staking_contract) == 0
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance
     assert nft_contract.ownerOf(token_id) == vault_addr
@@ -305,7 +324,6 @@ def test_stake_withdraw_batch(
     token_id_qty = 32
     token_ids = [token_id_base + i for i in range(token_id_qty)]
     vault_addrs = [renting_contract.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract.staking_pool_id()
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
 
     for token_id in token_ids:
@@ -322,6 +340,7 @@ def test_stake_withdraw_batch(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -331,12 +350,13 @@ def test_stake_withdraw_batch(
             for token_id, amount in zip(token_ids, amounts)
         ],
         nft_owner,
+        STAKING_WITHDRAW_BAYC,
         sender=nft_owner,
     )
 
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance
     for token_id, vault_addr in zip(token_ids, vault_addrs):
-        assert ape_staking_contract.staked_nfts(pool_id, token_id) == 0
+        assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == 0
         assert ape_contract.balanceOf(vault_addr) == 0
         assert nft_contract.ownerOf(token_id) == vault_addr
 
@@ -362,6 +382,7 @@ def test_staking_withdraw_logs_staking_withdraw(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -371,6 +392,7 @@ def test_staking_withdraw_logs_staking_withdraw(
             for token_id, amount in zip(token_ids, amounts)
         ],
         nft_owner,
+        STAKING_WITHDRAW_BAYC,
         sender=nft_owner,
     )
 
@@ -396,7 +418,9 @@ def test_stake_withdraw_reverts_if_invalid_context(renting_contract, nft_owner, 
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     invalid_contexts = [
         TokenContext(0, nft_owner, Rental()),
@@ -415,7 +439,7 @@ def test_stake_withdraw_reverts_if_invalid_context(renting_contract, nft_owner, 
     for invalid_context in invalid_contexts:
         with boa.reverts("invalid context"):
             renting_contract.stake_withdraw(
-                [TokenContextAndAmount(invalid_context, 1).to_tuple()], nft_owner, sender=nft_owner
+                [TokenContextAndAmount(invalid_context, 1).to_tuple()], nft_owner, STAKING_WITHDRAW_BAYC, sender=nft_owner
             )
 
 
@@ -429,11 +453,16 @@ def test_stake_withdraw_reverts_if_not_owner(renting_contract, nft_owner, renter
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     with boa.reverts("not owner"):
         renting_contract.stake_withdraw(
-            [TokenContextAndAmount(replace(token_context, nft_owner=owner), amount).to_tuple()], nft_owner, sender=nft_owner
+            [TokenContextAndAmount(replace(token_context, nft_owner=owner), amount).to_tuple()],
+            nft_owner,
+            STAKING_WITHDRAW_BAYC,
+            sender=nft_owner,
         )
 
 
@@ -449,11 +478,13 @@ def test_stake_withdraw_reverts_if_amount_exceeds_balance(
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     with boa.reverts("not enough staked"):
         renting_contract.stake_withdraw(
-            [TokenContextAndAmount(token_context, amount + 1).to_tuple()], nft_owner, sender=nft_owner
+            [TokenContextAndAmount(token_context, amount + 1).to_tuple()], nft_owner, STAKING_WITHDRAW_BAYC, sender=nft_owner
         )
 
 
@@ -463,7 +494,6 @@ def test_stake_claim(
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
     token_context = TokenContext(token_id, nft_owner, Rental())
-    pool_id = renting_contract.staking_pool_id()
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     amount = int(1e18)
 
@@ -471,11 +501,15 @@ def test_stake_claim(
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
-    renting_contract.stake_claim([TokenContextAndAmount(token_context, amount).to_tuple()], nft_owner, sender=nft_owner)
+    renting_contract.stake_claim(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], nft_owner, STAKING_CLAIM_BAYC, sender=nft_owner
+    )
 
-    assert ape_staking_contract.staked_nfts(pool_id, token_id) == amount
+    assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == amount
     assert ape_contract.balanceOf(ape_staking_contract) == amount - get_rewards(amount)
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance - amount + get_rewards(amount)
     assert nft_contract.ownerOf(token_id) == vault_addr
@@ -488,7 +522,6 @@ def test_stake_claim_batch(
     token_id_qty = 32
     token_ids = [token_id_base + i for i in range(token_id_qty)]
     vault_addrs = [renting_contract.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract.staking_pool_id()
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
 
     for token_id in token_ids:
@@ -505,6 +538,7 @@ def test_stake_claim_batch(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -514,13 +548,14 @@ def test_stake_claim_batch(
             for token_id, amount in zip(token_ids, amounts)
         ],
         nft_owner,
+        STAKING_CLAIM_BAYC,
         sender=nft_owner,
     )
 
     rewards = [get_rewards(amount) for amount in amounts]
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance - sum(amounts) + sum(rewards)
     for token_id, vault_addr, amount in zip(token_ids, vault_addrs, amounts):
-        assert ape_staking_contract.staked_nfts(pool_id, token_id) == amount
+        assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == amount
         assert ape_contract.balanceOf(vault_addr) == 0
         assert nft_contract.ownerOf(token_id) == vault_addr
 
@@ -546,6 +581,7 @@ def test_staking_claim_logs_staking_claim(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -555,6 +591,7 @@ def test_staking_claim_logs_staking_claim(
             for token_id, amount in zip(token_ids, amounts)
         ],
         nft_owner,
+        STAKING_CLAIM_BAYC,
         sender=nft_owner,
     )
 
@@ -578,7 +615,9 @@ def test_stake_claim_reverts_if_invalid_context(renting_contract, nft_owner, ren
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     invalid_contexts = [
         TokenContext(0, nft_owner, Rental()),
@@ -596,7 +635,9 @@ def test_stake_claim_reverts_if_invalid_context(renting_contract, nft_owner, ren
 
     for invalid_context in invalid_contexts:
         with boa.reverts("invalid context"):
-            renting_contract.stake_claim([TokenContextAndAmount(invalid_context, 1).to_tuple()], nft_owner, sender=nft_owner)
+            renting_contract.stake_claim(
+                [TokenContextAndAmount(invalid_context, 1).to_tuple()], nft_owner, STAKING_CLAIM_BAYC, sender=nft_owner
+            )
 
 
 def test_stake_claim_reverts_if_not_owner(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
@@ -609,11 +650,16 @@ def test_stake_claim_reverts_if_not_owner(renting_contract, nft_owner, renter, n
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     with boa.reverts("not owner"):
         renting_contract.stake_claim(
-            [TokenContextAndAmount(replace(token_context, nft_owner=owner), amount).to_tuple()], nft_owner, sender=nft_owner
+            [TokenContextAndAmount(replace(token_context, nft_owner=owner), amount).to_tuple()],
+            nft_owner,
+            STAKING_CLAIM_BAYC,
+            sender=nft_owner,
         )
 
 
@@ -623,7 +669,6 @@ def test_stake_compound(
     token_id = 1
     vault_addr = renting_contract.tokenid_to_vault(token_id)
     token_context = TokenContext(token_id, nft_owner, Rental())
-    pool_id = renting_contract.staking_pool_id()
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     amount = int(100e18)
 
@@ -631,11 +676,15 @@ def test_stake_compound(
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
-    renting_contract.stake_compound([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_compound(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_CLAIM_BAYC, STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
-    assert ape_staking_contract.staked_nfts(pool_id, token_id) == amount + get_rewards(amount)
+    assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == amount + get_rewards(amount)
     assert ape_contract.balanceOf(ape_staking_contract) == amount
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance - amount
     assert nft_contract.ownerOf(token_id) == vault_addr
@@ -648,7 +697,6 @@ def test_stake_compound_batch(
     token_id_qty = 32
     token_ids = [token_id_base + i for i in range(token_id_qty)]
     vault_addrs = [renting_contract.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract.staking_pool_id()
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
 
     for token_id in token_ids:
@@ -665,6 +713,7 @@ def test_stake_compound_batch(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -673,13 +722,15 @@ def test_stake_compound_batch(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_CLAIM_BAYC,
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
     rewards = [get_rewards(amount) for amount in amounts]
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance - sum(amounts)
     for token_id, vault_addr, amount, rewards in zip(token_ids, vault_addrs, amounts, rewards):
-        assert ape_staking_contract.staked_nfts(pool_id, token_id) == amount + rewards
+        assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == amount + rewards
         assert ape_contract.balanceOf(vault_addr) == 0
         assert nft_contract.ownerOf(token_id) == vault_addr
 
@@ -705,6 +756,7 @@ def test_staking_compound_logs_staking_compound(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -713,6 +765,8 @@ def test_staking_compound_logs_staking_compound(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_CLAIM_BAYC,
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -735,12 +789,19 @@ def test_stake_compound_reverts_if_contract_paused(renting_contract, nft_owner, 
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     renting_contract.set_paused(True, sender=owner)
 
     with boa.reverts("paused"):
-        renting_contract.stake_compound([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+        renting_contract.stake_compound(
+            [TokenContextAndAmount(token_context, amount).to_tuple()],
+            STAKING_CLAIM_BAYC,
+            STAKING_DEPOSIT_BAYC,
+            sender=nft_owner,
+        )
 
 
 def test_stake_compound_reverts_if_invalid_context(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
@@ -753,7 +814,9 @@ def test_stake_compound_reverts_if_invalid_context(renting_contract, nft_owner, 
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     invalid_contexts = [
         TokenContext(0, nft_owner, Rental()),
@@ -771,7 +834,12 @@ def test_stake_compound_reverts_if_invalid_context(renting_contract, nft_owner, 
 
     for invalid_context in invalid_contexts:
         with boa.reverts("invalid context"):
-            renting_contract.stake_compound([TokenContextAndAmount(invalid_context, 1).to_tuple()], sender=nft_owner)
+            renting_contract.stake_compound(
+                [TokenContextAndAmount(invalid_context, 1).to_tuple()],
+                STAKING_CLAIM_BAYC,
+                STAKING_DEPOSIT_BAYC,
+                sender=nft_owner,
+            )
 
 
 def test_stake_compound_reverts_if_not_owner(renting_contract, nft_owner, renter, nft_contract, ape_contract, owner):
@@ -784,9 +852,14 @@ def test_stake_compound_reverts_if_not_owner(renting_contract, nft_owner, renter
     renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
 
     ape_contract.approve(renting_contract, amount, sender=nft_owner)
-    renting_contract.stake_deposit([TokenContextAndAmount(token_context, amount).to_tuple()], sender=nft_owner)
+    renting_contract.stake_deposit(
+        [TokenContextAndAmount(token_context, amount).to_tuple()], STAKING_DEPOSIT_BAYC, sender=nft_owner
+    )
 
     with boa.reverts("not owner"):
         renting_contract.stake_compound(
-            [TokenContextAndAmount(replace(token_context, nft_owner=owner), amount).to_tuple()], sender=nft_owner
+            [TokenContextAndAmount(replace(token_context, nft_owner=owner), amount).to_tuple()],
+            STAKING_CLAIM_BAYC,
+            STAKING_DEPOSIT_BAYC,
+            sender=nft_owner,
         )
