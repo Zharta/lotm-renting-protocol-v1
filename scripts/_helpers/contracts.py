@@ -72,10 +72,8 @@ class VaultImplV3Contract(ContractConfig):
         payment_token_key: str,
         nft_contract_key: str,
         delegation_registry_key: str,
-        staking_contract_key: str = ZERO_ADDRESS,
         address: str | None = None,
     ):
-        staking_deps = [staking_contract_key] if staking_contract_key != ZERO_ADDRESS else []
         super().__init__(
             key,
             None,
@@ -83,8 +81,8 @@ class VaultImplV3Contract(ContractConfig):
             version=version,
             abi_key=abi_key,
             container_name="VaultV3",
-            deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key] + staking_deps,
-            deployment_args=[payment_token_key, nft_contract_key, delegation_registry_key, staking_contract_key],
+            deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_args=[payment_token_key, nft_contract_key, delegation_registry_key],
         )
         if address:
             self.load_contract(address)
@@ -216,7 +214,6 @@ class RentingV3Contract(ContractConfig):
         delegation_registry_key: str,
         renting_erc721_contract_key: str,
         staking_contract_key: str = ZERO_ADDRESS,
-        staking_pool_id: int = 0,
         max_protocol_fee: int | None = None,
         protocol_fee: int | None = None,
         protocol_wallet: str | None = None,
@@ -246,7 +243,6 @@ class RentingV3Contract(ContractConfig):
                 delegation_registry_key,
                 renting_erc721_contract_key,
                 staking_contract_key,
-                staking_pool_id,
                 max_protocol_fee,
                 protocol_fee,
                 protocol_wallet,
