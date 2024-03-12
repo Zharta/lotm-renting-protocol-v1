@@ -245,8 +245,8 @@
             "version": "3"
         },
         "vault_impl_otherdeed_ape_v2": {
-            "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
-            "address": "0xba3032a3701e5647FE053877160da12e22ee9b20",
+            "abi_key": "18df6fa54e99afcaa2a9cb50d769a8c56941e6d9",
+            "address": "0xbaF9ed4fA2f4761fC0959D04ceCAc8F0e2BD38B2",
             "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -488,7 +488,7 @@
         },
         "otherdeed_v2": {
             "abi_key": "30b3e4ad1ed1fd986fd83e3675d45f02a43ccdc9",
-            "address": "0x06cC5e6C80d90aF509A9496f248ac8216Cd7eDff",
+            "address": "0x2fb991012c91ea640563D47ADf75DF21300214D8",
             "contract": "RentingV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -504,7 +504,7 @@
                 "delegation_registry": "0x2232993b20752f23f3433b24b894645B712Ae04c",
                 "nft_contract": "0xe692Cf21B12e0B2717C4bF647F9768Fa58861c8b",
                 "payment_token": "0x290Ee41f4d6DF1029F72B240bdBa846A82ad46bD",
-                "vault_impl": "0xba3032a3701e5647FE053877160da12e22ee9b20"
+                "vault_impl": "0xbaF9ed4fA2f4761fC0959D04ceCAc8F0e2BD38B2"
             },
             "version": "2"
         },
