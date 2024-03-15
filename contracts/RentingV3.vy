@@ -932,7 +932,7 @@ def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
         assert renting_erc721.ownerOf(token_context.token_id) == msg.sender, "not owner"
-        self._store_token_state(token_context.token_id, msg.sender, empty(Rental))
+        self._store_token_state(token_context.token_id, msg.sender, token_context.active_rental)
 
 
 @external
