@@ -934,7 +934,7 @@ def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
 
     """
     @notice Allow the owner of rental ERC721 tokens to claim the ownership of the underlying NFTs
-    @dev Iterates over token contexts to claim the ownership of each NFT. The ownership is transferred to the NFT owner and the rental state is cleared.
+    @dev Iterates over token contexts to claim the ownership of each NFT. The ownership is transferred to the NFT owner.
     @param token_contexts An array of token contexts, each containing the rental state for an NFT.
     """
 
