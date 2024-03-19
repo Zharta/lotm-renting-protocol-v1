@@ -51,6 +51,10 @@ def __init__(
     @param _delegation_registry_addr The address of the delegation registry contract.
     """
 
+    assert _payment_token_addr != empty(address), "payment token addr not set"
+    assert _nft_contract_addr != empty(address), "nft contract addr not set"
+    assert _delegation_registry_addr != empty(address), "delegation addr not set"
+
     payment_token = IERC20(_payment_token_addr)
     nft_contract = IERC721(_nft_contract_addr)
     delegation_registry = IDelegationRegistry(_delegation_registry_addr)
