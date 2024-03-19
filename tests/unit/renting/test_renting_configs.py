@@ -26,7 +26,6 @@ def test_deploy_validation(
             ZERO_ADDRESS,
             0,
             0,
-            0,
             ZERO_ADDRESS,
             protocol_wallet,
         )
@@ -41,7 +40,6 @@ def test_deploy_validation(
             ZERO_ADDRESS,
             0,
             0,
-            0,
             protocol_wallet,
             ZERO_ADDRESS,
         )
@@ -53,7 +51,6 @@ def test_deploy_validation(
             delegation_registry_warm_contract,
             renting721_contract,
             ZERO_ADDRESS,
-            0,
             10001,
             0,
             protocol_wallet,
@@ -69,7 +66,6 @@ def test_deploy_validation(
             renting721_contract,
             ZERO_ADDRESS,
             0,
-            0,
             1,
             protocol_wallet,
             protocol_wallet,
@@ -83,7 +79,6 @@ def test_deploy_validation(
             ZERO_ADDRESS,
             ZERO_ADDRESS,
             ZERO_ADDRESS,
-            0,
             0,
             1,
             protocol_wallet,
@@ -117,7 +112,7 @@ def test_initial_state(
 def test_renting_erc721_initialization(renting_erc721_contract_def, renting_contract_def):
     dummy = boa.env.generate_address("dummy")
     renting721 = renting_erc721_contract_def.deploy()
-    renting = renting_contract_def.deploy(dummy, dummy, dummy, dummy, renting721, dummy, 0, 0, 0, dummy, dummy)
+    renting = renting_contract_def.deploy(dummy, dummy, dummy, dummy, renting721, dummy, 0, 0, dummy, dummy)
     assert renting721.renting_addr() == renting.address
     assert renting.renting_erc721() == renting721.address
 
@@ -169,6 +164,26 @@ def test_change_protocol_wallet(renting_contract, protocol_wallet, owner, nft_ow
 
     assert event.old_wallet == protocol_wallet
     assert event.new_wallet == nft_owner
+
+
+def test_set_staking_addr(renting_contract, owner):
+    staking_addr = boa.env.generate_address("staking")
+
+    renting_contract.set_staking_addr(staking_addr, sender=owner)
+    event = get_last_event(renting_contract, "StakingAddressSet")
+    assert event.new_value == staking_addr
+    assert renting_contract.staking_addr() == staking_addr
+
+    renting_contract.set_staking_addr(ZERO_ADDRESS, sender=owner)
+    event = get_last_event(renting_contract, "StakingAddressSet")
+    assert event.old_value == staking_addr
+    assert event.new_value == ZERO_ADDRESS
+    assert renting_contract.staking_addr() == ZERO_ADDRESS
+
+
+def test_set_staking_addr_reverts_if_wrong_caller(renting_contract, renter):
+    with boa.reverts("not protocol admin"):
+        renting_contract.set_staking_addr(ZERO_ADDRESS, sender=renter)
 
 
 def test_propose_admin_reverts_if_wrong_caller(renting_contract, renter):
