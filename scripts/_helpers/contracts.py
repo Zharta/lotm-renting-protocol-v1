@@ -213,14 +213,14 @@ class RentingV3Contract(ContractConfig):
         nft_contract_key: str,
         delegation_registry_key: str,
         renting_erc721_contract_key: str,
-        staking_contract_key: str = ZERO_ADDRESS,
+        staking_contract_key: str | None = None,
         max_protocol_fee: int | None = None,
         protocol_fee: int | None = None,
         protocol_wallet: str | None = None,
         protocol_admin: str | None = None,
         address: str | None = None,
     ):
-        staking_deps = [staking_contract_key] if staking_contract_key != ZERO_ADDRESS else []
+        staking_deps = [staking_contract_key] if staking_contract_key else []
         super().__init__(
             key,
             None,
@@ -242,7 +242,7 @@ class RentingV3Contract(ContractConfig):
                 nft_contract_key,
                 delegation_registry_key,
                 renting_erc721_contract_key,
-                staking_contract_key,
+                staking_contract_key or ZERO_ADDRESS,
                 max_protocol_fee,
                 protocol_fee,
                 protocol_wallet,
