@@ -301,8 +301,7 @@ def test_withdraw_reverts_if_active_rental(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,

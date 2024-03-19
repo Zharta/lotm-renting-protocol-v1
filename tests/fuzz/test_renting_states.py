@@ -159,8 +159,7 @@ class StateMachine(RuleBasedStateMachine):
         token_context = TokenContext(token, owner, self.active_rental[token])
         signed_listing, signature_timestamp = self.sign(listing, owner)
         self.renting.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            hours,
+            [TokenContextAndListing(token_context, signed_listing, hours).to_tuple()],
             ZERO_ADDRESS,
             signature_timestamp,
             sender=renter,
@@ -192,8 +191,7 @@ class StateMachine(RuleBasedStateMachine):
         token_context = TokenContext(token, owner, self.active_rental[token])
         signed_listing, signature_timestamp = self.sign(listing, owner)
         self.renting.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            hours,
+            [TokenContextAndListing(token_context, signed_listing, hours).to_tuple()],
             ZERO_ADDRESS,
             signature_timestamp,
             sender=renter,

@@ -239,10 +239,9 @@ def test_start_and_close_rentals_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         renter_delegate,
         start_time,
         sender=renter,
@@ -348,10 +347,9 @@ def test_claim_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -402,7 +400,7 @@ def test_stake_deposit_and_withdraw_batch(
 ):
     token_id_qty = len(token_ids)
     vault_addrs = [renting_contract_bayc.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract_bayc.staking_pool_id()
+    pool_id = 1
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     ape_staking_balance = ape_contract.balanceOf(ape_staking_contract)
 
@@ -471,7 +469,7 @@ def test_stake_claim_batch(
 ):
     token_id_qty = len(token_ids)
     vault_addrs = [renting_contract_bayc.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract_bayc.staking_pool_id()
+    pool_id = 1
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     ape_staking_balance = ape_contract.balanceOf(ape_staking_contract)
     staking_duration = 7 * 24 * 3600
@@ -530,7 +528,7 @@ def test_stake_claim_compound(
 ):
     token_id_qty = len(token_ids)
     vault_addrs = [renting_contract_bayc.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract_bayc.staking_pool_id()
+    pool_id = 1
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     ape_staking_balance = ape_contract.balanceOf(ape_staking_contract)
     staking_duration = 90 * 24 * 3600

@@ -77,6 +77,7 @@ struct SignedListing:
 struct TokenContextAndListing:
     token_context: TokenContext
     signed_listing: SignedListing
+    duration: uint256
 
 struct TokenContextAndAmount:
     token_context: TokenContext
@@ -479,13 +480,12 @@ def revoke_listing(token_contexts: DynArray[TokenContext, 32]):
 
 
 @external
-def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, delegate: address, signature_timestamp: uint256):
+def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], delegate: address, signature_timestamp: uint256):
 
     """
     @notice Start rentals for multiple NFTs for the specified duration and delegate them to a wallet
     @dev Iterates over token contexts to begin rentals for each NFT. The rental conditions are evaluated against the matching listing, signed by the owner and the protocol admin. The rental amount is computed and transferred to the protocol wallet and the delegation is created for the given wallet.
     @param token_contexts An array of token contexts, each containing the rental state and signed listing for an NFT.
-    @param duration The duration of the rentals in hours.
     @param delegate The address to delegate the NFT to during the rental period.
     @param signature_timestamp The timestamp of the protocol admin signature.
     """
@@ -493,11 +493,10 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
     self._check_not_paused()
 
     rental_logs: DynArray[RentalLog, 32] = []
-    expiration: uint256 = block.timestamp + duration * 3600
     rental_amounts: uint256 = 0
 
     for context in token_contexts:
-        rental_amounts += self._compute_rental_amount(block.timestamp, expiration, context.signed_listing.listing.price)
+        rental_amounts += self._compute_rental_amount(block.timestamp, block.timestamp + context.duration * 3600, context.signed_listing.listing.price)
 
     self._receive_payment_token(msg.sender, rental_amounts)
 
@@ -505,10 +504,11 @@ def start_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert self._is_context_valid(context.token_context), "invalid context"
         assert not self._is_rental_active(context.token_context.active_rental), "active rental"
-        assert self._is_within_duration_range(context.signed_listing.listing, duration), "duration not respected"
+        assert self._is_within_duration_range(context.signed_listing.listing, context.duration), "duration not respected"
         assert context.signed_listing.listing.price > 0, "listing not active"
         self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
+        expiration: uint256 = block.timestamp + context.duration * 3600
         vault.delegate_to_wallet(delegate if delegate != empty(address) else msg.sender, expiration)
 
         # store unclaimed rewards
@@ -611,13 +611,12 @@ def close_rentals(token_contexts: DynArray[TokenContext, 32]):
 
 
 @external
-def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duration: uint256, signature_timestamp: uint256):
+def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], signature_timestamp: uint256):
 
     """
     @notice Extend rentals for multiple NFTs for the specified duration
     @dev Iterates over token contexts to extend rentals for each NFT. The rental amount is computed pro-rata (considering the minimum duration) and the new rental amount is computed. The difference between the new rental amount and the payback amount is transferred from / to the renter and the new rental protocol fee is computed and accrued.
     @param token_contexts An array of token contexts, each containing the rental state and signed listing for an NFT.
-    @param duration The duration of the rentals in hours.
     @param signature_timestamp The timestamp of the protocol admin signature.
     """
 
@@ -625,7 +624,6 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
     protocol_fees_amount: uint256 = 0
     payback_amounts: uint256 = 0
     extension_amounts: uint256 = 0
-    expiration: uint256 = block.timestamp + duration * 3600
 
     for context in token_contexts:
         vault: IVault = self._get_vault(context.token_context.token_id)
@@ -633,10 +631,11 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], duratio
         assert self._is_rental_active(context.token_context.active_rental), "no active rental"
         assert msg.sender == context.token_context.active_rental.renter, "not renter of active rental"
 
-        assert self._is_within_duration_range(context.signed_listing.listing, duration), "duration not respected"
+        assert self._is_within_duration_range(context.signed_listing.listing, context.duration), "duration not respected"
         assert context.signed_listing.listing.price > 0, "listing not active"
         self._check_valid_listing(context.token_context.token_id, context.signed_listing, signature_timestamp, context.token_context.nft_owner)
 
+        expiration: uint256 = block.timestamp + context.duration * 3600
         real_expiration_adjusted: uint256 = block.timestamp
         if block.timestamp < context.token_context.active_rental.min_expiration:
             real_expiration_adjusted = context.token_context.active_rental.min_expiration

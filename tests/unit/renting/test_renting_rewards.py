@@ -48,10 +48,9 @@ def test_claim(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -106,10 +105,9 @@ def test_claim_logs_rewards_claimed(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -255,10 +253,9 @@ def test_claimable_rewards(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,

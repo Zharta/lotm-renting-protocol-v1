@@ -733,8 +733,7 @@ def test_claim_token_ownership_keeps_active_rental(
     ape_contract.approve(renting_contract, rental_amount, sender=renter)
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         delegate,
         start_time,
         sender=renter,

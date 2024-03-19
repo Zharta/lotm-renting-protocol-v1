@@ -26,7 +26,7 @@ def get_last_event(contract: VyperContract, name: str = None):
     return EventWrapper(matching_events[-1])
 
 
-def get_events(contract: VyperContract, name: str = None):
+def get_events(contract: VyperContract, name: str | None = None):
     return [
         EventWrapper(e) for e in contract.get_logs() if isinstance(e, Event) and (name is None or name == e.event_type.name)
     ]
@@ -273,9 +273,10 @@ class TokenContextAndAmount:
 class TokenContextAndListing:
     token_context: TokenContext
     signed_listing: SignedListing
+    duration: int
 
     def to_tuple(self):
-        return (self.token_context.to_tuple(), self.signed_listing.to_tuple())
+        return (self.token_context.to_tuple(), self.signed_listing.to_tuple(), self.duration)
 
 
 def compute_state_hash(token_id: int, nft_owner: str, rental: Rental):
