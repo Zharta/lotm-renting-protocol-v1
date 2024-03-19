@@ -201,8 +201,7 @@ def test_start_rental(
     assert ape_contract.balanceOf(renter) >= rental_amount
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,
@@ -276,8 +275,7 @@ def test_close_rental(
     assert ape_contract.balanceOf(renter) >= rental_amount
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,
@@ -351,8 +349,7 @@ def test_claim(
     assert ape_contract.balanceOf(renter) >= rental_amount
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,

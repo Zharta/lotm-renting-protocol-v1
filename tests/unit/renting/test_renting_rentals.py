@@ -55,8 +55,7 @@ def test_start_rentals(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,
@@ -115,8 +114,7 @@ def test_start_rentals_after_previous_expiration(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -133,8 +131,7 @@ def test_start_rentals_after_previous_expiration(
     signed_listing = sign_listing(listing, nft_owner_key, owner_key, second_start_time, renting_contract.address)
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(TokenContext(token_id, nft_owner, rental), signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(TokenContext(token_id, nft_owner, rental), signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         second_start_time,
         sender=second_renter,
@@ -189,10 +186,9 @@ def test_start_rentals_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         renter_delegate,
         start_time,
         sender=renter,
@@ -276,10 +272,9 @@ def test_start_rentals_transfers_amounts(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         nft_owner,
         start_time,
         sender=renter,
@@ -323,8 +318,7 @@ def test_starts_rentals_creates_delegation(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,
@@ -367,8 +361,7 @@ def test_start_rentals_reverts_if_contract_paused(
 
     with boa.reverts("paused"):
         renting_contract.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             ZERO_ADDRESS,
             start_time,
             sender=renter,
@@ -423,8 +416,7 @@ def test_start_rentals_reverts_if_invalid_signature(
         print(f"{invalid_signed_listing=}")
         with boa.reverts():
             renting_contract.start_rentals(
-                [TokenContextAndListing(token_context, invalid_signed_listing).to_tuple()],
-                duration,
+                [TokenContextAndListing(token_context, invalid_signed_listing, duration).to_tuple()],
                 ZERO_ADDRESS,
                 start_time,
                 sender=renter,
@@ -469,8 +461,7 @@ def test_start_rentals_reverts_if_invalid_listing_signature_params(
 
         with boa.reverts():
             renting_contract.start_rentals(
-                [TokenContextAndListing(token_context, invalid_signed_listing).to_tuple()],
-                duration,
+                [TokenContextAndListing(token_context, invalid_signed_listing, duration).to_tuple()],
                 ZERO_ADDRESS,
                 start_time,
                 sender=renter,
@@ -511,8 +502,7 @@ def test_start_rentals_reverts_if_invalid_signature_timestamp(
 
     with boa.reverts():
         renting_contract.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             ZERO_ADDRESS,
             invalid_timestamp,
             sender=renter,
@@ -557,8 +547,7 @@ def test_start_rentals_reverts_if_invalid_context(
     for invalid_context in invalid_contexts:
         with boa.reverts():
             renting_contract.start_rentals(
-                [TokenContextAndListing(invalid_context, signed_listing).to_tuple()],
-                duration,
+                [TokenContextAndListing(invalid_context, signed_listing, duration).to_tuple()],
                 ZERO_ADDRESS,
                 start_time,
                 sender=renter,
@@ -608,9 +597,9 @@ def test_start_rentals_reverts_if_misses_listing_conditions(
                     TokenContextAndListing(
                         TokenContext(token_id, nft_owner, Rental()),
                         sign_listing(invalid_listing, nft_owner_key, owner_key, start_time, renting_contract.address),
+                        duration,
                     ).to_tuple()
                 ],
-                duration,
                 ZERO_ADDRESS,
                 start_time,
                 sender=renter,
@@ -652,8 +641,7 @@ def test_start_rentals_reverts_if_listing_is_revoked(
 
     with boa.reverts():
         renting_contract.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             ZERO_ADDRESS,
             start_time,
             sender=renter,
@@ -686,8 +674,7 @@ def test_start_rentals_reverts_if_nft_not_deposited(
 
     with boa.reverts():
         renting_contract.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             ZERO_ADDRESS,
             start_time,
             sender=renter,
@@ -725,8 +712,7 @@ def test_start_rentals_reverts_if_payment_token_not_approved(
 
     with boa.reverts():
         renting_contract.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             ZERO_ADDRESS,
             start_time,
             sender=renter,
@@ -756,8 +742,7 @@ def test_start_rentals_reverts_if_rental_active(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -765,8 +750,7 @@ def test_start_rentals_reverts_if_rental_active(
 
     with boa.reverts():
         renting_contract.start_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             ZERO_ADDRESS,
             start_time,
             sender=renter,
@@ -820,8 +804,7 @@ def test_close_rentals(renting_contract, nft_contract, ape_contract, nft_owner, 
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -866,8 +849,7 @@ def test_close_rentals_before_min_duration(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -930,10 +912,9 @@ def test_close_rentals_batch(renting_contract, nft_contract, ape_contract, nft_o
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -982,10 +963,9 @@ def test_close_rentals_logs_rental_closed(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1050,8 +1030,7 @@ def test_close_rentals_removes_delegation(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         delegate,
         start_time,
         sender=renter,
@@ -1093,8 +1072,7 @@ def test_close_rentals_reverts_if_invalid_context(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1143,8 +1121,7 @@ def test_close_rentals_reverts_if_rental_not_active(
         renting_contract.close_rentals([token_context.to_tuple()], sender=nft_owner)
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1183,8 +1160,7 @@ def test_close_rentals_reverts_if_not_renter(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1232,8 +1208,7 @@ def test_renter_delegate_to_wallet(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1289,10 +1264,9 @@ def test_renting_delegate_to_wallet_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1351,10 +1325,9 @@ def test_renting_delegate_to_wallet_logs_renter_delegated_to_wallet(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1402,8 +1375,7 @@ def test_renting_delegate_to_wallet_reverts_if_invalid_context(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1459,7 +1431,7 @@ def test_renting_delegate_to_wallet_reverts_if_rental_not_active(
         renting_contract.renter_delegate_to_wallet([token_context.to_tuple()], delegate, sender=nft_owner)
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -1496,7 +1468,7 @@ def test_renting_delegate_to_wallet_reverts_if_not_renter(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -1530,8 +1502,7 @@ def test_extend_rentals(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,
@@ -1552,7 +1523,7 @@ def test_extend_rentals(
     ape_contract.approve(renting_contract, rental_amount, sender=renter)
 
     renting_contract.extend_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, extend_timestamp, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=renter
     )
     rental_extended_event = get_last_event(renting_contract, "RentalExtended")
     extended_rental = RentalExtensionLog(*rental_extended_event.rentals[0]).to_rental(renter=renter, delegate=renter_delegate)
@@ -1586,8 +1557,7 @@ def test_extend_rentals_before_min_duration(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,
@@ -1608,7 +1578,7 @@ def test_extend_rentals_before_min_duration(
     ape_contract.approve(renting_contract, rental_amount, sender=renter)
 
     renting_contract.extend_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, extend_timestamp, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=renter
     )
     rental_extended_event = get_last_event(renting_contract, "RentalExtended")
     extended_rental = RentalExtensionLog(*rental_extended_event.rentals[0]).to_rental(renter=renter, delegate=renter_delegate)
@@ -1644,8 +1614,7 @@ def test_extend_rentals_payback(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         renter_delegate,
         start_time,
         sender=renter,
@@ -1667,7 +1636,7 @@ def test_extend_rentals_payback(
     renter_balance = ape_contract.balanceOf(renter)
 
     renting_contract.extend_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, extend_timestamp, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=renter
     )
     rental_extended_event = get_last_event(renting_contract, "RentalExtended")
     extended_rental = RentalExtensionLog(*rental_extended_event.rentals[0]).to_rental(renter=renter, delegate=renter_delegate)
@@ -1709,10 +1678,9 @@ def test_extend_rentals_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         renter_delegate,
         start_time,
         sender=renter,
@@ -1735,10 +1703,9 @@ def test_extend_rentals_batch(
 
     renting_contract.extend_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         extend_timestamp,
         sender=renter,
     )
@@ -1780,10 +1747,9 @@ def test_extend_rentals_logs_rental_extended(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         renter_delegate,
         start_time,
         sender=renter,
@@ -1806,10 +1772,9 @@ def test_extend_rentals_logs_rental_extended(
 
     renting_contract.extend_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         extend_timestamp,
         sender=renter,
     )
@@ -1855,8 +1820,7 @@ def test_extend_rentals_reverts_if_invalid_context(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -1890,7 +1854,7 @@ def test_extend_rentals_reverts_if_invalid_context(
         print(f"invalid_context: {invalid_context}")
         with boa.reverts():
             renting_contract.extend_rentals(
-                [TokenContextAndListing(invalid_context, signed_listing).to_tuple()], duration, extend_timestamp, sender=renter
+                [TokenContextAndListing(invalid_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=renter
             )
 
 
@@ -1918,11 +1882,11 @@ def test_extend_rentals_reverts_if_rental_not_active(
 
     with boa.reverts("no active rental"):
         renting_contract.extend_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, start_time, sender=renter
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], start_time, sender=renter
         )
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -1937,7 +1901,7 @@ def test_extend_rentals_reverts_if_rental_not_active(
     token_context = TokenContext(token_id, nft_owner, started_rental)
     with boa.reverts("no active rental"):
         renting_contract.extend_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, extend_timestamp, sender=renter
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=renter
         )
 
 
@@ -1964,7 +1928,7 @@ def test_extend_rentals_reverts_if_not_renter(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -1980,7 +1944,7 @@ def test_extend_rentals_reverts_if_not_renter(
     token_context = TokenContext(token_id, nft_owner, started_rental)
     with boa.reverts("not renter of active rental"):
         renting_contract.extend_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, extend_timestamp, sender=nft_owner
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=nft_owner
         )
 
 
@@ -2007,7 +1971,7 @@ def test_extend_rentals_reverts_if_misses_listing_conditions(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -2032,8 +1996,7 @@ def test_extend_rentals_reverts_if_misses_listing_conditions(
         signed_listing = sign_listing(invalid_listing, nft_owner_key, owner_key, extend_timestamp, renting_contract.address)
         with boa.reverts():
             renting_contract.extend_rentals(
-                [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-                duration,
+                [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
                 extend_timestamp,
                 sender=renter,
             )
@@ -2062,7 +2025,7 @@ def test_extend_rentals_reverts_if_invalid_signature(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -2092,8 +2055,7 @@ def test_extend_rentals_reverts_if_invalid_signature(
         print(f"{invalid_signed_listing=}")
         with boa.reverts():
             renting_contract.extend_rentals(
-                [TokenContextAndListing(token_context, invalid_signed_listing).to_tuple()],
-                duration,
+                [TokenContextAndListing(token_context, invalid_signed_listing, duration).to_tuple()],
                 extend_timestamp,
                 sender=renter,
             )
@@ -2122,7 +2084,7 @@ def test_extend_rentals_reverts_if_insufficient_allowance(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -2139,8 +2101,7 @@ def test_extend_rentals_reverts_if_insufficient_allowance(
 
     with boa.reverts():
         renting_contract.extend_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             extend_timestamp,
             sender=renter,
         )
@@ -2169,7 +2130,7 @@ def test_extend_rentals_reverts_if_listing_not_active(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -2187,8 +2148,7 @@ def test_extend_rentals_reverts_if_listing_not_active(
 
     with boa.reverts("listing not active"):
         renting_contract.extend_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             extend_timestamp,
             sender=renter,
         )
@@ -2217,7 +2177,7 @@ def test_extend_rentals_reverts_if_listing_is_revoked(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -2235,8 +2195,7 @@ def test_extend_rentals_reverts_if_listing_is_revoked(
 
     with boa.reverts("listing revoked"):
         renting_contract.extend_rentals(
-            [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-            duration,
+            [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
             extend_timestamp,
             sender=renter,
         )

@@ -177,7 +177,7 @@ def test_delegate_to_wallet_reverts_if_rental_active(
     print(f"token_context: {token_context}")
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], 1, rental_delegate, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, 1).to_tuple()], rental_delegate, start_time, sender=renter
     )
     event = get_last_event(renting_contract, "RentalStarted")
     rental = RentalLog(*event.rentals[0]).to_rental(renter=renter, delegate=rental_delegate)
@@ -223,8 +223,7 @@ def test_renter_delegate_to_wallet(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -280,10 +279,9 @@ def test_renting_delegate_to_wallet_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -342,10 +340,9 @@ def test_renting_delegate_to_wallet_logs_renter_delegated_to_wallet(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -393,8 +390,7 @@ def test_renting_delegate_to_wallet_reverts_if_invalid_context(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
-        duration,
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -450,7 +446,7 @@ def test_renting_delegate_to_wallet_reverts_if_rental_not_active(
         renting_contract.renter_delegate_to_wallet([token_context.to_tuple()], delegate, sender=nft_owner)
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)
@@ -487,7 +483,7 @@ def test_renting_delegate_to_wallet_reverts_if_not_renter(
     token_context = TokenContext(token_id, nft_owner, Rental())
 
     renting_contract.start_rentals(
-        [TokenContextAndListing(token_context, signed_listing).to_tuple()], duration, ZERO_ADDRESS, start_time, sender=renter
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], ZERO_ADDRESS, start_time, sender=renter
     )
     rental_started_event = get_last_event(renting_contract, "RentalStarted")
     started_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter)

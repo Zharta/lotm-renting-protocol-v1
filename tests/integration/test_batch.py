@@ -1,5 +1,6 @@
 import boa
 import pytest
+from eth_utils import decode_hex
 
 from ..conftest_base import (
     ZERO_ADDRESS,
@@ -18,6 +19,13 @@ from ..conftest_base import (
     get_last_event,
     sign_listing,
 )
+
+STAKING_DEPOSIT_BAYC = decode_hex("0x46583a05")
+STAKING_DEPOSIT_MAYC = decode_hex("0x8ecbffa7")
+STAKING_WITHDRAW_BAYC = decode_hex("0xaceb3629")
+STAKING_WITHDRAW_MAYC = decode_hex("0xed23c906")
+STAKING_CLAIM_BAYC = decode_hex("0xb682e859")
+STAKING_CLAIM_MAYC = decode_hex("0x57a26300")
 
 
 @pytest.fixture(scope="module")
@@ -239,10 +247,9 @@ def test_start_and_close_rentals_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         renter_delegate,
         start_time,
         sender=renter,
@@ -348,10 +355,9 @@ def test_claim_batch(
 
     renting_contract.start_rentals(
         [
-            TokenContextAndListing(token_context, signed_listing).to_tuple()
+            TokenContextAndListing(token_context, signed_listing, duration).to_tuple()
             for token_context, signed_listing in zip(token_contexts, signed_listings)
         ],
-        duration,
         ZERO_ADDRESS,
         start_time,
         sender=renter,
@@ -402,7 +408,7 @@ def test_stake_deposit_and_withdraw_batch(
 ):
     token_id_qty = len(token_ids)
     vault_addrs = [renting_contract_bayc.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract_bayc.staking_pool_id()
+    pool_id = 1
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     ape_staking_balance = ape_contract.balanceOf(ape_staking_contract)
 
@@ -420,6 +426,7 @@ def test_stake_deposit_and_withdraw_batch(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
     deposit_nft_event = get_last_event(renting_contract_bayc, "DepositNft")
@@ -447,6 +454,7 @@ def test_stake_deposit_and_withdraw_batch(
             for token_id, amount in zip(token_ids, amounts)
         ],
         nft_owner,
+        STAKING_WITHDRAW_BAYC,
         sender=nft_owner,
     )
 
@@ -471,7 +479,7 @@ def test_stake_claim_batch(
 ):
     token_id_qty = len(token_ids)
     vault_addrs = [renting_contract_bayc.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract_bayc.staking_pool_id()
+    pool_id = 1
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     ape_staking_balance = ape_contract.balanceOf(ape_staking_contract)
     staking_duration = 7 * 24 * 3600
@@ -490,6 +498,7 @@ def test_stake_claim_batch(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -505,6 +514,7 @@ def test_stake_claim_batch(
     renting_contract_bayc.stake_claim(
         [TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), 0).to_tuple() for token_id in token_ids],
         nft_owner,
+        STAKING_CLAIM_BAYC,
         sender=nft_owner,
     )
 
@@ -530,7 +540,7 @@ def test_stake_claim_compound(
 ):
     token_id_qty = len(token_ids)
     vault_addrs = [renting_contract_bayc.tokenid_to_vault(token_id) for token_id in token_ids]
-    pool_id = renting_contract_bayc.staking_pool_id()
+    pool_id = 1
     nft_owner_balance = ape_contract.balanceOf(nft_owner)
     ape_staking_balance = ape_contract.balanceOf(ape_staking_contract)
     staking_duration = 90 * 24 * 3600
@@ -549,6 +559,7 @@ def test_stake_claim_compound(
             TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), amount).to_tuple()
             for token_id, amount in zip(token_ids, amounts)
         ],
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
@@ -565,6 +576,8 @@ def test_stake_claim_compound(
 
     renting_contract_bayc.stake_compound(
         [TokenContextAndAmount(TokenContext(token_id, nft_owner, Rental()), 0).to_tuple() for token_id in token_ids],
+        STAKING_CLAIM_BAYC,
+        STAKING_DEPOSIT_BAYC,
         sender=nft_owner,
     )
 
