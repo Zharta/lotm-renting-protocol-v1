@@ -6,10 +6,15 @@ from eth_utils import decode_hex
 
 from ...conftest_base import (
     ZERO_ADDRESS,
+    Listing,
     Rental,
+    RentalLog,
     TokenAndWallet,
     TokenContext,
+    TokenContextAndListing,
+    compute_state_hash,
     get_last_event,
+    sign_listing,
 )
 
 FOREVER = 2**256 - 1
@@ -18,7 +23,7 @@ PROTOCOL_FEE = 500
 
 @pytest.fixture(scope="module")
 def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_registry_warm_contract):
-    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract, ZERO_ADDRESS)
+    return vault_contract_def.deploy(ape_contract, nft_contract, delegation_registry_warm_contract)
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +49,6 @@ def renting_contract(
         delegation_registry_warm_contract,
         renting721_contract,
         ZERO_ADDRESS,
-        0,
         PROTOCOL_FEE,
         PROTOCOL_FEE,
         protocol_wallet,
@@ -696,3 +700,53 @@ def test_claim_token_ownership_reverts_if_not_owner(renting721_contract, nft_con
 
     with boa.reverts("not owner"):
         renting_contract.claim_token_ownership([TokenContext(1, nft_owner, Rental()).to_tuple()], sender=nft_owner)
+
+
+def test_claim_token_ownership_keeps_active_rental(
+    renting721_contract,
+    renting_contract,
+    ape_contract,
+    nft_contract,
+    nft_owner,
+    nft_owner_key,
+    owner,
+    owner_key,
+    renter,
+    delegation_registry_warm_contract,
+):
+    token_id = 1
+    receiver = boa.env.generate_address("receiver")
+    delegate = boa.env.generate_address("delegate")
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+    price = int(1e18)
+    duration = 10
+    rental_amount = price * duration
+    start_time = boa.eval("block.timestamp")
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    renting_contract.deposit([token_id], delegate, sender=nft_owner)
+
+    listing = Listing(token_id, price, 0, 0, start_time)
+    signed_listing = sign_listing(listing, nft_owner_key, owner_key, start_time, renting_contract.address)
+    token_context = TokenContext(token_id, nft_owner, Rental())
+
+    ape_contract.approve(renting_contract, rental_amount, sender=renter)
+
+    renting_contract.start_rentals(
+        [TokenContextAndListing(token_context, signed_listing).to_tuple()],
+        duration,
+        delegate,
+        start_time,
+        sender=renter,
+    )
+    rental_started_event = get_last_event(renting_contract, "RentalStarted")
+    rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter, delegate=delegate)
+    token_context = TokenContext(token_id, nft_owner, rental)
+
+    renting_contract.mint([token_context.to_tuple()], sender=nft_owner)
+    renting721_contract.safeTransferFrom(nft_owner, receiver, token_id, sender=nft_owner)
+
+    renting_contract.claim_token_ownership([token_context.to_tuple()], sender=receiver)
+
+    assert renting_contract.rental_states(token_id) == compute_state_hash(token_id, receiver, rental)
+    assert delegation_registry_warm_contract.getHotWallet(vault_addr) == delegate

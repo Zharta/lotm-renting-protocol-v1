@@ -18,17 +18,6 @@ interface IDelegationRegistry:
     def setHotWallet(hot_wallet_address: address, expiration_timestamp: uint256, lock_hot_wallet_address: bool): nonpayable
     def setExpirationTimestamp(expiration_timestamp: uint256): nonpayable
 
-interface IStaking:
-    def depositApeCoin(amount: uint256, recipient: address): nonpayable
-    def depositBAYC(nfts: DynArray[SingleNft,1]): nonpayable
-    def depositMAYC(nfts: DynArray[SingleNft,1]): nonpayable
-    def withdrawApeCoin(amount: uint256, recipient: address): nonpayable
-    def withdrawBAYC(nfts: DynArray[SingleNft,1], recipient: address): nonpayable
-    def withdrawMAYC(nfts: DynArray[SingleNft,1], recipient: address): nonpayable
-    def claimApeCoin(recipient: address): nonpayable
-    def claimBAYC(nfts: DynArray[uint256,1], recipient: address): nonpayable
-    def claimMAYC(nfts: DynArray[uint256,1], recipient: address): nonpayable
-
 
 # Structs
 
@@ -39,23 +28,10 @@ struct SingleNft:
 
 # Global Variables
 
-VALID_STAKE_POOL_IDS: constant(uint256[2]) = [1, 2]
-
-STAKING_DEPOSIT_METHOD: constant(bytes4[2]) = [0x46583a05, 0x8ecbffa7]
-# depositBAYC((uint32,uint224)[]), depositMAYC((uint32,uint224)[])
-
-STAKING_WITHDRAW_METHOD: constant(bytes4[2]) = [0xaceb3629, 0xed23c906]
-# withdrawBAYC((uint32,uint224)[],address), withdrawMAYC((uint32,uint224)[],address)
-
-STAKING_CLAIM_METHOD: constant(bytes4[2]) = [0xb682e859, 0x57a26300]
-# claimBAYC(uint256[],address), claimMAYC(uint256[],address)
-
 caller: public(address)
 payment_token: public(immutable(IERC20))
 nft_contract: public(immutable(IERC721))
 delegation_registry: public(immutable(IDelegationRegistry))
-staking_addr: public(immutable(address))
-staking_pool_id: public(uint256)
 
 
 ##### EXTERNAL METHODS - WRITE #####
@@ -66,7 +42,6 @@ def __init__(
     _payment_token_addr: address,
     _nft_contract_addr: address,
     _delegation_registry_addr: address,
-    _staking_addr: address,
 ):
 
     """
@@ -74,33 +49,29 @@ def __init__(
     @param _payment_token_addr The address of the payment token contract.
     @param _nft_contract_addr The address of the NFT contract.
     @param _delegation_registry_addr The address of the delegation registry contract.
-    @param _staking_addr The address of the staking contract.
     """
+
+    assert _payment_token_addr != empty(address), "payment token addr not set"
+    assert _nft_contract_addr != empty(address), "nft contract addr not set"
+    assert _delegation_registry_addr != empty(address), "delegation addr not set"
 
     payment_token = IERC20(_payment_token_addr)
     nft_contract = IERC721(_nft_contract_addr)
     delegation_registry = IDelegationRegistry(_delegation_registry_addr)
-    staking_addr = _staking_addr
 
 
 # Functions
 
 @external
-def initialise(staking_pool_id: uint256):
+def initialise():
 
     """
-    @notice Initialize a vault with the given staking pool, enabling it to receive a token
+    @notice Initialize a vault contract, setting the caller as the contract deployer.
     @dev Ensures that the vault is not already initialized.
-    @param staking_pool_id The id of the staking pool.
     """
 
     assert self.caller == empty(address), "already initialised"
-
-    if staking_addr != empty(address):
-        assert staking_pool_id in VALID_STAKE_POOL_IDS, "invalid staking pool id"
-
     self.caller = msg.sender
-    self.staking_pool_id = staking_pool_id
 
 
 @external
@@ -152,7 +123,7 @@ def delegate_to_wallet(delegate: address, expiration: uint256):
 
 
 @external
-def staking_deposit(sender: address, amount: uint256, token_id: uint256):
+def staking_deposit(sender: address, amount: uint256, token_id: uint256, staking_addr: address, pool_method_id: bytes4):
 
     """
     @notice Deposit the payment token into the staking contract.
@@ -160,14 +131,16 @@ def staking_deposit(sender: address, amount: uint256, token_id: uint256):
     @param sender The address of the payment token sender.
     @param amount The amount of the payment token to deposit.
     @param token_id The id of the NFT supporting the deposit, which must be deposited in the vault.
+    @param staking_addr The address of the staking contract.
+    @param pool_method_id The method id of the staking pool deposit function.
     """
 
     assert msg.sender == self.caller, "not caller"
-    self._staking_deposit(sender, amount, token_id)
+    self._staking_deposit(sender, amount, token_id, staking_addr, pool_method_id)
 
 
 @external
-def staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
+def staking_withdraw(wallet: address, amount: uint256, token_id: uint256, staking_addr: address, pool_method_id: bytes4):
 
     """
     @notice Withdraw the payment token from the staking contract.
@@ -175,37 +148,44 @@ def staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
     @param wallet The address of the wallet to receive the payment token.
     @param amount The amount of the payment token to withdraw.
     @param token_id The id of the NFT supporting the withdrawal, which must be deposited in the vault.
+    @param staking_addr The address of the staking contract.
+    @param pool_method_id The method id of the staking pool withdraw function.
     """
 
     assert msg.sender == self.caller, "not caller"
-    self._staking_withdraw(wallet, amount, token_id)
+    self._staking_withdraw(wallet, amount, token_id, staking_addr, pool_method_id)
 
 
 @external
-def staking_claim(wallet: address, token_id: uint256):
+def staking_claim(wallet: address, token_id: uint256, staking_addr: address, pool_method_id: bytes4):
 
     """
     @notice Claim the staking rewards.
     @dev Claims the staking rewards.
     @param wallet The address of the wallet to receive the staking rewards.
     @param token_id The id of the NFT supporting the claim, which must be deposited in the vault.
+    @param staking_addr The address of the staking contract.
+    @param pool_method_id The method id of the staking pool claim function.
     """
     assert msg.sender == self.caller, "not caller"
-    self._staking_claim(wallet, token_id)
+    self._staking_claim(wallet, token_id, staking_addr, pool_method_id)
 
 
 @external
-def staking_compound(token_id: uint256):
+def staking_compound(token_id: uint256, staking_addr: address, pool_claim_method_id: bytes4, pool_deposit_method_id: bytes4):
 
     """
     @notice Compound the staking rewards.
     @dev Compounds the staking rewards by claiming and depositing them. No validations are performed regarding staking limits or minimal deposit amounts.
     @param token_id The id of the NFT supporting the compound, which must be deposited in the vault.
+    @param staking_addr The address of the staking contract.
+    @param pool_claim_method_id The method id of the staking pool claim function.
+    @param pool_deposit_method_id The method id of the staking pool deposit function.
     """
 
     assert msg.sender == self.caller, "not caller"
-    self._staking_claim(self, token_id)
-    self._staking_deposit(self, payment_token.balanceOf(self), token_id)
+    self._staking_claim(self, token_id, staking_addr, pool_claim_method_id)
+    self._staking_deposit(self, payment_token.balanceOf(self), token_id, staking_addr, pool_deposit_method_id)
 
 
 @view
@@ -234,25 +214,22 @@ def _delegate_to_wallet(delegate: address, expiration: uint256):
 
 
 @internal
-def _staking_deposit(wallet: address, amount: uint256, token_id: uint256):
+def _staking_deposit(wallet: address, amount: uint256, token_id: uint256, staking_addr: address, pool_method_id: bytes4):
     payment_token.approve(staking_addr, amount)
 
     nfts: DynArray[SingleNft, 1] = [SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})]
-
-    raw_call(staking_addr, concat(STAKING_DEPOSIT_METHOD[self.staking_pool_id - 1], _abi_encode(nfts)))
+    raw_call(staking_addr, concat(pool_method_id, _abi_encode(nfts)))
 
 
 @internal
-def _staking_withdraw(wallet: address, amount: uint256, token_id: uint256):
-    payment_token.approve(staking_addr, amount)
+def _staking_withdraw(wallet: address, amount: uint256, token_id: uint256, staking_addr: address, pool_method_id: bytes4):
 
     nfts: DynArray[SingleNft, 1] = [SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})]
-
-    raw_call(staking_addr, concat(STAKING_WITHDRAW_METHOD[self.staking_pool_id - 1], _abi_encode(nfts, wallet)))
+    raw_call(staking_addr, concat(pool_method_id, _abi_encode(nfts, wallet)))
 
 
 @internal
-def _staking_claim(wallet: address, token_id: uint256):
+def _staking_claim(wallet: address, token_id: uint256, staking_addr: address, pool_method_id: bytes4):
 
     nfts: DynArray[uint256, 1] = [token_id]
-    raw_call(staking_addr, concat(STAKING_CLAIM_METHOD[self.staking_pool_id - 1], _abi_encode(nfts, wallet)))
+    raw_call(staking_addr, concat(pool_method_id, _abi_encode(nfts, wallet)))

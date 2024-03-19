@@ -17,14 +17,14 @@ from vyper.interfaces import ERC20 as IERC20
 from vyper.interfaces import ERC721 as IERC721
 
 interface IVault:
-    def initialise(staking_pool_id: uint256): nonpayable
+    def initialise(): nonpayable
     def deposit(token_id: uint256, nft_owner: address, delegate: address): nonpayable
     def withdraw(token_id: uint256, wallet: address): nonpayable
     def delegate_to_wallet(delegate: address, expiration: uint256): nonpayable
-    def staking_deposit(sender: address, amount: uint256, token_id: uint256): nonpayable
-    def staking_withdraw(wallet: address, amount: uint256, token_id: uint256): nonpayable
-    def staking_claim(wallet: address, token_id: uint256): nonpayable
-    def staking_compound(token_id: uint256): nonpayable
+    def staking_deposit(sender: address, amount: uint256, token_id: uint256, staking_addr: address, pool_method_id: bytes4): nonpayable
+    def staking_withdraw(wallet: address, amount: uint256, token_id: uint256, staking_addr: address, pool_method_id: bytes4): nonpayable
+    def staking_claim(wallet: address, token_id: uint256, staking_addr: address, pool_method_id: bytes4): nonpayable
+    def staking_compound(token_id: uint256, staking_addr: address, pool_claim_method_id: bytes4, pool_deposit_method_id: bytes4): nonpayable
 
 
 interface ERC721Receiver:
@@ -194,6 +194,10 @@ event ProtocolWalletChanged:
     old_wallet: address
     new_wallet: address
 
+event StakingAddressSet:
+    old_value: address
+    new_value: address
+
 event AdminProposed:
     admin: address
     proposed_admin: address
@@ -256,10 +260,9 @@ vault_impl_addr: public(immutable(address))
 payment_token: public(immutable(IERC20))
 nft_contract_addr: public(immutable(address))
 delegation_registry_addr: public(immutable(address))
-staking_addr: public(immutable(address))
+staking_addr: public(address)
 renting_erc721: public(immutable(RentingERC721))
 max_protocol_fee: public(immutable(uint256))
-staking_pool_id: public(immutable(uint256))
 
 protocol_wallet: public(address)
 protocol_fee: public(uint256)
@@ -284,7 +287,6 @@ def __init__(
     _delegation_registry_addr: address,
     _renting_erc721: address,
     _staking_addr: address,
-    _staking_pool_id: uint256,
     _max_protocol_fee: uint256,
     _protocol_fee: uint256,
     _protocol_wallet: address,
@@ -309,7 +311,6 @@ def __init__(
     assert _nft_contract_addr != empty(address), "nft contract is the zero addr"
     assert _delegation_registry_addr != empty(address), "deleg registry is the zero addr"
     assert _renting_erc721 != empty(address), "renting_erc721 is the zero addr"
-    # staking_addr can be empty, it's optional
     assert _max_protocol_fee <= 10000, "max protocol fee > 100%"
     assert _protocol_fee <= _max_protocol_fee, "protocol fee > max fee"
     assert _protocol_wallet != empty(address), "protocol wallet not set"
@@ -319,11 +320,10 @@ def __init__(
     payment_token = IERC20(_payment_token_addr)
     nft_contract_addr = _nft_contract_addr
     delegation_registry_addr = _delegation_registry_addr
-    staking_addr = _staking_addr
     max_protocol_fee = _max_protocol_fee
-    staking_pool_id = _staking_pool_id
     renting_erc721 = RentingERC721(_renting_erc721)
 
+    self.staking_addr = _staking_addr
     self.protocol_wallet = _protocol_wallet
     self.protocol_fee = _protocol_fee
     self.protocol_admin = _protocol_admin
@@ -745,8 +745,8 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
     # transfer reward to nft owner
     if rewards_to_claim > 0:
-        self._transfer_payment_token(msg.sender, rewards_to_claim)
         self.unclaimed_rewards[msg.sender] = 0
+        self._transfer_payment_token(msg.sender, rewards_to_claim)
 
     log NftsWithdrawn(
         msg.sender,
@@ -757,15 +757,17 @@ def withdraw(token_contexts: DynArray[TokenContext, 32]):
 
 
 @external
-def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
+def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32], pool_method_id: bytes4):
 
     """
     @notice Deposit the given amounts for multiple NFTs in the configured staking pool
     @dev Iterates over token contexts to deposit the given amounts for each NFT in the staking pool
     @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
+    @param pool_method_id The method id to call on the staking pool to deposit the given amounts.
     """
 
     self._check_not_paused()
+    staking_addr: address = self.staking_addr
     assert staking_addr != empty(address), "staking not supported"
 
     staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
@@ -776,7 +778,7 @@ def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
 
         vault: IVault = self._get_vault(context.token_context.token_id)
         assert payment_token.transferFrom(msg.sender, vault.address, context.amount), "transferFrom failed"
-        vault.staking_deposit(msg.sender, context.amount, context.token_context.token_id)
+        vault.staking_deposit(msg.sender, context.amount, context.token_context.token_id, staking_addr, pool_method_id)
         staking_log.append(StakingLog({
             token_id: context.token_context.token_id,
             amount: context.amount
@@ -786,15 +788,17 @@ def stake_deposit(token_contexts: DynArray[TokenContextAndAmount, 32]):
 
 
 @external
-def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
+def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address, pool_method_id: bytes4):
 
     """
     @notice Withdraw the given amounts for multiple NFTs from the configured staking pool
     @dev Iterates over token contexts to withdraw the given amounts for each NFT from the staking pool
     @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
     @param recipient The address to receive the withdrawn amounts.
+    @param pool_method_id The method id to call on the staking pool to withdraw the given amounts.
     """
 
+    staking_addr: address = self.staking_addr
     assert staking_addr != empty(address), "staking not supported"
 
     staking_log: DynArray[StakingLog, 32] = empty(DynArray[StakingLog, 32])
@@ -803,7 +807,7 @@ def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipien
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
 
-        self._get_vault(context.token_context.token_id).staking_withdraw(recipient, context.amount, context.token_context.token_id)
+        self._get_vault(context.token_context.token_id).staking_withdraw(recipient, context.amount, context.token_context.token_id, staking_addr, pool_method_id)
         staking_log.append(StakingLog({
             token_id: context.token_context.token_id,
             amount: context.amount
@@ -813,37 +817,42 @@ def stake_withdraw(token_contexts: DynArray[TokenContextAndAmount, 32], recipien
 
 
 @external
-def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address):
+def stake_claim(token_contexts: DynArray[TokenContextAndAmount, 32], recipient: address, pool_method_id: bytes4):
 
     """
     @notice Claim the rewards for multiple NFTs from the configured staking pool
     @dev Iterates over token contexts to claim the rewards for each NFT from the staking pool
     @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
     @param recipient The address to receive the claimed rewards.
+    @param pool_method_id The method id to call on the staking pool to claim the rewards.
     """
 
+    staking_addr: address = self.staking_addr
     assert staking_addr != empty(address), "staking not supported"
     tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
 
     for context in token_contexts:
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
-        self._get_vault(context.token_context.token_id).staking_claim(recipient, context.token_context.token_id)
+        self._get_vault(context.token_context.token_id).staking_claim(recipient, context.token_context.token_id, staking_addr, pool_method_id)
         tokens.append(context.token_context.token_id)
 
     log StakingClaim(msg.sender, nft_contract_addr, recipient, tokens)
 
 
 @external
-def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
+def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32], pool_claim_method_id: bytes4, pool_deposit_method_id: bytes4):
 
     """
     @notice Compound the rewards for multiple NFTs in the configured staking pool
     @dev Iterates over token contexts to compound the rewards for each NFT in the staking pool
     @param token_contexts An array of token contexts paired with amounts, each containing the rental state for an NFT.
+    @param pool_claim_method_id The method id to call on the staking pool to claim the rewards.
+    @param pool_deposit_method_id The method id to call on the staking pool to deposit the rewards.
     """
 
     self._check_not_paused()
+    staking_addr: address = self.staking_addr
     assert staking_addr != empty(address), "staking not supported"
     tokens: DynArray[uint256, 32] = empty(DynArray[uint256, 32])
 
@@ -851,7 +860,7 @@ def stake_compound(token_contexts: DynArray[TokenContextAndAmount, 32]):
         assert msg.sender == context.token_context.nft_owner, "not owner"
         assert self._is_context_valid(context.token_context), "invalid context"
 
-        self._get_vault(context.token_context.token_id).staking_compound(context.token_context.token_id)
+        self._get_vault(context.token_context.token_id).staking_compound(context.token_context.token_id, staking_addr, pool_claim_method_id, pool_deposit_method_id)
         tokens.append(context.token_context.token_id)
 
     log StakingCompound(msg.sender, nft_contract_addr, tokens)
@@ -915,7 +924,7 @@ def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
 
     """
     @notice Allow the owner of rental ERC721 tokens to claim the ownership of the underlying NFTs
-    @dev Iterates over token contexts to claim the ownership of each NFT. The ownership is transferred to the NFT owner and the rental state is cleared.
+    @dev Iterates over token contexts to claim the ownership of each NFT. The ownership is transferred to the NFT owner.
     @param token_contexts An array of token contexts, each containing the rental state for an NFT.
     """
 
@@ -924,7 +933,7 @@ def claim_token_ownership(token_contexts: DynArray[TokenContext, 32]):
     for token_context in token_contexts:
         assert self._is_context_valid(token_context), "invalid context"
         assert renting_erc721.ownerOf(token_context.token_id) == msg.sender, "not owner"
-        self._store_token_state(token_context.token_id, msg.sender, empty(Rental))
+        self._store_token_state(token_context.token_id, msg.sender, token_context.active_rental)
         tokens.append(token_context.token_id)
 
     log TokenOwnershipChanged(msg.sender, nft_contract_addr, tokens)
@@ -991,6 +1000,20 @@ def set_paused(paused: bool):
     log PauseStateSet(self.paused, paused)
 
     self.paused = paused
+
+
+@external
+def set_staking_addr(staking_addr: address):
+
+    """
+    @notice Set the staking pool address
+    @dev Sets the staking pool address to the given value and logs the event. Admin function.
+    @param staking_addr The new staking pool address.
+    """
+
+    assert msg.sender == self.protocol_admin, "not protocol admin"
+    log StakingAddressSet(self.staking_addr, staking_addr)
+    self.staking_addr = staking_addr
 
 
 @external
@@ -1135,7 +1158,7 @@ def _create_vault(token_id: uint256) -> IVault:
     vault: address = self._tokenid_to_vault(token_id)
     if not vault.is_contract:
         vault = create_minimal_proxy_to(vault_impl_addr, salt=convert(token_id, bytes32))
-        IVault(vault).initialise(staking_pool_id)
+        IVault(vault).initialise()
 
     return IVault(vault)
 
