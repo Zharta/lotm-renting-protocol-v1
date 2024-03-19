@@ -652,6 +652,26 @@ def test_claim_token_ownership(
     assert delegation_registry_warm_contract.getHotWallet(vault_addr) == receiver
 
 
+def test_claim_token_ownership_logs_token_ownership_changed(renting721_contract, renting_contract, nft_contract, nft_owner):
+    token_id = 1
+    receiver = boa.env.generate_address("receiver")
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    renting_contract.deposit([token_id], ZERO_ADDRESS, sender=nft_owner)
+    renting721_contract.mint([TokenAndWallet(token_id, nft_owner)], sender=renting_contract.address)
+    renting721_contract.safeTransferFrom(nft_owner, receiver, token_id, b"", sender=nft_owner)
+
+    renting_contract.claim_token_ownership([TokenContext(token_id, nft_owner, Rental()).to_tuple()], sender=receiver)
+    event = get_last_event(renting_contract, "TokenOwnershipChanged")
+
+    assert event.new_owner == receiver
+    assert event.nft_contract == nft_contract.address
+    assert len(event.tokens) == 1
+    assert event.tokens[0] == token_id
+
+
 def test_claim_token_ownership_reverts_if_invalid_context(renting721_contract, nft_contract, nft_owner, renting_contract):
     token_id = 1
     receiver = boa.env.generate_address("receiver")
