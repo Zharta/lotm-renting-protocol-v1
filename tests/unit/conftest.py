@@ -2,6 +2,8 @@ from textwrap import dedent
 
 import boa
 import pytest
+from boa.environment import register_raw_precompile
+from eth_account import Account
 
 
 @pytest.fixture(scope="session")
@@ -13,18 +15,37 @@ def accounts():
 
 
 @pytest.fixture(scope="session")
-def owner():
-    acc = boa.env.generate_address("owner")
-    boa.env.eoa = acc
-    boa.env.set_balance(acc, 10**21)
-    return acc
+def owner_account():
+    return Account.create()
 
 
 @pytest.fixture(scope="session")
-def nft_owner():
-    acc = boa.env.generate_address("nft_owner")
-    boa.env.set_balance(acc, 10**21)
-    return acc
+def owner(owner_account):
+    # acc = boa.env.generate_address("owner")
+    boa.env.eoa = owner_account.address
+    boa.env.set_balance(owner_account.address, 10**21)
+    return owner_account.address
+
+
+@pytest.fixture(scope="session")
+def owner_key(owner_account):
+    return owner_account.key
+
+
+@pytest.fixture(scope="session")
+def nft_owner_account():
+    return Account.create()
+
+
+@pytest.fixture(scope="session")
+def nft_owner(nft_owner_account):
+    boa.env.set_balance(nft_owner_account.address, 10**21)
+    return nft_owner_account.address
+
+
+@pytest.fixture(scope="session")
+def nft_owner_key(nft_owner_account):
+    return nft_owner_account.key
 
 
 @pytest.fixture(scope="session")
@@ -59,13 +80,23 @@ def delegation_registry_warm_contract():
 
 
 @pytest.fixture(scope="session")
+def ape_staking_contract_def():
+    return boa.load_partial("tests/stubs/ApeStaking.vy")
+
+
+@pytest.fixture(scope="session")
 def vault_contract_def():
-    return boa.load_partial("contracts/Vault.vy")
+    return boa.load_partial("contracts/VaultV3.vy")
 
 
 @pytest.fixture(scope="session")
 def renting_contract_def():
-    return boa.load_partial("contracts/Renting.vy")
+    return boa.load_partial("contracts/RentingV3.vy")
+
+
+@pytest.fixture(scope="session")
+def renting_erc721_contract_def():
+    return boa.load_partial("contracts/RentingERC721V3.vy")
 
 
 @pytest.fixture(scope="module")
@@ -77,3 +108,14 @@ def empty_contract_def():
      """
         )
     )
+
+
+@boa.precompile("def debug_bytes32(data: bytes32)")
+def debug_bytes32(data: bytes):
+    print(f"DEBUG: {data.hex()}")
+
+
+@pytest.fixture(scope="session")
+def debug_precompile():
+    register_raw_precompile("0x00000000000000000000000000000000000000ff", debug_bytes32)
+    yield

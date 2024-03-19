@@ -25,3 +25,5 @@ repos:
     hooks:
       - id: isort
         args: ["--profile", "black"]
+
+exclude: "^natspec/*"
