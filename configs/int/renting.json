@@ -124,7 +124,7 @@
         },
         "vault_impl_koda_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
-            "address": "0xe95b387cEe5BCC750D9e58Fc7a49B0aAFeFE26DF",
+            "address": "0xA62A2a84d19CFE2b99e29F49f0591C7ABe8f6768",
             "contract": "VaultImplV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -300,7 +300,7 @@
         },
         "koda_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
-            "address": "0xe95D5EBa55506A78B4FA61713B17998cb591FE7D",
+            "address": "0x1bD83F81EB786E669a8d1D66ed3A99Cec63b01c6",
             "contract": "RentingV2Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -316,7 +316,7 @@
                 "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
                 "nft_contract": "0x4Dc251DC5d8dBc96305bD4B73C3f8Cfe485BBceF",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
-                "vault_impl": "0xe95b387cEe5BCC750D9e58Fc7a49B0aAFeFE26DF"
+                "vault_impl": "0xA62A2a84d19CFE2b99e29F49f0591C7ABe8f6768"
             },
             "version": "2"
         },
