@@ -43,11 +43,14 @@ event ApprovalForAll:
     approved: bool
 
 # Global Variables
+SUPPORTED_INTERFACES: constant(bytes4[3]) = [0x01ffc9a7, 0x80ac58cd, 0x5b5e139f] # ERC165, ERC721, ERC721Metadata
 
-SUPPORTED_INTERFACES: constant(bytes4[2]) = [0x01ffc9a7, 0x80ac58cd] # ERC165, ERC721
+name: public(immutable(String[30]))
+symbol: public(immutable(String[20]))
 
-name: constant(String[10]) = ""
-symbol: constant(String[4]) = ""
+base_url: immutable(String[60])
+
+contractURI: public(immutable(String[60]))
 
 id_to_owner: HashMap[uint256, address]
 id_to_approvals: HashMap[uint256, address]
@@ -60,8 +63,20 @@ renting_addr: public(address)
 
 
 @external
-def __init__():
-    pass
+def __init__(_name: String[30], _symbol: String[20], _base_url: String[60], _contract_uri: String[60]):
+
+    """
+    @notice Initialises the contract with the renting contract address.
+    @param _name Name of the collection.
+    @param _symbol Symbol of the collection.
+    @param _base_url Base URL for the token URIs.
+    @param _contract_uri URI for the contract metadata.
+    """
+
+    name = _name
+    symbol = _symbol
+    base_url = _base_url
+    contractURI = _contract_uri
 
 
 @external
@@ -251,7 +266,7 @@ def setApprovalForAll(_operator: address, _approved: bool):
 
 @view
 @external
-def tokenURI(tokenId: uint256) -> String[132]:
+def tokenURI(tokenId: uint256) -> String[138]:
 
     """
     @notice Returns the URI for the given token.
@@ -260,7 +275,7 @@ def tokenURI(tokenId: uint256) -> String[132]:
     @return String[] URI for the given token.
     """
 
-    return ""
+    return concat(base_url, uint2str(tokenId))
 
 
 @view

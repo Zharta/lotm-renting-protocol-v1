@@ -146,7 +146,7 @@ def vault_contract_mayc(forked_env, mayc_contract, ape_contract, delegation_regi
 
 @pytest.fixture
 def renting_erc721_contract():
-    return boa.load("contracts/RentingERC721V3.vy")
+    return boa.load("contracts/RentingERC721V3.vy", "", "", "", "")
 
 
 @pytest.fixture(scope="session")
