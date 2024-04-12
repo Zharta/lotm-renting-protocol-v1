@@ -28,7 +28,7 @@ def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_re
 
 @pytest.fixture(scope="module")
 def renting721_contract(renting_erc721_contract_def):
-    return renting_erc721_contract_def.deploy()
+    return renting_erc721_contract_def.deploy("", "", "", "")
 
 
 @pytest.fixture(scope="module")
@@ -66,14 +66,14 @@ def mint(nft_owner, owner, renter, nft_contract, ape_contract):
 
 def test_initial_state(renting721_contract, renting_contract, vault_contract, nft_contract, ape_contract, nft_owner):
     assert renting721_contract.renting_addr() == renting_contract.address
-    # assert renting721_contract.name() == ""
-    # assert renting721_contract.symbol() == ""
-    assert renting721_contract.tokenURI(0) == ""
+    assert renting721_contract.name() == ""
+    assert renting721_contract.symbol() == ""
+    assert renting721_contract.tokenURI(0) == "0"
 
 
 def test_initialise(renting_erc721_contract_def):
     renting = boa.env.generate_address("renting")
-    renting721 = renting_erc721_contract_def.deploy()
+    renting721 = renting_erc721_contract_def.deploy("", "", "", "")
     renting721.initialise(sender=renting)
     assert renting721.renting_addr() == renting
 

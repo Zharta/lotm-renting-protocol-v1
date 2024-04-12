@@ -78,7 +78,7 @@ def renting_contract_no_staking(
         ape_contract,
         nft_contract,
         delegation_registry_warm_contract,
-        renting_erc721_contract_def.deploy(),
+        renting_erc721_contract_def.deploy("", "", "", ""),
         ZERO_ADDRESS,
         PROTOCOL_FEE,
         PROTOCOL_FEE,

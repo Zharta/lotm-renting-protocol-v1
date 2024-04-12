@@ -109,7 +109,7 @@ def vault_contract(vault_contract_def, ape_contract, nft_contract, delegation_re
 
 @pytest.fixture(scope="module")
 def renting_erc721_contract(renting_erc721_contract_def):
-    return renting_erc721_contract_def.deploy()
+    return renting_erc721_contract_def.deploy("", "", "", "")
 
 
 @pytest.fixture(scope="module")

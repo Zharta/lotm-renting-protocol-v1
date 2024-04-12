@@ -261,6 +261,10 @@ class RentingERC721V3Contract(ContractConfig):
         key: str,
         version: str | None = None,
         abi_key: str,
+        name: str | None = None,
+        symbol: str | None = None,
+        base_url: str | None = None,
+        contract_uri: str | None = None,
         address: str | None = None,
     ):
         super().__init__(
@@ -271,7 +275,7 @@ class RentingERC721V3Contract(ContractConfig):
             abi_key=abi_key,
             container_name="RentingERC721V3",
             deployment_deps=[],
-            deployment_args=[],
+            deployment_args=[name, symbol, base_url, contract_uri],
         )
         if address:
             self.load_contract(address)

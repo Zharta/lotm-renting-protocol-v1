@@ -111,7 +111,7 @@ def test_initial_state(
 
 def test_renting_erc721_initialization(renting_erc721_contract_def, renting_contract_def):
     dummy = boa.env.generate_address("dummy")
-    renting721 = renting_erc721_contract_def.deploy()
+    renting721 = renting_erc721_contract_def.deploy("", "", "", "")
     renting = renting_contract_def.deploy(dummy, dummy, dummy, dummy, renting721, dummy, 0, 0, dummy, dummy)
     assert renting721.renting_addr() == renting.address
     assert renting.renting_erc721() == renting721.address
