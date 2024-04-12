@@ -28,6 +28,7 @@ def cli(network):
     dm.context.gas_func = gas_cost
 
     changes = set()
+    # changes |= {"common.vault_impl_otherdeed_ape_v3", "common.renting_erc721_otherdeed_v3", "renting.otherdeed_v3"}
     dm.deploy(changes, dryrun=True)
 
     print("Done")

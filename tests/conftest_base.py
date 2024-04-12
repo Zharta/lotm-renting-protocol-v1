@@ -1,36 +1,39 @@
 import contextlib
+from collections import namedtuple
 from dataclasses import dataclass, field
 from functools import cached_property
 from textwrap import dedent
 
 import boa
 import vyper
+from boa.contracts.vyper.event import Event
+from boa.contracts.vyper.vyper_contract import VyperContract
 from eth.exceptions import Revert
+from eth_abi import encode
+from eth_account import Account
+from eth_account.messages import encode_intended_validator, encode_structured_data
+from eth_utils import encode_hex, keccak
 from web3 import Web3
 
 ZERO_ADDRESS = boa.eval("empty(address)")
 ZERO_BYTES32 = boa.eval("empty(bytes32)")
 
 
-def get_last_event(contract: boa.vyper.contract.VyperContract, name: str = None):
+def get_last_event(contract: VyperContract, name: str = None):
     print("CONTRACT LOGS", contract.get_logs())
     print("\n\n\n")
-    matching_events = [
-        e for e in contract.get_logs() if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)
-    ]
+    matching_events = [e for e in contract.get_logs() if isinstance(e, Event) and (name is None or name == e.event_type.name)]
     return EventWrapper(matching_events[-1])
 
 
-def get_events(contract: boa.vyper.contract.VyperContract, name: str = None):
+def get_events(contract: VyperContract, name: str | None = None):
     return [
-        EventWrapper(e)
-        for e in contract.get_logs()
-        if isinstance(e, boa.vyper.event.Event) and (name is None or name == e.event_type.name)
+        EventWrapper(e) for e in contract.get_logs() if isinstance(e, Event) and (name is None or name == e.event_type.name)
     ]
 
 
 class EventWrapper:
-    def __init__(self, event: boa.vyper.event.Event):
+    def __init__(self, event: Event):
         self.event = event
         self.event_name = event.event_type.name
 
@@ -43,7 +46,7 @@ class EventWrapper:
 
     @cached_property
     def args_dict(self):
-        print(f"{self.event=} {self.event.event_type.arguments=}")
+        # print(f"{self.event=} {self.event.event_type.arguments=}")
         args = self.event.event_type.arguments.keys()
         indexed = self.event.event_type.indexed
         topic_values = (v for v in self.event.topics)
@@ -53,13 +56,16 @@ class EventWrapper:
         return {k: self._format_value(v, self.event.event_type.arguments[k]) for k, v in _args}
 
     def _format_value(self, v, _type):
-        print(f"_format_value {v=} {_type=} {type(v).__name__=} {type(_type)=}")
+        # print(f"_format_value {v=} {_type=} {type(v).__name__=} {type(_type)=}")
         if isinstance(_type, vyper.semantics.types.primitives.AddressT):
             return Web3.to_checksum_address(v)
         # elif isinstance(_type, vyper.semantics.types.value.bytes_fixed.Bytes32Definition):
         elif isinstance(_type, vyper.semantics.types.primitives.BytesT):
             return f"0x{v.hex()}"
         return v
+
+    def __repr__(self):
+        return f"<EventWrapper {self.event_name} {self.args_dict}>"
 
 
 # TODO: find a better way to do this. also would be useful to get structs attrs by name
@@ -109,7 +115,6 @@ class Rental:
     expiration: int = 0
     amount: int = 0
     protocol_fee: int = 0
-    protocol_wallet: str = ZERO_ADDRESS
 
     def to_tuple(self):
         return (
@@ -123,7 +128,6 @@ class Rental:
             self.expiration,
             self.amount,
             self.protocol_fee,
-            self.protocol_wallet,
         )
 
 
@@ -133,9 +137,10 @@ class Listing:
     price: int = 0
     min_duration: int = 0
     max_duration: int = 0
+    timestamp: int = 0
 
     def to_tuple(self):
-        return (self.token_id, self.price, self.min_duration, self.max_duration)
+        return (self.token_id, self.price, self.min_duration, self.max_duration, self.timestamp)
 
 
 @dataclass
@@ -155,30 +160,53 @@ class RentalLog:
     expiration: int
     amount: int
     protocol_fee: int = 0
-    protocol_wallet: str = ZERO_ADDRESS
 
-    def to_rental(self, renter: str = ZERO_ADDRESS):
+    def to_rental(self, renter: str = ZERO_ADDRESS, delegate: str = ZERO_ADDRESS):
         return Rental(
             self.id,
             self.owner,
             renter,
-            ZERO_ADDRESS,
+            delegate,
             self.token_id,
             self.start,
             self.min_expiration,
             self.expiration,
             self.amount,
             self.protocol_fee,
-            self.protocol_wallet,
+        )
+
+
+@dataclass
+class RentalExtensionLog:
+    id: bytes
+    vault: str
+    owner: str
+    token_id: int
+    start: int
+    min_expiration: int
+    expiration: int
+    amount_settled: int
+    extension_amount: int
+    protocol_fee: int = 0
+
+    def to_rental(self, renter: str = ZERO_ADDRESS, delegate: str = ZERO_ADDRESS):
+        return Rental(
+            self.id,
+            self.owner,
+            renter,
+            delegate,
+            self.token_id,
+            self.start,
+            self.min_expiration,
+            self.expiration,
+            self.extension_amount,
+            self.protocol_fee,
         )
 
 
 @dataclass
 class RewardLog:
-    vault: str
     token_id: int
-    amount: int
-    protocol_fee_amount: int
     active_rental_amount: int
 
 
@@ -186,18 +214,21 @@ class RewardLog:
 class WithdrawalLog:
     vault: str
     token_id: int
-    rewards: int
-    protocol_fee_amount: int
 
 
 @dataclass
 class TokenContext:
     token_id: int = 0
+    nft_owner: str = ZERO_ADDRESS
     active_rental: Rental = field(default_factory=Rental)
-    listing: Listing = field(default_factory=Listing)
 
     def to_tuple(self):
-        return (self.token_id, self.active_rental.to_tuple(), self.listing.to_tuple())
+        return (self.token_id, self.nft_owner, self.active_rental.to_tuple())
+
+
+TokenAndWallet = namedtuple("TokenAndWallet", ["token_id", "wallet"], defaults=[0, ZERO_ADDRESS])
+
+StakingLog = namedtuple("StakingLog", ["token_id", "amount"], defaults=[0, 0])
 
 
 @dataclass
@@ -209,25 +240,103 @@ class VaultState:
         return (self.active_rental.to_tuple(), self.listing.to_tuple())
 
 
-def compute_state_hash(rental: Rental, listing: Listing):
+@dataclass
+class Signature:
+    v: int
+    r: int
+    s: int
+
+    def to_tuple(self):
+        return (self.v, self.r, self.s)
+
+
+@dataclass
+class SignedListing:
+    listing: Listing
+    owner_signature: Signature
+    admin_signature: Signature
+
+    def to_tuple(self):
+        return (self.listing.to_tuple(), self.owner_signature.to_tuple(), self.admin_signature.to_tuple())
+
+
+@dataclass
+class TokenContextAndAmount:
+    token_context: TokenContext
+    amount: int
+
+    def to_tuple(self):
+        return (self.token_context.to_tuple(), self.amount)
+
+
+@dataclass
+class TokenContextAndListing:
+    token_context: TokenContext
+    signed_listing: SignedListing
+    duration: int
+
+    def to_tuple(self):
+        return (self.token_context.to_tuple(), self.signed_listing.to_tuple(), self.duration)
+
+
+def compute_state_hash(token_id: int, nft_owner: str, rental: Rental):
     return boa.eval(
         dedent(
             f"""keccak256(
             concat(
+                convert({token_id}, bytes32),
+                convert({nft_owner}, bytes32),
                 {rental.id},
                 convert({rental.owner}, bytes32),
                 convert({rental.renter}, bytes32),
+                convert({rental.delegate}, bytes32),
                 convert({rental.token_id}, bytes32),
                 convert({rental.start}, bytes32),
                 convert({rental.min_expiration}, bytes32),
                 convert({rental.expiration}, bytes32),
                 convert({rental.amount}, bytes32),
                 convert({rental.protocol_fee}, bytes32),
-                convert({rental.protocol_wallet}, bytes32),
-                convert({listing.token_id}, bytes32),
-                convert({listing.price}, bytes32),
-                convert({listing.min_duration}, bytes32),
-                convert({listing.max_duration}, bytes32)
             ))"""
         )
     )
+
+
+def sign_listing(listing: Listing, owner_key: str, admin_key: str, timestamp: int, verifying_contract: str) -> SignedListing:
+    typed_data = {
+        "types": {
+            "EIP712Domain": [
+                {"name": "name", "type": "string"},
+                {"name": "version", "type": "string"},
+                {"name": "chainId", "type": "uint256"},
+                {"name": "verifyingContract", "type": "address"},
+            ],
+            "Listing": [
+                {"name": "token_id", "type": "uint256"},
+                {"name": "price", "type": "uint256"},
+                {"name": "min_duration", "type": "uint256"},
+                {"name": "max_duration", "type": "uint256"},
+                {"name": "timestamp", "type": "uint256"},
+            ],
+        },
+        "primaryType": "Listing",
+        "domain": {
+            "name": "Zharta",
+            "version": "1",
+            "chainId": boa.eval("chain.id"),
+            "verifyingContract": verifying_contract,
+        },
+        "message": vars(listing),
+    }
+    signable_msg = encode_structured_data(typed_data)
+    signed_msg = Account.from_key(owner_key).sign_message(signable_msg)
+    owner_signature = Signature(signed_msg.v, signed_msg.r, signed_msg.s)
+
+    encoded_owner_sig = encode(("(uint256,uint256,uint256)",), (owner_signature.to_tuple(),))
+    encoded_timestamp = encode(("uint256",), (timestamp,))
+    hash = keccak(primitive=encoded_owner_sig)
+
+    signable_msg = encode_intended_validator(verifying_contract, hexstr=encode_hex(hash + encoded_timestamp))
+    signed_msg = Account.from_key(admin_key).sign_message(signable_msg)
+    admin_signature = Signature(signed_msg.v, signed_msg.r, signed_msg.s)
+
+    return SignedListing(listing, owner_signature, admin_signature)

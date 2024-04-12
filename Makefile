@@ -47,7 +47,7 @@ gas:
 	${VENV}/bin/pytest tests/integration --durations=0 --gas-profile
 
 compile:
-	ape compile -f
+	${VENV}/bin/ape compile -f
 
 interfaces:
 	${VENV}/bin/python scripts/build_interfaces.py contracts/*.vy

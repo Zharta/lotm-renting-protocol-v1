@@ -5,13 +5,13 @@ classifiers = ["Private :: Do Not Upload"]
 version = "0"
 dependencies = [
     "eth-ape",
-    "vyper==0.3.9",
+    "vyper==0.3.10",
 ]
 
 
 [project.optional-dependencies]
 dev = [
-    "titanoboa @ git+https://github.com/vyperlang/titanoboa@44c14406eda4fefc0dad99a287dff7fae2172a18#[forking-recommended]",
+    "titanoboa @ git+https://github.com/vyperlang/titanoboa#[forking-recommended]",
     "black",
     "boto3",
     "click",
@@ -24,6 +24,7 @@ dev = [
     "pytest-xdist",
     "python-lsp-server[flake8]",
     "rope",
+    "vyper-lsp",
 ]
 
 [build-system]
