@@ -117,9 +117,10 @@ def test_renting_erc721_initialization(renting_erc721_contract_def, renting_cont
     assert renting.renting_erc721() == renting721.address
 
 
-def test_supports_interface(renting_contract):
-    assert renting_contract.supportsInterface(decode_hex("0x80ac58cd"))
-    assert renting_contract.supportsInterface(decode_hex("0x01ffc9a7"))
+def test_supports_interface(renting721_contract):
+    assert renting721_contract.supportsInterface(decode_hex("0x80ac58cd"))
+    assert renting721_contract.supportsInterface(decode_hex("0x01ffc9a7"))
+    assert renting721_contract.supportsInterface(decode_hex("0x5b5e139f"))
 
 
 def test_change_protocol_fee_reverts_if_wrong_caller(renting_contract, renter):

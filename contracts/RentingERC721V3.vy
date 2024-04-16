@@ -278,6 +278,18 @@ def tokenURI(tokenId: uint256) -> String[138]:
     return concat(base_url, uint2str(tokenId))
 
 
+@pure
+@external
+def supportsInterface(interface_id: bytes4) -> bool:
+    """
+    @notice Check if the contract supports the given interface, as defined in ERC-165
+    @dev Checks if the contract supports the given interface and returns true if it does.
+    @param interface_id The interface id.
+    @return True if the contract supports the given interface.
+    """
+    return interface_id in SUPPORTED_INTERFACES
+
+
 @view
 @internal
 def _is_approved_or_owner(_spender: address, _token_id: uint256) -> bool:
