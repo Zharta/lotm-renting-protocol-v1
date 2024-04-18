@@ -46,17 +46,6 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
-        "renting_erc721_hound_v3": {
-            "address": "",
-            "contract": "RentingERC721V3Contract",
-            "properties": {
-                "base_url": "https://hound.zharta.io/token/",
-                "contract_uri": "https://hound.zharta.io/metadata",
-                "name": "Mutant Hound Vaults V3",
-                "symbol": "HOUNDVAULTSV3"
-            },
-            "properties_addresses": {}
-        },
         "renting_erc721_koda_v3": {
             "abi_key": "a46a5f357b7c83dcc6f6459679643f6f4650ba5d",
             "address": "0x29193D61FC8d9EC84B61643aAD2a4153999279B9",
@@ -125,18 +114,6 @@
                 "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381"
             },
             "version": "1"
-        },
-        "vault_impl_hound_ape_v3": {
-            "address": "",
-            "contract": "VaultImplV3Contract",
-            "properties": {
-                "delegation_registry_key": "common.warm",
-                "nft_contract_key": "common.hound",
-                "payment_token_key": "common.ape_token"
-            },
-            "properties_addresses": {
-            },
-            "version": "3"
         },
         "vault_impl_koda_ape": {
             "abi_key": "5ba399e7fc8497f64a194adf3dce4ed0eca5a5c9",
@@ -286,24 +263,6 @@
                 "vault_impl": "0xb2a6Ae6c2fD37204b0a256De0ebad3b087439164"
             },
             "version": "2"
-        },
-        "hound_v3": {
-            "address": "",
-            "contract": "RentingV3Contract",
-            "properties": {
-                "delegation_registry_key": "common.warm",
-                "max_protocol_fee": 1000,
-                "nft_contract_key": "common.hound",
-                "payment_token_key": "common.ape_token",
-                "protocol_admin": "0x5723759D679662cf931d686f129E3296D9545190",
-                "protocol_fee": 0,
-                "protocol_wallet": "0x07d96cC26566BFCA358C61fBe7be3Ca771Da7EA6",
-                "renting_erc721_contract_key": "common.renting_erc721_hound_v3",
-                "vault_impl_key": "common.vault_impl_hound_ape_v3"
-            },
-            "properties_addresses": {
-            },
-            "version": "3"
         },
         "koda": {
             "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
