@@ -31,6 +31,12 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
+        "kodamara": {
+            "abi_key": "7b39a41e358ea2dc7ec1d38dc11d7d9a2881a2f4",
+            "address": "0x56e6F1BFFde5DCcd9A183585cE31f2902FC52707",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
         "mara": {
             "address": "0x3Bdca51226202Fc2a64211Aa35A8d95D61C6ca99",
             "contract": "ERC721Contract",
@@ -59,7 +65,6 @@
             "properties_addresses": {}
         },
         "renting_erc721_koda_v3": {
-            "abi_key": "a46a5f357b7c83dcc6f6459679643f6f4650ba5d",
             "address": "0x29193D61FC8d9EC84B61643aAD2a4153999279B9",
             "contract": "RentingERC721V3Contract",
             "properties": {
@@ -67,6 +72,17 @@
                 "contract_uri": "https://koda.zharta.io/metadata",
                 "name": "Koda Vaults V3",
                 "symbol": "KODAVAULTSV3"
+            },
+            "properties_addresses": {}
+        },
+        "renting_erc721_kodamara_v3": {
+            "address": "",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://kodamara.zharta.io/token/",
+                "contract_uri": "https://kodamara.zharta.io/metadata",
+                "name": "Kodamara Vaults V3",
+                "symbol": "KODAMARAVAULTSV3"
             },
             "properties_addresses": {}
         },
@@ -184,6 +200,18 @@
                 "delegation_registry": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
                 "nft_contract": "0xE012Baf811CF9c05c408e879C399960D1f305903",
                 "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381"
+            },
+            "version": "3"
+        },
+        "vault_impl_kodamara_ape_v3": {
+            "address": "",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.kodamara",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
             },
             "version": "3"
         },
@@ -377,6 +405,24 @@
                 "payment_token": "0x4d224452801ACEd8B2F0aebE155379bb5D594381",
                 "renting_erc721_contract": "0x29193D61FC8d9EC84B61643aAD2a4153999279B9",
                 "vault_impl": "0x102c160714119E32B0F82a597b8a9fA7Cfe89A47"
+            },
+            "version": "3"
+        },
+        "kodamara_v3": {
+            "address": "",
+            "contract": "RentingV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 1000,
+                "nft_contract_key": "common.kodamara",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x5723759D679662cf931d686f129E3296D9545190",
+                "protocol_fee": 0,
+                "protocol_wallet": "0x07d96cC26566BFCA358C61fBe7be3Ca771Da7EA6",
+                "renting_erc721_contract_key": "common.renting_erc721_kodamara_v3",
+                "vault_impl_key": "common.vault_impl_kodamara_ape_v3"
+            },
+            "properties_addresses": {
             },
             "version": "3"
         },

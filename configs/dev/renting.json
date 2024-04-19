@@ -36,6 +36,12 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
+        "kodamara": {
+            "abi_key": "7b39a41e358ea2dc7ec1d38dc11d7d9a2881a2f4",
+            "address": "0x759D49a056EFf15750f384E2Bf68340f112A8479",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
         "mara": {
             "abi_key": "7b39a41e358ea2dc7ec1d38dc11d7d9a2881a2f4",
             "address": "0x4B0FccF53589c1F185B35db88bB315a0bBF9a3e0",
@@ -78,6 +84,18 @@
             "address": "0xEC1b9eB2E26f626d32575B6A69A95Fd7615DBBbf",
             "contract": "RentingERC721V3Contract",
             "properties": {},
+            "properties_addresses": {}
+        },
+        "renting_erc721_kodamara_v3": {
+            "abi_key": "4640fc7573ce385f1f87da3d35a7b5f222f79afd",
+            "address": "0x5a8d207883a1fe9bE5237e71990b1e7f9bcA421e",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://kodamara.dev.zharta.io/token/",
+                "contract_uri": "https://kodamara.dev.zharta.io/metadata",
+                "name": "Kodamara Vaults V3",
+                "symbol": "KODAMARAVAULTSV3"
+            },
             "properties_addresses": {}
         },
         "renting_erc721_mara_v3": {
@@ -207,6 +225,22 @@
             "properties_addresses": {
                 "delegation_registry": "0x2232993b20752f23f3433b24b894645B712Ae04c",
                 "nft_contract": "0xBcb61491F1859f53438918F1A5aFCA542Af9D397",
+                "payment_token": "0x290Ee41f4d6DF1029F72B240bdBa846A82ad46bD"
+            },
+            "version": "3"
+        },
+        "vault_impl_kodamara_ape_v3": {
+            "abi_key": "0617e2b488c722f78089cb4706a806aa52defed7",
+            "address": "0x9B3B2b6f73379b65c62F75160d4C4F1b02156f47",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.kodamara",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x2232993b20752f23f3433b24b894645B712Ae04c",
+                "nft_contract": "0x759D49a056EFf15750f384E2Bf68340f112A8479",
                 "payment_token": "0x290Ee41f4d6DF1029F72B240bdBa846A82ad46bD"
             },
             "version": "3"
@@ -445,6 +479,30 @@
                 "payment_token": "0x290Ee41f4d6DF1029F72B240bdBa846A82ad46bD",
                 "renting_erc721_contract": "0xEC1b9eB2E26f626d32575B6A69A95Fd7615DBBbf",
                 "vault_impl": "0x06AA4Ac01DefCf282eDB97aC54d904f0ef5A7589"
+            },
+            "version": "3"
+        },
+        "kodamara_v3": {
+            "abi_key": "3efc173824d7c9f3b766e51386911e2b2ea2e7b3",
+            "address": "0x8B28C7b669122Ae03BBc13DEB3D19cF1051C9bFb",
+            "contract": "RentingV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.kodamara",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "renting_erc721_contract_key": "common.renting_erc721_kodamara_v3",
+                "vault_impl_key": "common.vault_impl_kodamara_ape_v3"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x2232993b20752f23f3433b24b894645B712Ae04c",
+                "nft_contract": "0x759D49a056EFf15750f384E2Bf68340f112A8479",
+                "payment_token": "0x290Ee41f4d6DF1029F72B240bdBa846A82ad46bD",
+                "renting_erc721_contract": "0x5a8d207883a1fe9bE5237e71990b1e7f9bcA421e",
+                "vault_impl": "0x9B3B2b6f73379b65c62F75160d4C4F1b02156f47"
             },
             "version": "3"
         },
