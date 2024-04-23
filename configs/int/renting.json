@@ -21,6 +21,11 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
+        "hound": {
+            "address": "0xe591C8e71B8f3e2e7DF5764f389F7F71535bc143",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
         "koda": {
             "address": "0x4Dc251DC5d8dBc96305bD4B73C3f8Cfe485BBceF",
             "contract": "ERC721Contract",
@@ -51,6 +56,18 @@
             "address": "0x7432d28C09d2b706bf558e4e5d44984AC54a6Ff4",
             "contract": "RentingERC721V3Contract",
             "properties": {},
+            "properties_addresses": {}
+        },
+        "renting_erc721_hound_v3": {
+            "abi_key": "4640fc7573ce385f1f87da3d35a7b5f222f79afd",
+            "address": "0x401DA8231e131415Ce93BD1908cBF2Be7D628e35",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://mutanthound.int.zharta.io/token/",
+                "contract_uri": "https://mutanthound.int.zharta.io/metadata",
+                "name": "Mutant Hound Vaults V3",
+                "symbol": "MUTANTHOUNDVAULTSV3"
+            },
             "properties_addresses": {}
         },
         "renting_erc721_koda_v3": {
@@ -121,6 +138,22 @@
                 "nft_contract": "0xFB710286BcA67cfCCDa256471F543F492ED27F8a",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
                 "staking_contract": "0x01D10dd71e98d0AE59EeA22963A912AEB402b916"
+            },
+            "version": "3"
+        },
+        "vault_impl_hound_ape_v3": {
+            "abi_key": "0617e2b488c722f78089cb4706a806aa52defed7",
+            "address": "0x3e826Bda549A3bAa79C0fcEF4dAc57891D918622",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.hound",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
+                "nft_contract": "0xe591C8e71B8f3e2e7DF5764f389F7F71535bc143",
+                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
             },
             "version": "3"
         },
@@ -311,6 +344,30 @@
                 "renting_erc721_contract": "0x7432d28C09d2b706bf558e4e5d44984AC54a6Ff4",
                 "staking_contract": "0x85201a25BeaC81924572Be34CD6A15D5d3bFf360",
                 "vault_impl": "0x7085a10CB2d5c494C0F82E47B01Da5531AD2a580"
+            },
+            "version": "3"
+        },
+        "hound_v3": {
+            "abi_key": "3efc173824d7c9f3b766e51386911e2b2ea2e7b3",
+            "address": "0xF1f217Fb58bEF747A7381bB2BFC12d753EF722a6",
+            "contract": "RentingV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.hound",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "renting_erc721_contract_key": "common.renting_erc721_hound_v3",
+                "vault_impl_key": "common.vault_impl_hound_ape_v3"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
+                "nft_contract": "0xe591C8e71B8f3e2e7DF5764f389F7F71535bc143",
+                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
+                "renting_erc721_contract": "0x401DA8231e131415Ce93BD1908cBF2Be7D628e35",
+                "vault_impl": "0x3e826Bda549A3bAa79C0fcEF4dAc57891D918622"
             },
             "version": "3"
         },
