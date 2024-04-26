@@ -437,6 +437,7 @@
                 "renting_erc721_contract": "0x97D03CD72905Bd8d197dDD80762AA085352F1087",
                 "vault_impl": "0xF350533c3003F6a2df04656a81E911789A987faA"
             },
+            "metadata_domain": "https://kodamara.zharta.io",
             "version": "3"
         },
         "mara": {
