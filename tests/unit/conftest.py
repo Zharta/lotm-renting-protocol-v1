@@ -2,7 +2,7 @@ from textwrap import dedent
 
 import boa
 import pytest
-from boa.environment import register_raw_precompile
+from boa.vm.py_evm import register_raw_precompile
 from eth_account import Account
 
 

@@ -416,6 +416,7 @@
                 "renting_erc721_contract": "0x4E4112c8711adcDEc58E98471eF00e81C54719D5",
                 "vault_impl": "0x37C80C629713f4E019F49bC928e01cf30f485f89"
             },
+            "metadata_domain": "https://mutanthound.dev.zharta.io",
             "version": "3"
         },
         "koda": {
@@ -480,6 +481,7 @@
                 "renting_erc721_contract": "0xEC1b9eB2E26f626d32575B6A69A95Fd7615DBBbf",
                 "vault_impl": "0x06AA4Ac01DefCf282eDB97aC54d904f0ef5A7589"
             },
+            "metadata_domain": "https://koda.dev.zharta.io",
             "version": "3"
         },
         "kodamara_v3": {
@@ -504,6 +506,7 @@
                 "renting_erc721_contract": "0x5a8d207883a1fe9bE5237e71990b1e7f9bcA421e",
                 "vault_impl": "0x9B3B2b6f73379b65c62F75160d4C4F1b02156f47"
             },
+            "metadata_domain": "https://kodamara.dev.zharta.io",
             "version": "3"
         },
         "mara": {
@@ -568,6 +571,7 @@
                 "renting_erc721_contract": "0x19835658D6c465aB8a691ca64bBD8B1BE65cdd24",
                 "vault_impl": "0xe9d4B739FF0eFd94dc5167247E3b33982462bbe8"
             },
+            "metadata_domain": "https://mara.dev.zharta.io",
             "version": "3"
         },
         "mayc_v3": {
@@ -640,6 +644,7 @@
                 "renting_erc721_contract": "0xAd5De356a962B994AD7C34604e257646d04458c1",
                 "vault_impl": "0x99D22ba807685C190ADAABD8A3833b689A20FA9e"
             },
+            "metadata_domain": "https://otherdeed.dev.zharta.io",
             "version": "3"
         }
     }

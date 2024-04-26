@@ -16,3 +16,4 @@ pytest-logs.txt
 
 # Local
 .DS_Store
+.idea
