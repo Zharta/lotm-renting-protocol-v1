@@ -24,7 +24,6 @@ dev = [
     "pytest-xdist",
     "python-lsp-server[flake8]",
     "rope",
-    "vyper-lsp",
 ]
 
 [build-system]
