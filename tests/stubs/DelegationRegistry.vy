@@ -4,6 +4,9 @@ event HotWalletChanged:
     to: address
     expirationTimestamp: uint256
 
+struct WalletLink:
+    walletAddress: address
+    expirationTimestamp: uint256
 
 @external
 def setHotWallet(hot_wallet_address: address, expiration_timestamp: uint256, lock_hot_wallet_address: bool):
@@ -19,3 +22,8 @@ def setExpirationTimestamp(expiration_timestamp: uint256):
 @external
 def getHotWallet(cold_wallet: address) -> address:
     return empty(address)
+
+@view
+@external
+def getHotWalletLink(cold_wallet: address) -> WalletLink:
+    return empty(WalletLink)

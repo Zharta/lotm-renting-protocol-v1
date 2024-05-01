@@ -654,6 +654,8 @@ def extend_rentals(token_contexts: DynArray[TokenContextAndListing, 32], signatu
         protocol_fee_amount: uint256 = pro_rata_rental_amount * context.token_context.active_rental.protocol_fee / 10000
         protocol_fees_amount += protocol_fee_amount
 
+        vault.delegate_to_wallet(context.token_context.active_rental.delegate, expiration)
+
         new_rental: Rental = Rental({
             id: context.token_context.active_rental.id,
             owner: context.token_context.nft_owner,

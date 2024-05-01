@@ -40,5 +40,13 @@ def getHotWallet(cold_wallet: address) -> address:
 
 @view
 @external
+def getHotWalletLink(cold_wallet: address) -> WalletLink:
+    return WalletLink({
+        walletAddress: self.hot[cold_wallet] if self.exp[cold_wallet] > block.timestamp else empty(address),
+        expirationTimestamp: self.exp[cold_wallet]
+    })
+
+@view
+@external
 def getColdWalletLinks(hot_wallet: address) -> DynArray[WalletLink, 128]:
     return []
