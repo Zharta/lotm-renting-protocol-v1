@@ -8,6 +8,7 @@ from ..conftest_base import (
     ZERO_BYTES32,
     Listing,
     Rental,
+    RentalExtensionLog,
     RentalLog,
     RewardLog,
     TokenContext,
@@ -310,6 +311,87 @@ def test_close_rental(
     assert event_rental.protocol_fee == protocol_fee
 
     assert renting_contract.rental_states(token_id) == compute_state_hash(token_id, nft_owner, Rental())
+
+
+def test_extend_rental(
+    contracts_config,
+    renting_contract,
+    nft_contract,
+    ape_contract,
+    nft_owner,
+    renter,
+    protocol_wallet,
+    protocol_fee,
+    nft_owner_key,
+    owner_key,
+    delegation_registry_warm_contract,
+):
+    token_id = 1
+    min_duration = 0
+    max_duration = 0
+
+    price = int(1e18)
+    start_time = boa.eval("block.timestamp")
+    duration = 10
+    rental_amount = duration * price
+    renter_delegate = boa.env.generate_address("delegate")
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+
+    renting_contract.deposit([token_id], ZERO_ADDRESS, sender=nft_owner)
+
+    listing = Listing(token_id, price, min_duration, max_duration, start_time)
+    signed_listing = sign_listing(listing, nft_owner_key, owner_key, start_time, renting_contract.address)
+    token_context = TokenContext(token_id, nft_owner, Rental())
+
+    ape_contract.approve(renting_contract, rental_amount, sender=renter)
+
+    assert ape_contract.balanceOf(renter) >= rental_amount
+
+    renting_contract.start_rentals(
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
+        renter_delegate,
+        start_time,
+        sender=renter,
+    )
+    rental_started_event = get_last_event(renting_contract, "RentalStarted")
+    event_rental = RentalLog(*rental_started_event.rentals[0])
+
+    started_rental = event_rental.to_rental(renter=renter, delegate=renter_delegate)
+    token_context = TokenContext(token_id, nft_owner, started_rental)
+
+    real_duration = 3
+    boa.env.time_travel(seconds=real_duration * 3600)
+    extend_timestamp = boa.eval("block.timestamp")
+
+    signed_listing = sign_listing(listing, nft_owner_key, owner_key, extend_timestamp, renting_contract.address)
+
+    ape_contract.approve(renting_contract, rental_amount, sender=renter)
+
+    renting_contract.extend_rentals(
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=renter
+    )
+
+    rental_extended_event = get_last_event(renting_contract, "RentalExtended")
+
+    event_rental = RentalExtensionLog(*rental_extended_event.rentals[0])
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+    assert event_rental.vault == vault_addr
+    assert event_rental.owner == nft_owner
+    assert event_rental.token_id == token_id
+    assert event_rental.start == extend_timestamp
+    assert event_rental.min_expiration == extend_timestamp
+    assert event_rental.expiration == extend_timestamp + duration * 3600
+    assert event_rental.amount_settled == rental_amount * real_duration // duration
+    assert event_rental.extension_amount == rental_amount
+
+    time_passed = (duration - real_duration) * 3600 + 1
+    boa.env.time_travel(seconds=time_passed)
+
+    assert delegation_registry_warm_contract.getHotWalletLink(vault_addr)[0] == renter_delegate
+    assert delegation_registry_warm_contract.getHotWalletLink(vault_addr)[1] == extend_timestamp + duration * 3600
 
 
 def test_claim(

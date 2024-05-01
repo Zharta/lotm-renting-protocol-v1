@@ -1533,6 +1533,68 @@ def test_extend_rentals(
     assert renting_contract.protocol_fees_amount() == fee_amount
 
 
+def test_extend_rentals_extends_delegation(
+    renting_contract,
+    nft_contract,
+    ape_contract,
+    nft_owner,
+    nft_owner_key,
+    renter,
+    owner,
+    owner_key,
+    protocol_wallet,
+    delegation_registry_warm_contract,
+):
+    token_id = 1
+    price = int(1e18)
+    min_duration = 0
+    max_duration = 0
+
+    renter_delegate = boa.env.generate_address("delegate")
+    start_time = boa.eval("block.timestamp")
+    duration = 10
+    rental_amount = duration * price
+
+    vault_addr = renting_contract.tokenid_to_vault(token_id)
+
+    nft_contract.approve(vault_addr, token_id, sender=nft_owner)
+    ape_contract.approve(renting_contract, rental_amount, sender=renter)
+    renting_contract.deposit([token_id], nft_owner, sender=nft_owner)
+
+    listing = Listing(token_id, price, min_duration, max_duration, start_time)
+    signed_listing = sign_listing(listing, nft_owner_key, owner_key, start_time, renting_contract.address)
+    token_context = TokenContext(token_id, nft_owner, Rental())
+
+    renting_contract.start_rentals(
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()],
+        renter_delegate,
+        start_time,
+        sender=renter,
+    )
+    rental_started_event = get_last_event(renting_contract, "RentalStarted")
+
+    real_duration = 3
+    time_passed = real_duration * 3600
+    boa.env.time_travel(seconds=time_passed)
+    extend_timestamp = boa.eval("block.timestamp")
+
+    active_rental = RentalLog(*rental_started_event.rentals[0]).to_rental(renter=renter, delegate=renter_delegate)
+    token_context = TokenContext(token_id, nft_owner, active_rental)
+    signed_listing = sign_listing(listing, nft_owner_key, owner_key, extend_timestamp, renting_contract.address)
+
+    ape_contract.approve(renting_contract, rental_amount, sender=renter)
+
+    renting_contract.extend_rentals(
+        [TokenContextAndListing(token_context, signed_listing, duration).to_tuple()], extend_timestamp, sender=renter
+    )
+
+    time_passed = (duration - real_duration) * 3600 + 1
+    boa.env.time_travel(seconds=time_passed)
+
+    assert delegation_registry_warm_contract.getHotWalletLink(vault_addr)[0] == renter_delegate
+    assert delegation_registry_warm_contract.getHotWalletLink(vault_addr)[1] == extend_timestamp + duration * 3600
+
+
 def test_extend_rentals_before_min_duration(
     renting_contract, nft_contract, ape_contract, nft_owner, nft_owner_key, renter, owner, owner_key, protocol_wallet
 ):
