@@ -10,6 +10,18 @@ aiosignal==1.3.1
     # via aiohttp
 annotated-types==0.6.0
     # via pydantic
+ape-alchemy==0.7.3
+    # via lotm-renting-protocol-v1 (pyproject.toml)
+ape-blast==0.7.1
+    # via lotm-renting-protocol-v1 (pyproject.toml)
+ape-etherscan==0.7.3
+    # via lotm-renting-protocol-v1 (pyproject.toml)
+ape-foundry==0.7.5
+    # via lotm-renting-protocol-v1 (pyproject.toml)
+ape-optimism==0.7.3
+    # via ape-blast
+ape-vyper==0.7.1
+    # via lotm-renting-protocol-v1 (pyproject.toml)
 asttokens==2.4.1
     # via
     #   stack-data
@@ -95,7 +107,14 @@ eth-account==0.11.2
     #   titanoboa
     #   web3
 eth-ape==0.7.18
-    # via lotm-renting-protocol-v1 (pyproject.toml)
+    # via
+    #   ape-alchemy
+    #   ape-blast
+    #   ape-etherscan
+    #   ape-foundry
+    #   ape-optimism
+    #   ape-vyper
+    #   lotm-renting-protocol-v1 (pyproject.toml)
 eth-bloom==3.0.1
     # via py-evm
 eth-hash[pycryptodome,pysha3]==0.7.0
@@ -117,6 +136,8 @@ eth-keys==0.5.1
     #   py-evm
 eth-pydantic-types==0.1.0
     # via
+    #   ape-alchemy
+    #   ape-foundry
     #   eth-ape
     #   ethpm-types
     #   evm-trace
@@ -157,9 +178,19 @@ eth-utils==2.3.1
     #   trie
     #   web3
 ethpm-types==0.6.10
-    # via eth-ape
+    # via
+    #   ape-alchemy
+    #   ape-blast
+    #   ape-etherscan
+    #   ape-foundry
+    #   ape-optimism
+    #   ape-vyper
+    #   eth-ape
 evm-trace==0.1.5
-    # via eth-ape
+    # via
+    #   ape-alchemy
+    #   ape-foundry
+    #   eth-ape
 evmchains==0.0.7
     # via eth-ape
 execnet==2.1.1
@@ -176,6 +207,7 @@ frozenlist==1.4.1
     #   aiosignal
 hexbytes==0.3.1
     # via
+    #   ape-foundry
     #   eip712
     #   eth-account
     #   eth-pydantic-types
@@ -256,6 +288,7 @@ packaging==23.2
     #   eth-ape
     #   pytest
     #   pytoolconfig
+    #   vvm
     #   vyper
 pandas==1.5.3
     # via eth-ape
@@ -382,10 +415,13 @@ regex==2024.4.16
     # via parsimonious
 requests==2.31.0
     # via
+    #   ape-alchemy
+    #   ape-etherscan
     #   eth-ape
     #   ethpm-types
     #   pygithub
     #   titanoboa
+    #   vvm
     #   web3
 rich==13.7.1
     # via
@@ -432,7 +468,9 @@ titanoboa[forking-recommended] @ git+https://github.com/vyperlang/titanoboa
 toolz==0.12.1
     # via cytoolz
 tqdm==4.66.2
-    # via eth-ape
+    # via
+    #   ape-vyper
+    #   eth-ape
 traitlets==5.14.3
     # via
     #   eth-ape
@@ -471,8 +509,11 @@ varint==1.0.2
     #   py-multihash
 virtualenv==20.26.0
     # via pre-commit
+vvm==0.2.0
+    # via ape-vyper
 vyper==0.3.10
     # via
+    #   ape-vyper
     #   lotm-renting-protocol-v1 (pyproject.toml)
     #   titanoboa
 watchdog==3.0.0
@@ -480,7 +521,10 @@ watchdog==3.0.0
 wcwidth==0.2.13
     # via prompt-toolkit
 web3[tester]==6.17.2
-    # via eth-ape
+    # via
+    #   ape-alchemy
+    #   ape-foundry
+    #   eth-ape
 websockets==12.0
     # via web3
 wheel==0.43.0
@@ -488,7 +532,10 @@ wheel==0.43.0
 wrapt==1.16.0
     # via deprecated
 yarl==1.9.4
-    # via aiohttp
+    # via
+    #   aiohttp
+    #   ape-etherscan
+    #   ape-foundry
 zipp==3.18.1
     # via importlib-metadata
 

@@ -21,6 +21,7 @@ def abi_key(abi: list) -> str:
 class DeploymentContext:
     contracts: dict[str, Any]
     env: Environment
+    ecosystem: Ecosystem
     owner: KeyfileAccount
     config: dict[str, Any] = field(default_factory=dict)
     gas_func: Callable | None = None

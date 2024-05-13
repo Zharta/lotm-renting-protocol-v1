@@ -6,6 +6,11 @@ version = "0"
 dependencies = [
     "eth-ape",
     "vyper==0.3.10",
+    "ape-vyper",
+    "ape-foundry",
+    "ape-alchemy",
+    "ape-blast",
+    "ape-etherscan",
 ]
 
 

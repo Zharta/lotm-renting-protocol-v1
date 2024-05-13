@@ -78,7 +78,7 @@ class DeploymentManager:
             case Environment.prod:
                 self.owner = accounts.load("prodacc")
 
-        self.context = DeploymentContext(self._get_contracts(), self.env, self.owner, self._get_configs())
+        self.context = DeploymentContext(self._get_contracts(), self.env, self.ecosystem, self.owner, self._get_configs())
 
     def _get_contracts(self) -> dict[str, ContractConfig]:
         contracts = load_contracts(self.env, self.ecosystem)

@@ -18,7 +18,7 @@
             "properties_addresses": {
                 "delegation_registry": "0xA8Ab83613fF003B841E6831b97AA462b4B6b520A",
                 "nft_contract": "0x2F886AAD50d76258C1E77AC92a57Df1d5DB48853",
-                "payment_token": "0x4300000000000000000000000000000000000004"
+                "payment_token": "0x4200000000000000000000000000000000000023"
             },
             "version": "3"
         },
@@ -34,7 +34,7 @@
         },
         "weth": {
             "abi_key": "a29fd0590b1b2665c6d6fa1ab3bb730cbd3411c9",
-            "address": "0x4300000000000000000000000000000000000004",
+            "address": "0x4200000000000000000000000000000000000023",
             "contract": "ERC20Contract",
             "properties": {
                 "decimals": 18,
@@ -48,7 +48,7 @@
     "renting": {
         "fantasy_v3": {
             "abi_key": "d8332043a51f074c41ad2b32e32ab23086beb9c6",
-            "address": "",
+            "address": "0x423bb9CC3746b936F46785aEfDbb28F35D65b10b",
             "contract": "RentingBlastV3Contract",
             "properties": {
                 "base_url": "https://fantasy.int.zharta.io/token/",
@@ -67,7 +67,7 @@
             "properties_addresses": {
                 "delegation_registry": "0xA8Ab83613fF003B841E6831b97AA462b4B6b520A",
                 "nft_contract": "0x2F886AAD50d76258C1E77AC92a57Df1d5DB48853",
-                "payment_token": "0x4300000000000000000000000000000000000004",
+                "payment_token": "0x4200000000000000000000000000000000000023",
                 "vault_impl": "0x69f18335Ab0c6E60C7cE02e501BBCb0C25025eDc"
             },
             "version": "3"

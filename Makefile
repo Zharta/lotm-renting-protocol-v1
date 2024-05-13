@@ -17,11 +17,9 @@ $(VENV):
 
 install: $(VENV) requirements.txt
 	${PIP} install -r requirements.txt
-	${VENV}/bin/ape plugins install --upgrade .
 
 install-dev: $(VENV) requirements-dev.txt
 	${PIP} install -r requirements-dev.txt
-	${VENV}/bin/ape plugins install --upgrade .
 	$(VENV)/bin/pre-commit install
 
 requirements.txt: pyproject.toml
