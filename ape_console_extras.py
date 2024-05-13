@@ -2,7 +2,7 @@ import os
 
 import web3
 
-from scripts.deployment import DeploymentManager, Environment
+from scripts.deployment import DeploymentManager, Ecosystem, Environment
 
 ENV = Environment[os.environ.get("ENV", "local")]
 
@@ -13,7 +13,9 @@ def inject_poa(w3):
 
 
 def ape_init_extras(network):
-    dm = DeploymentManager(ENV)
+    ECOSYSTEM = Ecosystem[os.environ.get("ECOSYSTEM")]
+    print(f"Connected to {network} {ENV=} {ECOSYSTEM=}")
+    dm = DeploymentManager(ENV, ECOSYSTEM)
 
     return {
         "dm": dm,

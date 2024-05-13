@@ -5,7 +5,7 @@ from ape import project
 from ape.contracts.base import ContractContainer, ContractType
 from hexbytes import HexBytes
 
-from .basetypes import ContractConfig
+from .basetypes import ContractConfig, DeploymentContext
 
 ZERO_ADDRESS = "0x" + "00" * 20
 
@@ -125,10 +125,35 @@ class ERC721Contract(ContractConfig):
 
 @dataclass
 class WarmDelegationContract(ContractConfig):
-    def __init__(self, *, key: str, version: str | None = None, abi_key: str, address: str | None = None):
-        super().__init__(key, None, project.HotWalletMock, version=version, abi_key=abi_key, container_name="HotWalletMock")
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        admin: str | None = None,
+        operator: str | None = None,
+        abi_key: str,
+        address: str | None = None,
+    ):
+        container = WarmDelegationContainer()
+        super().__init__(
+            key,
+            None,
+            container,
+            version=version,
+            abi_key=abi_key,
+            container_name="WarmDelegation",
+            deployment_deps=[],
+            deployment_args=[],
+        )
+        self.admin = admin
+        self.operator = operator
         if address:
             self.load_contract(address)
+
+    def deploy(self, context: DeploymentContext, dryrun: bool = False):
+        super().deploy(context, dryrun)
+        execute(context, self.key, "initialize", self.admin, self.operator, dryrun=dryrun)
 
 
 @dataclass
@@ -254,6 +279,60 @@ class RentingV3Contract(ContractConfig):
 
 
 @dataclass
+class RentingBlastV3Contract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        vault_impl_key: str,
+        payment_token_key: str,
+        nft_contract_key: str,
+        delegation_registry_key: str,
+        max_protocol_fee: int | None = None,
+        protocol_fee: int | None = None,
+        protocol_wallet: str | None = None,
+        protocol_admin: str | None = None,
+        name: str | None = None,
+        symbol: str | None = None,
+        base_url: str | None = None,
+        contract_uri: str | None = None,
+        address: str | None = None,
+    ):
+        super().__init__(
+            key,
+            None,
+            project.RentingBlastV3,
+            version=version,
+            abi_key=abi_key,
+            container_name="RentingBlastV3",
+            deployment_deps=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
+            deployment_args=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+                max_protocol_fee,
+                protocol_fee,
+                protocol_wallet,
+                protocol_admin,
+                name,
+                symbol,
+                base_url,
+                contract_uri,
+            ],
+        )
+        if address:
+            self.load_contract(address)
+
+
+@dataclass
 class RentingERC721V3Contract(ContractConfig):
     def __init__(
         self,
@@ -327,6 +406,23 @@ class StakingContractContainer(ContractContainer):
         super().__init__(contract)
 
 
+class WarmDelegationContainer(ContractContainer):
+    def __init__(self):
+        with open("contracts/auxiliary/HotWallet_abi.json", "r") as f:
+            abi = json.load(f)
+        with open("contracts/auxiliary/HotWallet_deployment.hex", "r") as f:
+            deployment_bytecode = HexBytes(f.read().strip())
+        with open("contracts/auxiliary/HotWallet_runtime.hex", "r") as f:
+            runtime_bytecode = HexBytes(f.read().strip())
+        contract = ContractType(
+            contractName="HotWallet",
+            abi=abi,
+            deploymentBytecode=deployment_bytecode,
+            runtimeBytecode=runtime_bytecode,
+        )
+        super().__init__(contract)
+
+
 contract_map = {
     k.__name__: k
     for k in [
@@ -336,6 +432,7 @@ contract_map = {
         RentingV1Contract,
         RentingV2Contract,
         RentingV3Contract,
+        RentingBlastV3Contract,
         StakingContract,
         VaultImplV1Contract,
         VaultImplV2Contract,
@@ -343,3 +440,17 @@ contract_map = {
         WarmDelegationContract,
     ]
 }
+
+
+def execute(context: DeploymentContext, contract: str, func: str, *args, options=None, dryrun: bool = False):
+    args_repr = [f"{c}" if c in context else str(c) for c in args]
+    print(f"Executing {contract}.{func}({', '.join(args_repr)})")
+    if not dryrun:
+        contract_instance = context.contracts[contract].contract
+        function = getattr(contract_instance, func)
+        args_values = [context[c] if c in context else c for c in args]  # noqa: SIM401
+        args_values = [v.address() if isinstance(v, ContractConfig) else v for v in args_values]
+        try:
+            function(*args_values, **({"sender": context.owner} | context.gas_options() | (options or {})))
+        except Exception as e:
+            print(f"Error executing {contract}.{func} with arguments {args_values}: {e}")

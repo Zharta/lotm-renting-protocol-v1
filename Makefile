@@ -17,11 +17,9 @@ $(VENV):
 
 install: $(VENV) requirements.txt
 	${PIP} install -r requirements.txt
-	${VENV}/bin/ape plugins install --upgrade .
 
 install-dev: $(VENV) requirements-dev.txt
 	${PIP} install -r requirements-dev.txt
-	${VENV}/bin/ape plugins install --upgrade .
 	$(VENV)/bin/pre-commit install
 
 requirements.txt: pyproject.toml
@@ -66,6 +64,9 @@ clean:
 %-int: export ENV=int
 %-prod: export ENV=prod
 
+%-blast-dev %-blast-int %-blast-prod: export ECOSYSTEM=blast
+%-ethereum-dev %-ethereum-int %-ethereum-prod: export ECOSYSTEM=ethereum
+
 add-account:
 	${VENV}/bin/ape accounts import $(alias)
 
@@ -75,17 +76,32 @@ console-local:
 deploy-local:
 	${VENV}/bin/ape run -I deployment --network ethereum:local:ganache
 
-console-dev:
-	${VENV}/bin/ape console --network https://network.dev.zharta.io
+console-blast-dev:
+	${VENV}/bin/ape console --network blast:dev:geth
 
-deploy-dev:
-	${VENV}/bin/ape run -I deployment --network https://network.dev.zharta.io
+console-ethereum-dev:
+	${VENV}/bin/ape console --network https://network.dev.zharta.io --ecosystem ethereum
+
+deploy-blast-dev:
+	${VENV}/bin/ape run -I deployment  --network blast:dev:geth
+
+deploy-ethereum-dev:
+	${VENV}/bin/ape run -I deployment --network https://network.dev.zharta.io --ecosystem ethereum
+
+# deploy-dev:
+# 	${VENV}/bin/ape run -I deployment --network https://network.dev.zharta.io
 
 publish-dev:
 	${VENV}/bin/ape run publish
 
 console-int:
 	${VENV}/bin/ape console --network ethereum:sepolia:alchemy
+
+console-blast-int:
+	${VENV}/bin/ape console --network blast:sepolia:geth
+
+deploy-blast-int:
+	${VENV}/bin/ape run -I deployment --network blast:sepolia:geth
 
 deploy-int:
 	${VENV}/bin/ape run -I deployment --network ethereum:sepolia:alchemy

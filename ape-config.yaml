@@ -4,3 +4,17 @@ plugins:
   - name: alchemy
   - name: foundry
   - name: vyper
+  - name: blast
+
+geth:
+  blast:
+    dev:
+      uri: https://network.dev.zharta.io
+
+networks:
+  custom:
+     - name: dev
+       chain_id: 1337
+       ecosystem: blast
+       base_ecosystem_plugin: blast
+       default_provider: geth

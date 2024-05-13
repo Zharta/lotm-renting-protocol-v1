@@ -6,7 +6,7 @@ import click
 from ape import convert
 from ape.cli import ConnectedProviderCommand, network_option
 
-from ._helpers.deployment import DeploymentManager, Environment
+from ._helpers.deployment import DeploymentManager, Ecosystem, Environment
 
 ENV = Environment[os.environ.get("ENV", "local")]
 
@@ -16,7 +16,7 @@ warnings.filterwarnings("ignore")
 
 
 def gas_cost(context):
-    return {"gas_price": convert("10 gwei", int)}
+    return {"gas_price": convert("10 gwei", int)} if context.ecosystem == Ecosystem.ethereum else {"type": 1}
 
 
 @click.command(cls=ConnectedProviderCommand)
@@ -24,7 +24,7 @@ def gas_cost(context):
 def cli(network):
     print(f"Connected to {network}")
 
-    dm = DeploymentManager(ENV)
+    dm = DeploymentManager(ENV, Ecosystem[network.ecosystem.name])
     dm.context.gas_func = gas_cost
 
     changes = set()

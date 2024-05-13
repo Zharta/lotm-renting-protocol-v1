@@ -8,6 +8,7 @@ from ape.contracts.base import ContractContainer, ContractInstance
 from ape_accounts.accounts import KeyfileAccount
 
 Environment = Enum("Environment", ["local", "dev", "int", "prod"])
+Ecosystem = Enum("Ecosystem", ["ethereum", "blast"])
 
 
 def abi_key(abi: list) -> str:
@@ -20,6 +21,7 @@ def abi_key(abi: list) -> str:
 class DeploymentContext:
     contracts: dict[str, Any]
     env: Environment
+    ecosystem: Ecosystem
     owner: KeyfileAccount
     config: dict[str, Any] = field(default_factory=dict)
     gas_func: Callable | None = None
