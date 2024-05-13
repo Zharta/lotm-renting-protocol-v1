@@ -1,0 +1,88 @@
+{
+    "common": {
+        "fantasy": {
+            "abi_key": "42058f2ef404aedd5b7ab7139c0cb924c5bb1bcd",
+            "address": "0xBE106Bb139314a14a3EA05de8AcbF9A2e59B0227",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
+        "renting_erc721_fantasy_v3": {
+            "abi_key": "4640fc7573ce385f1f87da3d35a7b5f222f79afd",
+            "address": "0x980fe4b067493232a499A358325A3555402BD22f",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://fantasy.dev.zharta.io/token/",
+                "contract_uri": "https://fantasy.dev.zharta.io/metadata",
+                "name": "Fantasy Vaults V3",
+                "symbol": "FANTASYVAULTSV3"
+            },
+            "properties_addresses": {}
+        },
+        "vault_impl_fantasy_ape_v3": {
+            "abi_key": "0617e2b488c722f78089cb4706a806aa52defed7",
+            "address": "0x1426C1E5655540459B80387F593e42316804cF62",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.fantasy",
+                "payment_token_key": "common.weth"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x944A010328b7F3A5611bcCd5ef287AFdF8443880",
+                "nft_contract": "0xBE106Bb139314a14a3EA05de8AcbF9A2e59B0227",
+                "payment_token": "0xdEEd4A11cAe1527824A0DeCf31422663BEF2d840"
+            },
+            "version": "3"
+        },
+        "warm": {
+            "abi_key": "5a7af90789d78376f8f5a99fb957d27d0540509f",
+            "address": "0x944A010328b7F3A5611bcCd5ef287AFdF8443880",
+            "contract": "WarmDelegationContract",
+            "properties": {
+                "admin": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "operator": "0x66aB6D9362d4F35596279692F0251Db635165871"
+            },
+            "properties_addresses": {}
+        },
+        "weth": {
+            "abi_key": "a29fd0590b1b2665c6d6fa1ab3bb730cbd3411c9",
+            "address": "0xdEEd4A11cAe1527824A0DeCf31422663BEF2d840",
+            "contract": "ERC20Contract",
+            "properties": {
+                "decimals": 18,
+                "name": "Wrapped Ether",
+                "supply": 1e+27,
+                "symbol": "WETH"
+            },
+            "properties_addresses": {}
+        }
+    },
+    "renting": {
+        "fantasy_v3": {
+            "abi_key": "d8332043a51f074c41ad2b32e32ab23086beb9c6",
+            "address": "0xBebAFa62aC6022F893265A9a3Dac22c813614Ad7",
+            "contract": "RentingBlastV3Contract",
+            "properties": {
+                "base_url": "https://fantasy.dev.zharta.io/token/",
+                "contract_uri": "https://fantasy.dev.zharta.io/metadata",
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "name": "Fantasy Vaults V3",
+                "nft_contract_key": "common.fantasy",
+                "payment_token_key": "common.weth",
+                "protocol_admin": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "symbol": "FANTASYVAULTSV3",
+                "vault_impl_key": "common.vault_impl_fantasy_ape_v3"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x944A010328b7F3A5611bcCd5ef287AFdF8443880",
+                "nft_contract": "0xBE106Bb139314a14a3EA05de8AcbF9A2e59B0227",
+                "payment_token": "0xdEEd4A11cAe1527824A0DeCf31422663BEF2d840",
+                "vault_impl": "0x1426C1E5655540459B80387F593e42316804cF62"
+            },
+            "version": "3"
+        }
+    }
+}

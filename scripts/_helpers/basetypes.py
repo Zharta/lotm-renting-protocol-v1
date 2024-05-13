@@ -8,6 +8,7 @@ from ape.contracts.base import ContractContainer, ContractInstance
 from ape_accounts.accounts import KeyfileAccount
 
 Environment = Enum("Environment", ["local", "dev", "int", "prod"])
+Ecosystem = Enum("Ecosystem", ["ethereum", "blast"])
 
 
 def abi_key(abi: list) -> str:
