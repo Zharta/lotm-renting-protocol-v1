@@ -26,6 +26,11 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
+        "hvmtl": {
+            "address": "0x6675D14b8649E0Ed8E16A2462Bed29c520D340F5",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
         "koda": {
             "address": "0x4Dc251DC5d8dBc96305bD4B73C3f8Cfe485BBceF",
             "contract": "ERC721Contract",
@@ -67,6 +72,18 @@
                 "contract_uri": "https://mutanthound.int.zharta.io/metadata",
                 "name": "Mutant Hound Vaults V3",
                 "symbol": "MUTANTHOUNDVAULTSV3"
+            },
+            "properties_addresses": {}
+        },
+        "renting_erc721_hvmtl_v3": {
+            "abi_key": "4640fc7573ce385f1f87da3d35a7b5f222f79afd",
+            "address": "0xc22b7d3e9a3918edEF75E3A3fC554e6F6d716033",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://hvmtl.int.zharta.io/token/",
+                "contract_uri": "https://hvmtl.int.zharta.io/metadata",
+                "name": "HV-MTL Vaults V3",
+                "symbol": "HVMTLVAULTSV3"
             },
             "properties_addresses": {}
         },
@@ -153,6 +170,22 @@
             "properties_addresses": {
                 "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
                 "nft_contract": "0xe591C8e71B8f3e2e7DF5764f389F7F71535bc143",
+                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
+            },
+            "version": "3"
+        },
+        "vault_impl_hvmtl_ape_v3": {
+            "abi_key": "0617e2b488c722f78089cb4706a806aa52defed7",
+            "address": "0x82E9c09ded2De94B24C612F277092fA85d5046F6",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.hvmtl",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
+                "nft_contract": "0x6675D14b8649E0Ed8E16A2462Bed29c520D340F5",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
             },
             "version": "3"
@@ -371,6 +404,31 @@
             },
             "version": "3"
         },
+        "hvmtl_v3": {
+            "abi_key": "3efc173824d7c9f3b766e51386911e2b2ea2e7b3",
+            "address": "0x3909F7EA942687232A69A0B462468C19162c1f48",
+            "contract": "RentingV3Contract",
+            "metadata_domain": "https://hvmtl.int.zharta.io",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.hvmtl",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "renting_erc721_contract_key": "common.renting_erc721_hvmtl_v3",
+                "vault_impl_key": "common.vault_impl_hvmtl_ape_v3"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
+                "nft_contract": "0x6675D14b8649E0Ed8E16A2462Bed29c520D340F5",
+                "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39",
+                "renting_erc721_contract": "0xc22b7d3e9a3918edEF75E3A3fC554e6F6d716033",
+                "vault_impl": "0x82E9c09ded2De94B24C612F277092fA85d5046F6"
+            },
+            "version": "3"
+        },
         "koda": {
             "abi_key": "c7fd38757151ab66d38600ac7addcd15f157b3bc",
             "address": "0xE44Bf31cD8EFdD9ec67046EE3a5D398207E49632",
@@ -414,6 +472,7 @@
         "koda_v3": {
             "address": "0x5f5faF8284c54d56B85DaD9905A57FF645989f9b",
             "contract": "RentingV3Contract",
+            "metadata_domain": "https://koda.int.zharta.io",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,
@@ -432,13 +491,13 @@
                 "renting_erc721_contract": "0x8521fAbbc0c7f7885AbA53F778bF32602Bc2758b",
                 "vault_impl": "0x47cA49DCb1Fe130445064Af3caD6aa5485F271cB"
             },
-            "metadata_domain": "https://koda.int.zharta.io",
             "version": "3"
         },
         "kodamara_v3": {
             "abi_key": "3efc173824d7c9f3b766e51386911e2b2ea2e7b3",
             "address": "0x08EC9b9cbed7a5d4ffd22c32a6ED5ADb79c7881A",
             "contract": "RentingV3Contract",
+            "metadata_domain": "https://kodamara.int.zharta.io",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,
@@ -457,7 +516,6 @@
                 "renting_erc721_contract": "0x09169e2573A671664FC2eb94cF88D0863e7Ba89f",
                 "vault_impl": "0xB41B81c388D1C5ebE9a7fC5508E58BCAa8225279"
             },
-            "metadata_domain": "https://kodamara.int.zharta.io",
             "version": "3"
         },
         "mara": {
@@ -504,6 +562,7 @@
             "abi_key": "90fb48c72639e2af910e583799a7d7d43ebdc37a",
             "address": "0xb7bD1a0666428D5Dc519173052daf9e76C73486d",
             "contract": "RentingV3Contract",
+            "metadata_domain": "https://mara.int.zharta.io",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,
@@ -522,7 +581,6 @@
                 "renting_erc721_contract": "0xeDee6c2577Cc1D66e830E6cfafE643B7BC2eCd49",
                 "vault_impl": "0xd8B3ab8135280B9F80223a0DC26Fa15e04BDe77b"
             },
-            "metadata_domain": "https://mara.int.zharta.io",
             "version": "3"
         },
         "mayc_v3": {
@@ -576,6 +634,7 @@
         "otherdeed_v3": {
             "address": "0xaDe57267977B4B6CAb2DC6d9D12BcbE723cDaf0b",
             "contract": "RentingV3Contract",
+            "metadata_domain": "https://otherdeed.int.zharta.io",
             "properties": {
                 "delegation_registry_key": "common.warm",
                 "max_protocol_fee": 2500,
@@ -594,7 +653,6 @@
                 "renting_erc721_contract": "0x6303d6cA247180860a450003fc2f8eBCb1933E07",
                 "vault_impl": "0xE23567B74d269cA8ACe8Ca1842d235563d0C4897"
             },
-            "metadata_domain": "https://otherdeed.int.zharta.io",
             "version": "3"
         }
     }
