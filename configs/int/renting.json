@@ -47,15 +47,30 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
+        "meebits": {
+            "address": "0x9e155dD6e197F43DF0B5B933D741a89a6882888E",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
         "otherdeed": {
             "address": "0xFe396dee00E7cfd8659Ea68e3B0910E1363e09e0",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
+        "thegrailed": {
+            "address": "",
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
         "renting_erc721_bayc_v3": {
             "address": "0x7432d28C09d2b706bf558e4e5d44984AC54a6Ff4",
             "contract": "RentingERC721V3Contract",
-            "properties": {},
+            "properties": {
+                "base_url": "https://bayc.int.zharta.io/token/",
+                "contract_uri": "https://bayc.int.zharta.io/metadata",
+                "name": "BAYC Vaults V3",
+                "symbol": "BAYCVAULTSV3"
+            },
             "properties_addresses": {}
         },
         "renting_erc721_hound_v3": {
@@ -99,12 +114,41 @@
             "address": "0x1Aa30eBC578f427B9E2FBa38cAF2c3D280411383",
             "contract": "RentingERC721V3Contract",
             "properties": {},
+            "properties_addresses": {
+                "base_url": "https://mayc.int.zharta.io/token/",
+                "contract_uri": "https://mayc.int.zharta.io/metadata",
+                "name": "MAYC Vaults V3",
+                "symbol": "MAYCVAULTSV3"
+            }
+        },
+        "renting_erc721_meebits_v3": {
+            "abi_key": "",
+            "address": "",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://meebits.zharta.io/token/",
+                "contract_uri": "https://meebits.zharta.io/metadata",
+                "name": "Meebits Vaults V3",
+                "symbol": "MEEBITSVAULTSV3"
+            },
             "properties_addresses": {}
         },
         "renting_erc721_otherdeed_v3": {
             "address": "0x6303d6cA247180860a450003fc2f8eBCb1933E07",
             "contract": "RentingERC721V3Contract",
             "properties": {},
+            "properties_addresses": {}
+        },
+        "renting_erc721_thegrailed_v3": {
+            "abi_key": "",
+            "address": "",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://thegrailed.zharta.io/token/",
+                "contract_uri": "https://thegrailed.zharta.io/metadata",
+                "name": "The Grailed Vaults V3",
+                "symbol": "THEGRAILEDVAULTSV3"
+            },
             "properties_addresses": {}
         },
         "staking": {
@@ -283,6 +327,22 @@
             },
             "version": "3"
         },
+        "vault_impl_meebits_ape_v3": {
+            "abi_key": "",
+            "address": "",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.meebits",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "",
+                "nft_contract": "",
+                "payment_token": ""
+            },
+            "version": "3"
+        },
         "vault_impl_otherdeed_ape_v2": {
             "abi_key": "927b10e8028c8d2995a80cdcfd119dafe497f3b3",
             "address": "0x3df34a0892867d26eC06fFB48D3dD9085ae5cC4f",
@@ -311,6 +371,22 @@
                 "delegation_registry": "0x050e78c41339DDCa7e5a25c554c6f2C3dbB95dC4",
                 "nft_contract": "0xFe396dee00E7cfd8659Ea68e3B0910E1363e09e0",
                 "payment_token": "0x66F549233CF1083182b29658260Aa3A7e13c6c39"
+            },
+            "version": "3"
+        },
+        "vault_impl_thegrailed_ape_v3": {
+            "abi_key": "",
+            "address": "",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.thegrailed",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "",
+                "nft_contract": "",
+                "payment_token": ""
             },
             "version": "3"
         },
@@ -551,6 +627,32 @@
             },
             "version": "3"
         },
+        "meebits_v3": {
+            "abi_key": "",
+            "address": "",
+            "contract": "RentingV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.meebits",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "renting_erc721_contract_key": "common.renting_erc721_meebits_v3",
+                "staking_contract_key": "common.staking",
+                "vault_impl_key": "common.vault_impl_meebits_ape_v3"
+            },
+            "properties_addresses": {
+                "delegation_registry": "",
+                "nft_contract": "",
+                "payment_token": "",
+                "renting_erc721_contract": "",
+                "staking_contract": "",
+                "vault_impl": ""
+            },
+            "version": "3"
+        },
         "otherdeed_v2": {
             "abi_key": "ce8a6c330579dd917c048193cd6e72ac71f17d93",
             "address": "0x4AE6B0ab2F1C3F7AdED1a9206c46c6982b80c62f",
@@ -595,6 +697,32 @@
                 "vault_impl": "0xE23567B74d269cA8ACe8Ca1842d235563d0C4897"
             },
             "metadata_domain": "https://otherdeed.int.zharta.io",
+            "version": "3"
+        },
+        "thegrailed_v3": {
+            "abi_key": "",
+            "address": "",
+            "contract": "RentingV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.thegrailed",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x313e7bF4D508087295f092Bb9fadcE3b7b4dc89e",
+                "renting_erc721_contract_key": "common.renting_erc721_thegrailed_v3",
+                "staking_contract_key": "common.staking",
+                "vault_impl_key": "common.vault_impl_thegrailed_ape_v3"
+            },
+            "properties_addresses": {
+                "delegation_registry": "",
+                "nft_contract": "",
+                "payment_token": "",
+                "renting_erc721_contract": "",
+                "staking_contract": "",
+                "vault_impl": ""
+            },
             "version": "3"
         }
     }
