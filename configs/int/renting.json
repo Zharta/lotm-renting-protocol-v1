@@ -58,7 +58,7 @@
             "properties_addresses": {}
         },
         "thegrailed": {
-            "address": "",
+            "address": "0x93537D86Ea4FF9070dC21e7F7EB4e9A7828c9c5e",
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
