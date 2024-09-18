@@ -427,7 +427,7 @@ sqlalchemy==2.0.29
     # via eth-ape
 stack-data==0.6.3
     # via ipython
-titanoboa[forking-recommended] @ git+https://github.com/vyperlang/titanoboa
+titanoboa==0.1.10b1
     # via lotm-renting-protocol-v1 (pyproject.toml)
 toolz==0.12.1
     # via cytoolz
@@ -459,7 +459,6 @@ ujson==5.9.0
     # via
     #   python-lsp-jsonrpc
     #   python-lsp-server
-    #   titanoboa
 urllib3==2.2.1
     # via
     #   botocore
