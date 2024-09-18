@@ -30,6 +30,12 @@
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
+        "hvmtl": {
+            "abi_key": "7b39a41e358ea2dc7ec1d38dc11d7d9a2881a2f4",
+            "address": "0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6",
+            "contract": "ERC721Contract",
+            "properties_addresses": {}
+        },
         "koda": {
             "abi_key": "7b39a41e358ea2dc7ec1d38dc11d7d9a2881a2f4",
             "address": "0x5AC5049868B8Df4BE3d29dF98a3554dDe9e25d7A",
@@ -93,6 +99,18 @@
                 "contract_uri": "https://mutanthound.dev.zharta.io/metadata",
                 "name": "Mutant Hound Vaults V3",
                 "symbol": "MUTANTHOUNDVAULTSV3"
+            },
+            "properties_addresses": {}
+        },
+        "renting_erc721_hvmtl_v3": {
+            "abi_key": "4640fc7573ce385f1f87da3d35a7b5f222f79afd",
+            "address": "0x01093aDa728165FCdb5BEd4B5713Cc55D7F864A8",
+            "contract": "RentingERC721V3Contract",
+            "properties": {
+                "base_url": "https://hvmtl.dev.zharta.io/token/",
+                "contract_uri": "https://hvmtl.dev.zharta.io/metadata",
+                "name": "HV-MTL Vaults V3",
+                "symbol": "HVMTLVAULTSV3"
             },
             "properties_addresses": {}
         },
@@ -243,6 +261,22 @@
                 "delegation_registry": "0xe0f7fBB316Fd479774539140B1E692D9D6a675b6",
                 "nft_contract": "0xc77404F65D99ebB902dD10f1902B2F9672054610",
                 "payment_token": "0xB6d16b909Df0E1455dA3E019577bB0C4685a1616"
+            },
+            "version": "3"
+        },
+        "vault_impl_hvmtl_ape_v3": {
+            "abi_key": "0617e2b488c722f78089cb4706a806aa52defed7",
+            "address": "0xB4B5cf78BdE264224ed2a2dee030B0B85D0D5a66",
+            "contract": "VaultImplV3Contract",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "nft_contract_key": "common.hvmtl",
+                "payment_token_key": "common.ape_token"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x2232993b20752f23f3433b24b894645B712Ae04c",
+                "nft_contract": "0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6",
+                "payment_token": "0x290Ee41f4d6DF1029F72B240bdBa846A82ad46bD"
             },
             "version": "3"
         },
@@ -511,6 +545,31 @@
                 "payment_token": "0xB6d16b909Df0E1455dA3E019577bB0C4685a1616",
                 "renting_erc721_contract": "0x49eE8E2Eaf86cA82Bc64228Cc3c0C5ecD1Ff288F",
                 "vault_impl": "0xF1e3fdC64B1F1C005f6b808D4c1A8Dd68CEa143e"
+            },
+            "version": "3"
+        },
+        "hvmtl_v3": {
+            "abi_key": "3efc173824d7c9f3b766e51386911e2b2ea2e7b3",
+            "address": "0xc95C62094DB2B4C9e0b35b4aE713cE19a78E9aF2",
+            "contract": "RentingV3Contract",
+            "metadata_domain": "https://hvmtl.dev.zharta.io",
+            "properties": {
+                "delegation_registry_key": "common.warm",
+                "max_protocol_fee": 2500,
+                "nft_contract_key": "common.hvmtl",
+                "payment_token_key": "common.ape_token",
+                "protocol_admin": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "protocol_fee": 500,
+                "protocol_wallet": "0x66aB6D9362d4F35596279692F0251Db635165871",
+                "renting_erc721_contract_key": "common.renting_erc721_hvmtl_v3",
+                "vault_impl_key": "common.vault_impl_hvmtl_ape_v3"
+            },
+            "properties_addresses": {
+                "delegation_registry": "0x2232993b20752f23f3433b24b894645B712Ae04c",
+                "nft_contract": "0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6",
+                "payment_token": "0x290Ee41f4d6DF1029F72B240bdBa846A82ad46bD",
+                "renting_erc721_contract": "0x01093aDa728165FCdb5BEd4B5713Cc55D7F864A8",
+                "vault_impl": "0xB4B5cf78BdE264224ed2a2dee030B0B85D0D5a66"
             },
             "version": "3"
         },
