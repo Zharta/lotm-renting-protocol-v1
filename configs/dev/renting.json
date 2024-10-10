@@ -32,7 +32,7 @@
         },
         "hvmtl": {
             "abi_key": "7b39a41e358ea2dc7ec1d38dc11d7d9a2881a2f4",
-            "address": "0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6",
+            "address": "0x70B2047AEe02222FdC03CC7146626FC3E3C595c8",
             "contract": "ERC721Contract",
             "properties_addresses": {}
         },
@@ -98,7 +98,7 @@
         },
         "renting_erc721_hvmtl_v3": {
             "abi_key": "4640fc7573ce385f1f87da3d35a7b5f222f79afd",
-            "address": "0x01093aDa728165FCdb5BEd4B5713Cc55D7F864A8",
+            "address": "0x8F1B5ed568bD42d369De5ff27439c29c7844B245",
             "contract": "RentingERC721V3Contract",
             "properties": {
                 "base_url": "https://hvmtl.dev.zharta.io/token/",
@@ -266,7 +266,7 @@
         },
         "vault_impl_hvmtl_ape_v3": {
             "abi_key": "0617e2b488c722f78089cb4706a806aa52defed7",
-            "address": "0xB4B5cf78BdE264224ed2a2dee030B0B85D0D5a66",
+            "address": "0xaD29b4EED74feeB9b08362873F45A4015ca4d943",
             "contract": "VaultImplV3Contract",
             "properties": {
                 "delegation_registry_key": "common.warm",
@@ -275,7 +275,7 @@
             },
             "properties_addresses": {
                 "delegation_registry": "0xe0f7fBB316Fd479774539140B1E692D9D6a675b6",
-                "nft_contract": "0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6",
+                "nft_contract": "0x70B2047AEe02222FdC03CC7146626FC3E3C595c8",
                 "payment_token": "0xB6d16b909Df0E1455dA3E019577bB0C4685a1616"
             },
             "version": "3"
@@ -550,7 +550,7 @@
         },
         "hvmtl_v3": {
             "abi_key": "3efc173824d7c9f3b766e51386911e2b2ea2e7b3",
-            "address": "0xc95C62094DB2B4C9e0b35b4aE713cE19a78E9aF2",
+            "address": "0x1a96DFa5Db50F625F3C9191aa019c8cd8478A050",
             "contract": "RentingV3Contract",
             "metadata_domain": "https://hvmtl.dev.zharta.io",
             "properties": {
@@ -566,10 +566,10 @@
             },
             "properties_addresses": {
                 "delegation_registry": "0xe0f7fBB316Fd479774539140B1E692D9D6a675b6",
-                "nft_contract": "0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6",
+                "nft_contract": "0x70B2047AEe02222FdC03CC7146626FC3E3C595c8",
                 "payment_token": "0xB6d16b909Df0E1455dA3E019577bB0C4685a1616",
-                "renting_erc721_contract": "0x01093aDa728165FCdb5BEd4B5713Cc55D7F864A8",
-                "vault_impl": "0xB4B5cf78BdE264224ed2a2dee030B0B85D0D5a66"
+                "renting_erc721_contract": "0x8F1B5ed568bD42d369De5ff27439c29c7844B245",
+                "vault_impl": "0xaD29b4EED74feeB9b08362873F45A4015ca4d943"
             },
             "version": "3"
         },
