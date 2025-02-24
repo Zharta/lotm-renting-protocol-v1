@@ -2,7 +2,6 @@
 
 VENV?=./.venv
 PYTHON=${VENV}/bin/python3
-PIP=${VENV}/bin/pip
 
 CONTRACTS := $(shell find contracts -depth 1 -name '*.vy')
 NATSPEC := $(patsubst contracts/%, natspec/%, $(CONTRACTS:%.vy=%.json))
@@ -11,24 +10,21 @@ PATH := ${VENV}/bin:${PATH}
 vpath %.vy ./contracts
 
 $(VENV):
-	python3 -m venv $(VENV)
-	${PIP} install -U pip
-	${PIP} install pip-tools wheel
+	if ! command -v uv > /dev/null; then python -m pip install -U uv; fi
+	uv venv $(VENV)
 
-install: $(VENV) requirements.txt
-	${PIP} install -r requirements.txt
-	${VENV}/bin/ape plugins install --upgrade .
+install: ${VENV} requirements.txt
+	uv pip sync requirements.txt
 
 install-dev: $(VENV) requirements-dev.txt
-	${PIP} install -r requirements-dev.txt
-	${VENV}/bin/ape plugins install --upgrade .
+	uv pip sync requirements-dev.txt
 	$(VENV)/bin/pre-commit install
 
 requirements.txt: pyproject.toml
-	$(VENV)/bin/pip-compile -o requirements.txt pyproject.toml
+	uv pip compile -o requirements.txt pyproject.toml
 
 requirements-dev.txt: pyproject.toml
-	$(VENV)/bin/pip-compile -o requirements-dev.txt --extra dev pyproject.toml
+	uv pip compile -o requirements-dev.txt --extra dev pyproject.toml
 
 unit-tests: ${VENV}
 	${VENV}/bin/pytest tests/unit --durations=20 -n auto
@@ -47,7 +43,8 @@ gas:
 	${VENV}/bin/pytest tests/integration --durations=0 --gas-profile
 
 compile:
-	${VENV}/bin/ape compile -f
+	rm -rf .build/*
+	${VENV}/bin/ape compile
 
 interfaces:
 	${VENV}/bin/python scripts/build_interfaces.py contracts/*.vy
@@ -60,44 +57,40 @@ natspec/%.json: %.vy
 clean:
 	rm -rf ${VENV} .cache
 
+lint:
+	$(VENV)/bin/ruff check --select I --fix .
+	$(VENV)/bin/ruff format .
+
 
 %-local: export ENV=local
-%-dev: export ENV=dev
-%-int: export ENV=int
-%-prod: export ENV=prod
+%-zethereum %-zapechain: export ENV=dev
+%-sepolia %-curtis: export ENV=int
+%-ethereum %-apechain: export ENV=prod
+
+%-local: export CHAIN=foundry
+%-zethereum: export CHAIN=zethereum
+%-zapechain: export CHAIN=zapechain
+%-sepolia: export CHAIN=sepolia
+%-curtis: export CHAIN=curtis
+%-ethereum: export CHAIN=mainnet
+%-apechain: export CHAIN=apechain
+
+%-local: export NETWORK=ethereum:local:foundry
+%-zethereum: export NETWORK=ethereum:local:https://network.dev.zharta.io/dev1/
+%-zapechain: export NETWORK=ethereum:local:https://network.dev.zharta.io/dev2/
+%-sepolia: export NETWORK=ethereum:sepolia:alchemy
+%-curtis: export NETWORK=apechain:curtis:alchemy
+%-ethereum: export NETWORK=ethereum:mainnet:alchemy
+%-apechain: export NETWORK=apechain:apechain:alchemy
 
 add-account:
 	${VENV}/bin/ape accounts import $(alias)
 
-console-local:
-	${VENV}/bin/ape console --network ethereum:local:ganache
+console-local console-zethereum console-zapechain console-sepolia console-curtis console-ethereum console-apechain:
+	${VENV}/bin/ape console --network ${NETWORK}
 
-deploy-local:
-	${VENV}/bin/ape run -I deployment --network ethereum:local:ganache
+deploy-local deploy-zethereum deploy-zapechain deploy-sepolia deploy-curtis deploy-ethereum deploy-apechain:
+	${VENV}/bin/ape run -I deployment --network ${NETWORK}
 
-console-dev:
-	${VENV}/bin/ape console --network https://network.dev.zharta.io
-
-deploy-dev:
-	${VENV}/bin/ape run -I deployment --network https://network.dev.zharta.io
-
-publish-dev:
-	${VENV}/bin/ape run publish
-
-console-int:
-	${VENV}/bin/ape console --network ethereum:sepolia:alchemy
-
-deploy-int:
-	${VENV}/bin/ape run -I deployment --network ethereum:sepolia:alchemy
-
-publish-int:
-	${VENV}/bin/ape run publish
-
-console-prod:
-	${VENV}/bin/ape console --network ethereum:mainnet:alchemy
-
-deploy-prod:
-	${VENV}/bin/ape run -I deployment --network ethereum:mainnet:alchemy
-
-publish-prod:
+publish-zethereum publish-zapechain publish-sepolia publish-curtis publish-ethereum publish-apechain:
 	${VENV}/bin/ape run publish

@@ -16,6 +16,7 @@ warnings.filterwarnings("ignore")
 
 
 ENV = Environment[os.environ.get("ENV", "local")]
+CHAIN = os.environ.get("CHAIN", "nochain")
 DYNAMODB = boto3.resource("dynamodb")
 RENTING = DYNAMODB.Table(f"renting-configs-{ENV.name}")
 ABI = DYNAMODB.Table(f"abis-{ENV.name}")
@@ -28,8 +29,8 @@ def abi_key(abi: list) -> str:
     return hash.hexdigest()
 
 
-def get_abi_map(context, env: Environment) -> dict:
-    config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
+def get_abi_map(context, env: Environment, chain: str) -> dict:
+    config_file = f"{Path.cwd()}/configs/{env.name}/{chain}/renting.json"
     with open(config_file, "r") as f:
         config = json.load(f)
 
@@ -42,8 +43,8 @@ def get_abi_map(context, env: Environment) -> dict:
     return contracts
 
 
-def get_renting_configs(context, env: Environment) -> dict:
-    config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
+def get_renting_configs(context, env: Environment, chain: str) -> dict:
+    config_file = f"{Path.cwd()}/configs/{env.name}/{chain}/renting.json"
     with open(config_file, "r") as f:
         config = json.load(f)
 
@@ -62,27 +63,35 @@ def update_renting_config(renting_key: str, renting: dict):
     update_expr = ", ".join(f"{k}=:v{i}" for i, (k, v) in indexed_attrs if k not in KEY_ATTRIBUTES)
     values = {f":v{i}": v for i, (k, v) in indexed_attrs if k not in KEY_ATTRIBUTES}
     RENTING.update_item(
-        Key={"renting_key": renting_key}, UpdateExpression=f"SET {update_expr}", ExpressionAttributeValues=values
+        Key={"renting_key": renting_key},
+        UpdateExpression=f"SET {update_expr}",
+        ExpressionAttributeValues=values,
     )
 
 
 def update_abi(abi_key: str, abi: list[dict]):
-    ABI.update_item(Key={"abi_key": abi_key}, UpdateExpression="SET abi=:v", ExpressionAttributeValues={":v": abi})
+    ABI.update_item(
+        Key={"abi_key": abi_key},
+        UpdateExpression="SET abi=:v",
+        ExpressionAttributeValues={":v": abi},
+    )
 
 
 @click.command()
 def cli():
-    dm = DeploymentManager(ENV)
+    dm = DeploymentManager(ENV, CHAIN)
 
-    print(f"Updating renting configs in {ENV.name}")
+    print(f"Updating renting configs in {ENV.name} for {CHAIN}")
 
-    abis = get_abi_map(dm.context, dm.env)
+    abis = get_abi_map(dm.context, dm.env, dm.chain)
     for contract_key, config in abis.items():
         abi_key = config["abi_key"]
         print(f"adding abi {contract_key=} {abi_key=}")
         update_abi(abi_key, config["abi"])
 
-    renting_configs = get_renting_configs(dm.context, dm.env)
+    renting_configs = get_renting_configs(dm.context, dm.env, dm.chain)
+    for data in renting_configs.values():
+        data["chain"] = CHAIN
 
     for k, v in renting_configs.items():
         properties_abis = {}
@@ -95,4 +104,4 @@ def cli():
         print(f"updating renting config {k} {abi_key=}")
         update_renting_config(k, v)
 
-    print(f"Renting configs updated in {ENV.name}")
+    print(f"Renting configs updated in {ENV.name} for {CHAIN}")

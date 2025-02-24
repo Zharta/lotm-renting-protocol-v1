@@ -5,6 +5,7 @@ import web3
 from scripts.deployment import DeploymentManager, Environment
 
 ENV = Environment[os.environ.get("ENV", "local")]
+CHAIN = os.environ.get("CHAIN", "nochain")
 
 
 def inject_poa(w3):
@@ -13,7 +14,7 @@ def inject_poa(w3):
 
 
 def ape_init_extras(network):
-    dm = DeploymentManager(ENV)
+    dm = DeploymentManager(ENV, CHAIN)
 
     return {
         "dm": dm,
