@@ -9,6 +9,7 @@ from ape.cli import ConnectedProviderCommand, network_option
 from ._helpers.deployment import DeploymentManager, Environment
 
 ENV = Environment[os.environ.get("ENV", "local")]
+CHAIN = os.environ.get("CHAIN", "nochain")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -24,7 +25,7 @@ def gas_cost(context):
 def cli(network):
     print(f"Connected to {network}")
 
-    dm = DeploymentManager(ENV)
+    dm = DeploymentManager(ENV, CHAIN)
     dm.context.gas_func = gas_cost
 
     changes = set()

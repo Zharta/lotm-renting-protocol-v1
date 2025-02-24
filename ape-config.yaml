@@ -2,5 +2,7 @@ name: lotm-renting-protocol
 
 plugins:
   - name: alchemy
+  - name: arbitrum
+  - name: base
   - name: foundry
   - name: vyper

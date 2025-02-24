@@ -5,14 +5,18 @@ classifiers = ["Private :: Do Not Upload"]
 version = "0"
 dependencies = [
     "eth-ape",
-    "vyper==0.3.10",
+    "vyper==0.4.0",
+    "ape-vyper",
+    "ape-foundry",
+    "ape-alchemy",
+    "ape-arbitrum",
+    "ape-base",
 ]
 
 
 [project.optional-dependencies]
 dev = [
     "titanoboa==0.1.10b1",
-    "black",
     "boto3",
     "click",
     "coverage",
@@ -22,8 +26,10 @@ dev = [
     "pre-commit",
     "pytest",
     "pytest-xdist",
-    "python-lsp-server[flake8]",
+    "python-lsp-server",
+    "rich",
     "rope",
+    "ruff",
 ]
 
 [build-system]
@@ -41,10 +47,31 @@ addopts = """
     --durations=10
 """
 
-
-[tool.isort]
-profile = "black"
-
-[tool.black]
+[tool.ruff]
+lint.select = ["ALL"]
+lint.ignore = ["ANN", "B905", "BLE", "COM812", "CPY", "D", "DTZ", "EM", "FIX", "ISC001", "PLR0913", "PLR2004", "S", "TCH", "TD", "TRY003"]
 line-length = 127
-target-version = ['py311']
+lint.preview = true
+target-version = "py311"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*.py" = [
+    "ARG001",
+    "F401",
+    "FBT003",
+    "N815",
+    "PLC1901",
+    "PLR0917",
+    "PT004",
+    "PT022",
+    "PTH",
+    "RUF029",
+    "SLF001",
+    "T201",
+    "TID252",
+]
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false

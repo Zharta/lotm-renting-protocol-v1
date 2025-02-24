@@ -2,7 +2,8 @@ import json
 from dataclasses import dataclass
 
 from ape import project
-from ape.contracts.base import ContractContainer, ContractType
+from ape.contracts.base import ContractContainer
+from ethpm_types.contract_type import ContractType
 from hexbytes import HexBytes
 
 from .basetypes import ContractConfig
@@ -54,8 +55,16 @@ class VaultImplV2Contract(ContractConfig):
             version=version,
             abi_key=abi_key,
             container_name="VaultV2",
-            deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key],
-            deployment_args=[payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_deps=[
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
+            deployment_args=[
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
         )
         if address:
             self.load_contract(address)
@@ -81,8 +90,16 @@ class VaultImplV3Contract(ContractConfig):
             version=version,
             abi_key=abi_key,
             container_name="VaultV3",
-            deployment_deps=[payment_token_key, nft_contract_key, delegation_registry_key],
-            deployment_args=[payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_deps=[
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
+            deployment_args=[
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
         )
         if address:
             self.load_contract(address)
@@ -117,16 +134,44 @@ class ERC20Contract(ContractConfig):
 
 @dataclass
 class ERC721Contract(ContractConfig):
-    def __init__(self, *, key: str, version: str | None = None, abi_key: str, address: str | None = None):
-        super().__init__(key, None, project.ERC721, version=version, abi_key=abi_key, container_name="ERC721")
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        address: str | None = None,
+    ):
+        super().__init__(
+            key,
+            None,
+            project.ERC721,
+            version=version,
+            abi_key=abi_key,
+            container_name="ERC721",
+        )
         if address:
             self.load_contract(address)
 
 
 @dataclass
 class WarmDelegationContract(ContractConfig):
-    def __init__(self, *, key: str, version: str | None = None, abi_key: str, address: str | None = None):
-        super().__init__(key, None, project.HotWalletMock, version=version, abi_key=abi_key, container_name="HotWalletMock")
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        address: str | None = None,
+    ):
+        super().__init__(
+            key,
+            None,
+            project.HotWalletMock,
+            version=version,
+            abi_key=abi_key,
+            container_name="HotWalletMock",
+        )
         if address:
             self.load_contract(address)
 
@@ -152,8 +197,18 @@ class RentingV1Contract(ContractConfig):
             version=version,
             abi_key=abi_key,
             container_name="RentingV1",
-            deployment_deps=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
-            deployment_args=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_deps=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
+            deployment_args=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
         )
         if address:
             self.load_contract(address)
@@ -184,7 +239,12 @@ class RentingV2Contract(ContractConfig):
             version=version,
             abi_key=abi_key,
             container_name="RentingV2",
-            deployment_deps=[vault_impl_key, payment_token_key, nft_contract_key, delegation_registry_key],
+            deployment_deps=[
+                vault_impl_key,
+                payment_token_key,
+                nft_contract_key,
+                delegation_registry_key,
+            ],
             deployment_args=[
                 vault_impl_key,
                 payment_token_key,
@@ -303,8 +363,18 @@ class StakingContract(ContractConfig):
             version=version,
             abi_key=abi_key,
             container_name="Staking",
-            deployment_deps=[apecoin_contract_key, bayc_contract_key, mayc_contract_key, bakc_contract_key],
-            deployment_args=[apecoin_contract_key, bayc_contract_key, mayc_contract_key, bakc_contract_key],
+            deployment_deps=[
+                apecoin_contract_key,
+                bayc_contract_key,
+                mayc_contract_key,
+                bakc_contract_key,
+            ],
+            deployment_args=[
+                apecoin_contract_key,
+                bayc_contract_key,
+                mayc_contract_key,
+                bakc_contract_key,
+            ],
         )
         if address:
             self.load_contract(address)

@@ -18,13 +18,16 @@ logger.setLevel(logging.WARNING)
 warnings.filterwarnings("ignore")
 
 
-def load_contracts(env: Environment) -> list[ContractConfig]:
-    config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
+def load_contracts(env: Environment, chain: str) -> list[ContractConfig]:
+    config_file = f"{Path.cwd()}/configs/{env.name}/{chain}/renting.json"
     with open(config_file, "r") as f:
         config = json.load(f)
     contracts = [
         contract_map[c["contract"]](
-            key=f"{scope}.{name}", address=c.get("address"), abi_key=c.get("abi_key"), **c.get("properties", {})
+            key=f"{scope}.{name}",
+            address=c.get("address"),
+            abi_key=c.get("abi_key"),
+            **c.get("properties", {}),
         )
         for scope in ["common", "renting"]
         for name, c in config[scope].items()
@@ -38,8 +41,8 @@ def load_contracts(env: Environment) -> list[ContractConfig]:
     return contracts
 
 
-def store_contracts(env: Environment, contracts: list[ContractConfig]):
-    config_file = f"{Path.cwd()}/configs/{env.name}/renting.json"
+def store_contracts(env: Environment, chain: str, contracts: list[ContractConfig]):
+    config_file = f"{Path.cwd()}/configs/{env.name}/{chain}/renting.json"
     with open(config_file, "r") as f:
         config = json.load(f)
 
@@ -65,8 +68,9 @@ def store_contracts(env: Environment, contracts: list[ContractConfig]):
 
 
 class DeploymentManager:
-    def __init__(self, env: Environment):
+    def __init__(self, env: Environment, chain: str):
         self.env = env
+        self.chain = chain
         match env:
             case Environment.local:
                 self.owner = accounts[0]
@@ -77,10 +81,10 @@ class DeploymentManager:
             case Environment.prod:
                 self.owner = accounts.load("prodacc")
 
-        self.context = DeploymentContext(self._get_contracts(), self.env, self.owner, self._get_configs())
+        self.context = DeploymentContext(self._get_contracts(), self.env, self.chain, self.owner, self._get_configs())
 
     def _get_contracts(self) -> dict[str, ContractConfig]:
-        contracts = load_contracts(self.env)
+        contracts = load_contracts(self.env, self.chain)
         return {c.key: c for c in contracts}
 
     def _get_configs(self) -> dict[str, Any]:
@@ -88,7 +92,7 @@ class DeploymentManager:
 
     def _save_state(self):
         contracts = [c for c in self.context.contracts.values()]
-        store_contracts(self.env, contracts)
+        store_contracts(self.env, self.chain, contracts)
 
     def deploy(self, changes: set[str], dryrun=False, save_state=True):
         self.owner.set_autosign(True)
