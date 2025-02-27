@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version 0.4.0
 
 """
 @title Zharta Renting Vault Contract
@@ -10,8 +10,8 @@ Delegations are performed by warm.xyz HotWalletProxy.
 
 # Interfaces
 
-from vyper.interfaces import ERC20 as IERC20
-from vyper.interfaces import ERC721 as IERC721
+from ethereum.ercs import IERC20
+from ethereum.ercs import IERC721
 
 interface IDelegationRegistry:
     def getHotWallet(cold_wallet: address) -> address: view
@@ -37,7 +37,7 @@ delegation_registry: public(immutable(IDelegationRegistry))
 ##### EXTERNAL METHODS - WRITE #####
 
 @payable
-@external
+@deploy
 def __init__(
     _payment_token_addr: address,
     _nft_contract_addr: address,
@@ -87,7 +87,7 @@ def deposit(token_id: uint256, nft_owner: address, delegate: address):
 
     assert msg.sender == self.caller, "not caller"
 
-    nft_contract.safeTransferFrom(nft_owner, self, token_id, b"")
+    extcall nft_contract.safeTransferFrom(nft_owner, self, token_id, b"")
 
     if delegate != empty(address):
         self._delegate_to_wallet(delegate, max_value(uint256))
@@ -104,7 +104,7 @@ def withdraw(token_id: uint256, wallet: address):
     """
 
     assert msg.sender == self.caller, "not caller"
-    nft_contract.safeTransferFrom(self, wallet, token_id, b"")
+    extcall nft_contract.safeTransferFrom(self, wallet, token_id, b"")
     self._delegate_to_wallet(empty(address), 0)
 
 
@@ -185,7 +185,7 @@ def staking_compound(token_id: uint256, staking_addr: address, pool_claim_method
 
     assert msg.sender == self.caller, "not caller"
     self._staking_claim(self, token_id, staking_addr, pool_claim_method_id)
-    self._staking_deposit(self, payment_token.balanceOf(self), token_id, staking_addr, pool_deposit_method_id)
+    self._staking_deposit(self, (staticcall payment_token.balanceOf(self)), token_id, staking_addr, pool_deposit_method_id)
 
 
 @view
@@ -207,15 +207,15 @@ def onERC721Received(_operator: address, _from: address, _tokenId: uint256, _dat
 
 @internal
 def _delegate_to_wallet(delegate: address, expiration: uint256):
-    if delegation_registry.getHotWallet(self) == delegate:
-        delegation_registry.setExpirationTimestamp(expiration)
+    if (staticcall delegation_registry.getHotWallet(self)) == delegate:
+        extcall delegation_registry.setExpirationTimestamp(expiration)
     else:
-        delegation_registry.setHotWallet(delegate, expiration, False)
+        extcall delegation_registry.setHotWallet(delegate, expiration, False)
 
 
 @internal
 def _staking_deposit(wallet: address, amount: uint256, token_id: uint256, staking_addr: address, pool_method_id: bytes4):
-    payment_token.approve(staking_addr, amount)
+    extcall payment_token.approve(staking_addr, amount)
 
     nfts: DynArray[SingleNft, 1] = [SingleNft({tokenId: convert(token_id, uint32), amount: convert(amount, uint224)})]
     raw_call(staking_addr, concat(pool_method_id, _abi_encode(nfts)))

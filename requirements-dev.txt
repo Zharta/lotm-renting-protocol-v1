@@ -425,7 +425,7 @@ sqlalchemy==2.0.29
     # via eth-ape
 stack-data==0.6.3
     # via ipython
-titanoboa==0.1.10b1
+titanoboa==0.2.5
     # via lotm-renting-protocol-v1 (pyproject.toml)
 toolz==0.12.1
     # via cytoolz
@@ -476,7 +476,9 @@ varint==1.0.2
 virtualenv==20.26.0
     # via pre-commit
 vvm==0.3.2
-    # via ape-vyper
+    # via
+    #   ape-vyper
+    #   titanoboa
 vyper==0.4.0
     # via
     #   lotm-renting-protocol-v1 (pyproject.toml)

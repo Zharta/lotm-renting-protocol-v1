@@ -13,7 +13,7 @@ def inject_poa(w3):
     return w3
 
 
-def ape_init_extras(network):
+def ape_init_extras():
     dm = DeploymentManager(ENV, CHAIN)
 
     return {
