@@ -4,7 +4,7 @@
 @dev Implementation of basic mock functionality for mock of [HotWalletProxy](https://etherscan.io/address/0xf4fbf314e8819a8d4d496bfb3cdcd3687d0bbcb8#code#F1#L51)
 """
 
-# @version 0.3.10
+# @version 0.4.0
 
 ## TODO add the remaining functions
 
@@ -41,10 +41,10 @@ def getHotWallet(cold_wallet: address) -> address:
 @view
 @external
 def getHotWalletLink(cold_wallet: address) -> WalletLink:
-    return WalletLink({
-        walletAddress: self.hot[cold_wallet] if self.exp[cold_wallet] > block.timestamp else empty(address),
-        expirationTimestamp: self.exp[cold_wallet]
-    })
+    return WalletLink(
+        walletAddress = self.hot[cold_wallet] if self.exp[cold_wallet] > block.timestamp else empty(address),
+        expirationTimestamp = self.exp[cold_wallet]
+    )
 
 @view
 @external

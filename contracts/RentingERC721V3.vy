@@ -1,4 +1,4 @@
-# @version 0.3.10
+# @version 0.4.0
 
 """
 @title Zharta RentingERC721 Contract
@@ -10,9 +10,6 @@ The ownership can be transferred while rentals are ongoing, althought ownership 
 """
 
 # Interfaces
-
-from vyper.interfaces import ERC20 as IERC20
-from vyper.interfaces import ERC721 as IERC721
 
 
 interface ERC721Receiver:
@@ -62,7 +59,7 @@ renting_addr: public(address)
 ##### EXTERNAL METHODS - WRITE #####
 
 
-@external
+@deploy
 def __init__(_name: String[30], _symbol: String[20], _base_url: String[60], _contract_uri: String[60]):
 
     """
@@ -102,7 +99,7 @@ def mint(tokens: DynArray[TokenAndWallet, 32]):
 
     assert msg.sender == self.renting_addr, "not renting contract"
 
-    for token in tokens:
+    for token: TokenAndWallet in tokens:
         assert self.id_to_owner[token.token_id] == empty(address), "token already minted"
         self._mint_token_to(token.wallet, token.token_id)
         log Transfer(empty(address), token.wallet, token.token_id)
@@ -119,7 +116,7 @@ def burn(tokens: DynArray[TokenAndWallet, 32]):
 
     assert msg.sender == self.renting_addr, "not renting contract"
 
-    for token in tokens:
+    for token: TokenAndWallet in tokens:
         if self.id_to_owner[token.token_id] == token.wallet:
             self._burn_token_from(token.wallet, token.token_id)
 
@@ -227,7 +224,7 @@ def safeTransferFrom(_from: address, _to: address, _tokenId: uint256, _data: Byt
 
     self._transfer_from(_from, _to, _tokenId, msg.sender)
     if _to.is_contract:
-        returnValue: bytes4 = ERC721Receiver(_to).onERC721Received(msg.sender, _from, _tokenId, _data)
+        returnValue: bytes4 = staticcall ERC721Receiver(_to).onERC721Received(msg.sender, _from, _tokenId, _data)
         assert returnValue == convert(method_id("onERC721Received(address,address,uint256,bytes)", output_type=Bytes[4]), bytes4)
 
 
