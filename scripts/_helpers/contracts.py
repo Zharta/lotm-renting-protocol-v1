@@ -294,8 +294,8 @@ class RentingV3Contract(ContractConfig):
                 nft_contract_key,
                 delegation_registry_key,
                 renting_erc721_contract_key,
-            ]
-            + staking_deps,
+                *staking_deps,
+            ],
             deployment_args=[
                 vault_impl_key,
                 payment_token_key,

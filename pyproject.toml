@@ -50,7 +50,27 @@ addopts = """
 
 [tool.ruff]
 lint.select = ["ALL"]
-lint.ignore = ["ANN", "B905", "BLE", "COM812", "CPY", "D", "DTZ", "EM", "FIX", "ISC001", "PLR0913", "PLR2004", "S", "TCH", "TD", "TRY003"]
+lint.ignore = [
+    "ANN",
+    "B905",
+    "BLE",
+    "COM812",
+    "CPY",
+    "D",
+    "DTZ",
+    "EM",
+    "FIX",
+    "FURB101",
+    "FURB103",
+    "ISC001",
+    "PLR0913",
+    "PLR2004",
+    "S",
+    "TCH",
+    "TD",
+    "TRY002",
+    "TRY003",
+]
 line-length = 127
 lint.preview = true
 target-version = "py311"
@@ -60,9 +80,9 @@ target-version = "py311"
 "scripts/*.py" = [
     "A001",
     "ARG001",
+    "C420",
     "ERA001",
     "FBT002",
-    "FURB103",
     "T201",
     "PLR6301",
     "PLW1514",
