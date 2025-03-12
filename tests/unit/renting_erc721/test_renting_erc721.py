@@ -223,7 +223,7 @@ def test_approve_for_all_logs_approval(renting721_contract, nft_owner):
 
     assert event.owner == nft_owner
     assert event.operator == operator
-    assert event.approved == True
+    assert event.approved
 
 
 def test_set_approval_for_all_reverts_if_operator_is_owner(renting721_contract, nft_owner):

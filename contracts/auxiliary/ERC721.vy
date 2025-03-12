@@ -6,7 +6,7 @@
 @author Takayuki Jimba (@yudetamago)
 """
 
-# @version 0.4.0
+# @version 0.4.1
 
 from ethereum.ercs import IERC165
 from ethereum.ercs import IERC721
