@@ -1,8 +1,9 @@
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 from ape.contracts.base import ContractContainer, ContractInstance
 from ape_accounts.accounts import KeyfileAccount
@@ -28,8 +29,7 @@ class DeploymentContext:
     def __getitem__(self, key):
         if key in self.contracts:
             return self.contracts[key]
-        else:
-            return self.config[key]
+        return self.config[key]
 
     def __contains__(self, key):
         return key in self.contracts or key in self.config
@@ -44,7 +44,7 @@ class DeploymentContext:
 @dataclass
 class ContractConfig:
     key: str
-    contract: Optional[ContractInstance]
+    contract: ContractInstance | None
     container: ContractContainer
     container_name: str | None = None
     deployment_deps: set[str] = field(default_factory=set)
@@ -53,14 +53,14 @@ class ContractConfig:
     abi_key: str | None = None
     version: str | None = None
 
-    def deployable(self, context: DeploymentContext) -> bool:
+    def deployable(self, context: DeploymentContext) -> bool:  # noqa: ARG002
         return True
 
-    def deployment_dependencies(self, context: DeploymentContext) -> set[str]:
+    def deployment_dependencies(self, context: DeploymentContext) -> set[str]:  # noqa: ARG002
         return self.deployment_deps
 
     def deployment_args_values(self, context: DeploymentContext) -> list[Any]:
-        values = [context[c] if c in context else c for c in self.deployment_args]
+        values = [context.get(c, c) for c in self.deployment_args]
         return [v.contract if isinstance(v, ContractConfig) else v for v in values]
 
     def deployment_args_repr(self, context: DeploymentContext) -> list[Any]:
@@ -69,7 +69,7 @@ class ContractConfig:
     def deployment_options(self, context: DeploymentContext) -> dict[str, Any]:
         return {"sender": context.owner} | context.gas_options()
 
-    def config_dependencies(self, context: DeploymentContext) -> dict[str, Callable]:
+    def config_dependencies(self, context: DeploymentContext) -> dict[str, Callable]:  # noqa: ARG002
         return self.config_deps
 
     def address(self):
@@ -87,7 +87,7 @@ class ContractConfig:
     def load_contract(self, address: str):
         self.contract = self.container.at(address)
 
-    def deploy(self, context: DeploymentContext, dryrun: bool = False):
+    def deploy(self, context: DeploymentContext, dryrun: bool = False):  # noqa: FBT001
         if self.contract is not None:
             print(f"WARNING: Deployment will override contract *{self.key}* at {self.contract}")
         if not self.deployable(context):
