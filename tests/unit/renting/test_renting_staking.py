@@ -729,7 +729,7 @@ def test_stake_compound_batch(
 
     rewards = [get_rewards(amount) for amount in amounts]
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance - sum(amounts)
-    for token_id, vault_addr, amount, rewards in zip(token_ids, vault_addrs, amounts, rewards):
+    for token_id, vault_addr, amount, rewards in zip(token_ids, vault_addrs, amounts, rewards):  # noqa: B020
         assert ape_staking_contract.staked_nfts(BAYC_POOL_ID, token_id) == amount + rewards
         assert ape_contract.balanceOf(vault_addr) == 0
         assert nft_contract.ownerOf(token_id) == vault_addr

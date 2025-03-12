@@ -78,6 +78,7 @@ def test_delegate_to_wallet_batch(
     renting_contract.delegate_to_wallet(token_contexts, delegate, sender=nft_owner)
 
     for token_id in token_ids:
+        vault_addr = renting_contract.tokenid_to_vault(token_id)
         assert delegation_registry_warm_contract.getHotWallet(vault_addr) == delegate
 
     event = get_last_event(renting_contract, "DelegatedToWallet")

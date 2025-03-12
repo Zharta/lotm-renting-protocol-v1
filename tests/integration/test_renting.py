@@ -461,8 +461,8 @@ def test_claim(
     assert reward.token_id == token_id
     assert reward.active_rental_amount == 0
 
-    assert renting_contract.eval(f"self.unclaimed_rewards[{nft_owner}]") == 0
-    assert renting_contract.eval("self.protocol_fees_amount") == total_fees
+    assert renting_contract.unclaimed_rewards(nft_owner) == 0
+    assert renting_contract.protocol_fees_amount() == total_fees
 
     assert ape_contract.balanceOf(nft_owner) == nft_owner_balance + total_rewards
     assert ape_contract.balanceOf(protocol_wallet) == protocol_wallet_balance

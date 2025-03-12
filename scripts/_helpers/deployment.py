@@ -91,7 +91,7 @@ class DeploymentManager:
         return {}
 
     def _save_state(self):
-        contracts = [c for c in self.context.contracts.values()]
+        contracts = list(self.context.contracts.values())
         store_contracts(self.env, self.chain, contracts)
 
     def deploy(self, changes: set[str], dryrun=False, save_state=True):

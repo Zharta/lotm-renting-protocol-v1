@@ -1,3 +1,5 @@
+# ruff: noqa: RUF012
+
 import random
 
 import boa
@@ -58,7 +60,7 @@ class StateMachine(RuleBasedStateMachine):
         self.rewards = {owner: 0 for owner in self.owners}
         self.paid = {renter: 0 for renter in self.renters}
         self.claimed = {owner: 0 for owner in self.owners}
-        self.vaults = dict()  # token: address
+        self.vaults = {}  # token: address
 
         for renter in self.renters:
             self.ape.mint(renter, INITIAL_BALANCE, sender=self.ape.minter())
