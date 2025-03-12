@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Callable
+from collections.abc import Callable
 
 from .basetypes import ContractConfig, DeploymentContext
 
@@ -13,7 +13,7 @@ class DependencyManager:
         self._build_deployment_set()
 
     def _build_dependencies(self) -> tuple[dict, dict]:
-        internal_contracts = [c for c in self.context.contracts.values()]
+        internal_contracts = list(self.context.contracts.values())
         dep_dependencies_set = {(dep, c.key) for c in internal_contracts for dep in c.deployment_dependencies(self.context)}
         config_dependencies_set1 = {(k, v) for c in internal_contracts for k, v in c.config_dependencies(self.context).items()}
         config_dependencies_set2 = {
@@ -46,7 +46,7 @@ class DependencyManager:
 
     def _build_deployment_order(self):
         sorted_dependencies = topological_sort(self.deployment_dependencies)
-        internal_deployable_sorted = [c for c in sorted_dependencies]
+        internal_deployable_sorted = list(sorted_dependencies)
         self.deployment_order = internal_deployable_sorted
 
     def build_transaction_set(self) -> set[Callable]:
@@ -62,7 +62,7 @@ class DependencyManager:
 def topological_sort(dependencies: dict[str, set[str]]) -> list[str]:
     nodes = set(dependencies.keys()) | {w for v in dependencies.values() for w in v}
     vis = {n: False for n in nodes}
-    stack = list()
+    stack = []
 
     def _dfs(n: str):
         vis[n] = True
@@ -71,13 +71,13 @@ def topological_sort(dependencies: dict[str, set[str]]) -> list[str]:
                 _dfs(d)
         stack.append(n)
 
-    for d in vis.keys():
+    for d in vis:  # noqa: PLC0206
         if not vis[d]:
             _dfs(d)
     return stack[::-1]
 
 
-def groupby_first(tuples: set[tuple], extended_keys: set[str] = None) -> dict[str, set[str]]:
+def groupby_first(tuples: set[tuple], extended_keys: set[str] | None = None) -> dict[str, set[str]]:
     res = defaultdict(set)
     for k in extended_keys or set():
         res[k] = set()

@@ -2,7 +2,7 @@
 # @author Takayuki Jimba (@yudetamago)
 # https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
 
-# @version 0.4.0
+# @version 0.4.1
 
 from ethereum.ercs import IERC20
 from ethereum.ercs import IERC20Detailed
@@ -33,7 +33,7 @@ balanceOf: public(HashMap[address, uint256])
 allowance: public(HashMap[address, HashMap[address, uint256]])
 # By declaring `totalSupply` as public, we automatically create the `totalSupply()` getter
 totalSupply: public(uint256)
-minter: address
+minter: public(address)
 
 
 @deploy

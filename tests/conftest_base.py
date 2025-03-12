@@ -6,12 +6,12 @@ from textwrap import dedent
 
 import boa
 import vyper
-from boa.contracts.vyper.event import Event
+from boa.contracts.event_decoder import RawLogEntry
 from boa.contracts.vyper.vyper_contract import VyperContract
 from eth.exceptions import Revert
 from eth_abi import encode
 from eth_account import Account
-from eth_account.messages import encode_intended_validator, encode_structured_data
+from eth_account.messages import encode_intended_validator, encode_typed_data
 from eth_utils import encode_hex, keccak
 from web3 import Web3
 
@@ -19,50 +19,34 @@ ZERO_ADDRESS = boa.eval("empty(address)")
 ZERO_BYTES32 = boa.eval("empty(bytes32)")
 
 
-def get_last_event(contract: VyperContract, name: str = None):
-    print("CONTRACT LOGS", contract.get_logs())
-    print("\n\n\n")
-    matching_events = [e for e in contract.get_logs() if isinstance(e, Event) and (name is None or name == e.event_type.name)]
+def get_last_event(contract: VyperContract, name: str | None = None):
+    matching_events = [
+        e
+        for e in contract.get_logs(strict=False)
+        if not isinstance(e, RawLogEntry) and (name is None or name == type(e).__name__)
+    ]
     return EventWrapper(matching_events[-1])
 
 
 def get_events(contract: VyperContract, name: str | None = None):
     return [
-        EventWrapper(e) for e in contract.get_logs() if isinstance(e, Event) and (name is None or name == e.event_type.name)
+        EventWrapper(e)
+        for e in contract.get_logs(strict=False)
+        if not isinstance(e, RawLogEntry) and (name is None or name == type(e).__name__)
     ]
 
 
 class EventWrapper:
-    def __init__(self, event: Event):
+    def __init__(self, event: namedtuple):
         self.event = event
-        self.event_name = event.event_type.name
+        self.event_name = type(event).__name__
+        self.args_dict = event._asdict()
+        print(f"EventWrapper {self.event_name=} {self.args_dict=}")
 
     def __getattr__(self, name):
-        print(f"getattr {self=} {name=}")
         if name in self.args_dict:
             return self.args_dict[name]
-        else:
-            raise AttributeError(f"No attr {name} in {self.event_name}. Event data is {self.event}")
-
-    @cached_property
-    def args_dict(self):
-        # print(f"{self.event=} {self.event.event_type.arguments=}")
-        args = self.event.event_type.arguments.keys()
-        indexed = self.event.event_type.indexed
-        topic_values = (v for v in self.event.topics)
-        args_values = (v for v in self.event.args)
-        _args = [(arg, next(topic_values) if indexed[i] else next(args_values)) for i, arg in enumerate(args)]
-
-        return {k: self._format_value(v, self.event.event_type.arguments[k]) for k, v in _args}
-
-    def _format_value(self, v, _type):
-        # print(f"_format_value {v=} {_type=} {type(v).__name__=} {type(_type)=}")
-        if isinstance(_type, vyper.semantics.types.primitives.AddressT):
-            return Web3.to_checksum_address(v)
-        # elif isinstance(_type, vyper.semantics.types.value.bytes_fixed.Bytes32Definition):
-        elif isinstance(_type, vyper.semantics.types.primitives.BytesT):
-            return f"0x{v.hex()}"
-        return v
+        raise AttributeError(f"No attr {name} in {self.event_name}. Event data is {self.event}")
 
     def __repr__(self):
         return f"<EventWrapper {self.event_name} {self.args_dict}>"
@@ -75,15 +59,15 @@ def checksummed(obj, vyper_type=None):
     print(f"checksummed {obj=} {vyper_type=} {type(obj).__name__=} {type(vyper_type)=}")
 
     if isinstance(vyper_type, vyper.codegen.types.types.DArrayType):
-        return list(checksummed(x, vyper_type.subtype) for x in obj)
+        return [checksummed(x, vyper_type.subtype) for x in obj]
 
-    elif isinstance(vyper_type, vyper.codegen.types.types.StructType):
+    if isinstance(vyper_type, vyper.codegen.types.types.StructType):
         return tuple(checksummed(*arg) for arg in zip(obj, vyper_type.tuple_members()))
 
-    elif isinstance(vyper_type, vyper.codegen.types.types.BaseType):
+    if isinstance(vyper_type, vyper.codegen.types.types.BaseType):
         if vyper_type.typ == "address":
             return Web3.toChecksumAddress(obj)
-        elif vyper_type.typ == "bytes32":
+        if vyper_type.typ == "bytes32":
             return f"0x{obj.hex()}"
 
     return obj
@@ -327,7 +311,7 @@ def sign_listing(listing: Listing, owner_key: str, admin_key: str, timestamp: in
         },
         "message": vars(listing),
     }
-    signable_msg = encode_structured_data(typed_data)
+    signable_msg = encode_typed_data(full_message=typed_data)
     signed_msg = Account.from_key(owner_key).sign_message(signable_msg)
     owner_signature = Signature(signed_msg.v, signed_msg.r, signed_msg.s)
 

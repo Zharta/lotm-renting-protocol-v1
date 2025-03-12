@@ -188,6 +188,8 @@ ipython==8.21.0
     # via eth-ape
 jedi==0.19.1
     # via ipython
+lark==1.2.2
+    # via vyper
 lazyasd==0.1.4
     # via eth-ape
 lru-dict==1.2.0
@@ -375,7 +377,7 @@ varint==1.0.2
     #   py-multihash
 vvm==0.3.2
     # via ape-vyper
-vyper==0.4.0
+vyper==0.4.1
     # via
     #   lotm-renting-protocol-v1 (pyproject.toml)
     #   ape-vyper

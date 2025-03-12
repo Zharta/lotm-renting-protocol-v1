@@ -262,7 +262,7 @@ def test_start_rentals_transfers_amounts(
         sign_listing(listing, nft_owner_key, owner_key, start_time, renting_contract.address) for listing in listings
     ]
     token_contexts = [TokenContext(token_id, nft_owner, Rental()) for token_id in token_ids]
-    rental_amount = sum([listing.price * duration for listing in listings])
+    rental_amount = sum(listing.price * duration for listing in listings)
 
     ape_contract.mint(renter, rental_amount, sender=owner)
     renter_initial_balance = ape_contract.balanceOf(renter)

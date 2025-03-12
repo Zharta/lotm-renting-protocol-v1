@@ -110,12 +110,12 @@ def empty_contract_def():
     )
 
 
-@boa.precompile("def debug_bytes32(data: bytes32)")
-def debug_bytes32(data: bytes):
-    print(f"DEBUG: {data.hex()}")
+# @boa.precompile("def debug_bytes32(data: bytes32)")
+# def debug_bytes32(data: bytes):
+#     print(f"DEBUG: {data.hex()}")
 
 
-@pytest.fixture(scope="session")
-def debug_precompile():
-    register_raw_precompile("0x00000000000000000000000000000000000000ff", debug_bytes32)
-    yield
+# @pytest.fixture(scope="session")
+# def debug_precompile():
+#     register_raw_precompile("0x00000000000000000000000000000000000000ff", debug_bytes32)
+#     yield
