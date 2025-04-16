@@ -83,7 +83,7 @@ def deploy_reverts():
     try:
         yield
         raise ValueError("Did not revert")
-    except Revert:
+    except boa.contracts.base_evm_contract.BoaError:
         ...
 
 
