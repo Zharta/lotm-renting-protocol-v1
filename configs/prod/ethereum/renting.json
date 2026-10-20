@@ -451,6 +451,21 @@
             },
             "version": "3"
         },
+        "vault_whitelist_extension": {
+            "contract": "VaultWhitelistExtensionContract",
+            "properties": {
+                "renting_keys": [
+                    "renting.koda_v2",
+                    "renting.koda_v3",
+                    "renting.mara_v2",
+                    "renting.mara_v3",
+                    "renting.otherdeed_v2",
+                    "renting.otherdeed_v3",
+                    "renting.kodamara_v3"
+                ]
+            },
+            "properties_addresses": {}
+        },
         "warm": {
             "address": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
             "contract": "WarmDelegationContract",

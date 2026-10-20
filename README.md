@@ -246,12 +246,38 @@ The Vault is the implementation contract for each vault, which is deployed as a 
 | stake_claim        | Any               | Nonpayable   | claims pending staking rewards to the owner's wallet                                                                                       |
 | stake_compound     | Any               | Nonpayable   | claims pending staking rewards and stake them in the same staking pool                                                                     |
 
+#### Vault whitelist extension (`VaultWhitelistExtension.vy`)
+
+Koda, Mara and Otherdeed Expanded validate transfers with the LimitBreak Creator Token Transfer Validator (V5, `0x721C008fdff27BF06E7E123956E2Fe03B63342e3`), using the whitelist ruleset and list 13. Vault transfers are performed by the vault itself (`caller == from`), which the ruleset blocks for contracts that are not whitelisted (`OTCNotAllowedForSmartWallets` on withdrawals, `CallerOrFromMustBeWhitelisted` on deposits).
+
+The extension implements the LimitBreak `IWhitelistExtension` interface and only enables withdrawals. It is ownerless and its markets (renting contracts, from which the NFT collection is read) are immutable. An account is whitelisted for a collection only if:
+* it is a registered vault of a market for the collection, and
+* it currently owns its token (`ownerOf(token_id)`), which holds while the validator checks a withdrawal but not a deposit
+
+The whitelisting applies to the vault account for any transfer validated while it owns its token, but the renting protocol can only make a vault transfer its own token, so a token sent to a vault by other means can't leave it.
+
+Vaults are identified by their address only: they are deployed by the renting contract with CREATE2, using the token id as salt, so a vault address can only hold a vault deployed by that renting contract. The code and storage of an account can be replicated by other contracts and are not used. As the validator doesn't provide the token id, vaults must be registered with `register_vaults(renting, token_ids)`, which is permissionless as the addresses are provided by the renting contract (`tokenid_to_vault`). `ownerOf` is called with a gas limit (`OWNER_OF_GAS`) and any failure means the account is not whitelisted.
+
+The markets are configured in `configs/prod/ethereum/renting.json` (`common.vault_whitelist_extension`) and cover the V2 and V3 markets of Koda, Mara and Otherdeed Expanded, as well as Kodamara V3 (currently not gated by LimitBreak). To enable withdrawals:
+1. pause the V3 markets (`set_paused(True)`), as V3 receipts (renting ERC721) are not burned when withdrawn by a holder other than the depositor, which would let them withdraw a later deposit of the same token. Pausing blocks deposits, while `withdraw` and `mint` remain available. Keep `staking_addr` unset in these markets, as the vault staking functions remain available and call it from the vaults
+2. deploy the extension (before running `publish`, which requires every configured contract to be deployed)
+3. register the vaults holding NFTs with `register_vaults`
+4. the list owner registers the extension with `addAccountsToList(13, 3, [extension])`
+
+| **Function**      | **Roles Allowed** | **Modifier** | **Description**                                                                                                   |
+| ---               | :-:               | ---          | ---                                                                                                               |
+| isWhitelisted     | Any               | View         | returns whether an account is a registered vault for the collection owning its token, called by the validator. Never reverts |
+| register_vaults   | Any               | Nonpayable   | registers the vaults of a renting contract for the given token ids, whether they are deployed or not            |
+| markets           | Any               | View         | returns the configured markets                                                                                    |
+| vaults            | Any               | View         | returns the market (index + 1) and token id of a registered vault                                                 |
+
 ### Testing
 
 There are three types of tests implemented, running on py-evm using titanoboa:
 1. Unit tests focus on individual functions for each contract, mocking external dependencies (ERC20, ERC721, and warm.xyz HotWallet)
 2. Integration tests run on a forked chain, testing the integration between the contracts in the protocol and real implementations of the external dependencies
 3. Fuzz tests implement stateful testing, validating that invariants are kept over multiple interactions with the protocol
+4. LimitBreak tests run on a mainnet fork, validating the vault whitelist extension end to end against the deployed markets, including the NFTs held by vaults at the fork block (`tests/limitbreak/vaults_snapshot.json`, generated by `python -m tests.limitbreak.snapshot`)
 
 Additionaly, under `contracts/auxiliary` there are mock implementations of external dependencies **which are NOT part of the protocol** and are only used to support deployments in private and test networks:
 ```
@@ -282,6 +308,10 @@ make integration-tests
 * fuzz tests
 ```
 make fuzz-tests
+```
+* LimitBreak tests (requires an archive node in `BOA_FORK_RPC_URL`, as the integration tests)
+```
+make limitbreak-tests
 ```
 * gas profiling
 ```
