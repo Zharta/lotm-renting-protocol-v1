@@ -61,6 +61,8 @@ def store_contracts(env: Environment, chain: str, contracts: list[ContractConfig
             for prop_key, prop_val in properties.items():
                 if prop_key.endswith("_key"):
                     addresses[prop_key[:-4]] = contracts_dict[prop_val].address()
+                elif prop_key.endswith("_keys"):
+                    addresses[prop_key[:-5]] = [contracts_dict[k].address() for k in prop_val]
             c["properties_addresses"] = addresses
 
     with open(config_file, "w") as f:

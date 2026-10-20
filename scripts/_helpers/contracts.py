@@ -1,12 +1,13 @@
 import json
 from dataclasses import dataclass
+from typing import Any
 
 from ape import project
 from ape.contracts.base import ContractContainer
 from ethpm_types.contract_type import ContractType
 from hexbytes import HexBytes
 
-from .basetypes import ContractConfig
+from .basetypes import ContractConfig, DeploymentContext
 
 ZERO_ADDRESS = "0x" + "00" * 20
 
@@ -342,6 +343,38 @@ class RentingERC721V3Contract(ContractConfig):
 
 
 @dataclass
+class VaultWhitelistExtensionContract(ContractConfig):
+    def __init__(
+        self,
+        *,
+        key: str,
+        version: str | None = None,
+        abi_key: str,
+        renting_keys: list[str],
+        address: str | None = None,
+    ):
+        self.renting_keys = renting_keys
+        super().__init__(
+            key,
+            None,
+            project.VaultWhitelistExtension,
+            version=version,
+            abi_key=abi_key,
+            container_name="VaultWhitelistExtension",
+            deployment_deps=renting_keys,
+            deployment_args=[],
+        )
+        if address:
+            self.load_contract(address)
+
+    def deployment_args_values(self, context: DeploymentContext) -> list[Any]:
+        return [[context[k].address() for k in self.renting_keys]]
+
+    def deployment_args_repr(self, context: DeploymentContext) -> list[Any]:  # noqa: ARG002
+        return [[f"[{k}]" for k in self.renting_keys]]
+
+
+@dataclass
 class StakingContract(ContractConfig):
     def __init__(
         self,
@@ -410,6 +443,7 @@ contract_map = {
         VaultImplV1Contract,
         VaultImplV2Contract,
         VaultImplV3Contract,
+        VaultWhitelistExtensionContract,
         WarmDelegationContract,
     ]
 }
