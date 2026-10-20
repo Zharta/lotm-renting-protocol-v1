@@ -1,0 +1,24 @@
+# Legacy VaultV2 (contracts/legacy/VaultV2.vy), subset used by the tests
+
+@view
+@external
+def caller() -> address:
+    ...
+
+@view
+@external
+def owner() -> address:
+    ...
+
+@view
+@external
+def state() -> bytes32:
+    ...
+
+@external
+def initialise(owner: address):
+    ...
+
+@external
+def deposit(token_id: uint256, price: uint256, min_duration: uint256, max_duration: uint256, delegate: address):
+    ...
