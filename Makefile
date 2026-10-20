@@ -35,6 +35,9 @@ integration-tests: ${VENV}
 fuzz-tests:
 	${VENV}/bin/pytest tests/fuzz --durations=0 -n auto
 
+limitbreak-tests: ${VENV}
+	${VENV}/bin/pytest tests/limitbreak --durations=20
+
 coverage:
 	${VENV}/bin/coverage run -m pytest tests/unit --durations=0
 	${VENV}/bin/coverage report | tee coverage.txt
