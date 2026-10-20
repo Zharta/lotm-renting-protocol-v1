@@ -1,0 +1,6 @@
+# Chimpers whitelist extension registered in list 13 (third party), subset used by the tests
+
+@view
+@external
+def chimpers() -> address:
+    ...

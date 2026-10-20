@@ -1,0 +1,38 @@
+# LimitBreak CreatorTokenTransferValidator (V5), subset used by the tests
+
+struct CollectionSecurityPolicy:
+    rulesetId: uint8
+    listId: uint48
+    customRuleset: address
+    globalOptions: uint8
+    rulesetOptions: uint16
+    tokenType: uint16
+
+@external
+def addAccountsToList(id: uint48, listType: uint8, accounts: DynArray[address, 128]):
+    ...
+
+@view
+@external
+def getListAccounts(id: uint48, listType: uint8) -> DynArray[address, 1024]:
+    ...
+
+@view
+@external
+def listOwners(id: uint48) -> address:
+    ...
+
+@view
+@external
+def boundRuleset(rulesetId: uint8) -> address:
+    ...
+
+@view
+@external
+def getCollectionSecurityPolicy(collection: address) -> CollectionSecurityPolicy:
+    ...
+
+@view
+@external
+def validateTransferSim(collection: address, caller: address, _from: address, to: address, tokenId: uint256) -> (bool, bytes4):
+    ...

@@ -78,6 +78,22 @@ def get_vault_from_proxy(proxy_addr):
     return deployer.at(proxy_addr)
 
 
+def minimal_proxy_runtime(impl: str) -> bytes:
+    return bytes.fromhex("363d3d373d3d3d363d73") + bytes.fromhex(impl[2:]) + bytes.fromhex("5af43d82803e903d91602b57fd5bf3")
+
+
+def deploy_runtime(runtime: bytes, deployer: str | None = None) -> str:
+    # deploys a contract with the given runtime (up to 255 bytes), using initcode that just returns it
+    initcode = bytes.fromhex(f"60{len(runtime):02x}80600b6000396000f3") + runtime
+    with boa.env.prank(deployer or boa.env.eoa):
+        address, _ = boa.env.deploy_code(bytecode=initcode)
+    return str(address)
+
+
+def deploy_minimal_proxy(impl: str, deployer: str | None = None) -> str:
+    return deploy_runtime(minimal_proxy_runtime(impl), deployer)
+
+
 @contextlib.contextmanager
 def deploy_reverts():
     try:
