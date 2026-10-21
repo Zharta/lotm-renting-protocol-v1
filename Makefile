@@ -10,7 +10,7 @@ PATH := ${VENV}/bin:${PATH}
 vpath %.vy ./contracts
 
 $(VENV):
-	if ! command -v uv > /dev/null; then python -m pip install -U uv; fi
+	if ! command -v uv > /dev/null; then python -m pip install -U "uv>=0.13.4"; fi
 	uv venv $(VENV)
 
 install: ${VENV} requirements.txt

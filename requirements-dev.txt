@@ -51,8 +51,10 @@ cbor2==5.6.5
     # via vyper
 cchecksum==0.0.4
     # via eth-ape
-certifi==2025.1.31
-    # via requests
+certifi==2026.10.19
+    # via
+    #   lotm-renting-protocol-v1 (pyproject.toml)
+    #   requests
 cfgv==3.4.0
     # via pre-commit
 charset-normalizer==3.4.1

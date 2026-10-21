@@ -4,6 +4,7 @@ description = "Koda Renting Protocol by Zharta"
 classifiers = ["Private :: Do Not Upload"]
 version = "0"
 dependencies = [
+    "certifi>=2026.10.19",  # eMudhra intermediate CA compromise, 2026-10-20
     "eth-ape",
     "vyper==0.4.1",
     "ape-vyper",
