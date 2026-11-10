@@ -35,6 +35,9 @@ integration-tests: ${VENV}
 fuzz-tests:
 	${VENV}/bin/pytest tests/fuzz --durations=0 -n auto
 
+limitbreak-tests: ${VENV}
+	${VENV}/bin/pytest tests/limitbreak --durations=20
+
 coverage:
 	${VENV}/bin/coverage run -m pytest tests/unit --durations=0
 	${VENV}/bin/coverage report | tee coverage.txt
@@ -91,6 +94,9 @@ console-local console-zethereum console-zapechain console-sepolia console-curtis
 
 deploy-local deploy-zethereum deploy-zapechain deploy-sepolia deploy-curtis deploy-ethereum deploy-apechain:
 	${VENV}/bin/ape run -I deployment --network ${NETWORK}
+
+register-vaults-local register-vaults-ethereum:
+	${VENV}/bin/ape run register_vaults --network ${NETWORK} $(if $(filter false,${DRYRUN}),--no-dryrun)
 
 publish-zethereum publish-zapechain publish-sepolia publish-curtis publish-ethereum publish-apechain:
 	${VENV}/bin/ape run publish

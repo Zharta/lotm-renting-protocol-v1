@@ -1,0 +1,25 @@
+# Yuga collections (ERC721 with LimitBreak transfer validation), subset used by the tests
+
+@view
+@external
+def ownerOf(tokenId: uint256) -> address:
+    ...
+
+@external
+def approve(to: address, tokenId: uint256):
+    ...
+
+@external
+def transferFrom(_from: address, to: address, tokenId: uint256):
+    ...
+
+@view
+@external
+def getTransferValidator() -> address:
+    ...
+
+# only in collections extending ERC721LockableUpgradeable (Koda, Otherdeed Expanded)
+@view
+@external
+def isLocked(tokenId: uint256) -> bool:
+    ...

@@ -32,3 +32,6 @@ jobs:
 
     - name: Run project integration tests
       run: make integration-tests
+
+    - name: Run LimitBreak tests
+      run: make limitbreak-tests
