@@ -95,5 +95,8 @@ console-local console-zethereum console-zapechain console-sepolia console-curtis
 deploy-local deploy-zethereum deploy-zapechain deploy-sepolia deploy-curtis deploy-ethereum deploy-apechain:
 	${VENV}/bin/ape run -I deployment --network ${NETWORK}
 
+register-vaults-local register-vaults-ethereum:
+	${VENV}/bin/ape run register_vaults --network ${NETWORK} $(if $(filter false,${DRYRUN}),--no-dryrun)
+
 publish-zethereum publish-zapechain publish-sepolia publish-curtis publish-ethereum publish-apechain:
 	${VENV}/bin/ape run publish
