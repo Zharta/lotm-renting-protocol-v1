@@ -261,7 +261,7 @@ Vaults are identified by their address only: they are deployed by the renting co
 The markets are configured in `configs/prod/ethereum/renting.json` (`common.vault_whitelist_extension`) and cover the V2 and V3 markets of Koda, Mara and Otherdeed Expanded, as well as Kodamara V3 (currently not gated by LimitBreak). To enable withdrawals:
 1. pause the V3 markets (`set_paused(True)`), as V3 receipts (renting ERC721) are not burned when withdrawn by a holder other than the depositor, which would let them withdraw a later deposit of the same token. Pausing blocks deposits, while `withdraw` and `mint` remain available. Keep `staking_addr` unset in these markets, as the vault staking functions remain available and call it from the vaults
 2. deploy the extension (before running `publish`, which requires every configured contract to be deployed)
-3. register the vaults holding NFTs with `register_vaults`
+3. register the vaults holding NFTs with `register_vaults`, using `make register-vaults-ethereum` (dry run, prints the calls) and then `make register-vaults-ethereum DRYRUN=false`. Token ids are read from the renting contracts' deposit events, keeping the vaults that still hold their token and are not registered yet
 4. the list owner registers the extension with `addAccountsToList(13, 3, [extension])`
 
 | **Function**      | **Roles Allowed** | **Modifier** | **Description**                                                                                                   |
