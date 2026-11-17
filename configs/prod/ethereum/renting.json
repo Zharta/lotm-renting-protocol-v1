@@ -452,6 +452,8 @@
             "version": "3"
         },
         "vault_whitelist_extension": {
+            "abi_key": "d0226e6fe90c7276dffdf8cfe2a19ef8def90ef5",
+            "address": "0x4b1A60AC2Ffbb78b468a924F99184EB960E4F302",
             "contract": "VaultWhitelistExtensionContract",
             "properties": {
                 "renting_keys": [
@@ -464,7 +466,17 @@
                     "renting.kodamara_v3"
                 ]
             },
-            "properties_addresses": {}
+            "properties_addresses": {
+                "renting": [
+                    "0x1F3AF672e1f767d5E6dF25d45c59f35C2D865e23",
+                    "0xe8d846113Ad52e58e9c3321fFb3B3381B53A3875",
+                    "0x0Bce649673e5B6221Cf3100d8e5333d890B555ae",
+                    "0x5a9168BD70d260Ef39D9Cdd3bc76385eF260c01C",
+                    "0x25a4710517c680daBd31E5e43a03A7D4e8486D95",
+                    "0x2ef699b51Ca996c224BbE51CdBFcc2a1A7284D94",
+                    "0x2dBAe2F35030F4C9d0f139BCB426F235A972EA73"
+                ]
+            }
         },
         "warm": {
             "address": "0xC3AA9bc72Bd623168860a1e5c6a4530d3D80456c",
